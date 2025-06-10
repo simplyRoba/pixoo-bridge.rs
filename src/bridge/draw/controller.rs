@@ -1,4 +1,5 @@
+use crate::bridge::draw::service;
 
-pub async fn fill() -> &'static str {
-    "fill"
+pub async fn fill() {
+    service::draw_color()
 }
