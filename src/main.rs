@@ -5,16 +5,17 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use axum::http::StatusCode;
-use bridge::routes::define_system_routes;
+use crate::bridge::routes::bridge_routes;
 
 mod bridge;
+mod client;
 
 #[tokio::main]
 async fn main() {
     let app = Router::new()
         .route("/", get(hello))
         .route("/json", post(handle_json))
-        .merge(define_system_routes())
+        .merge(bridge_routes())
         .fallback(fallback);
     
     //TODO make port configurable

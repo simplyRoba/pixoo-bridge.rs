@@ -1,12 +1,8 @@
-use axum::{
-    routing::{get, post},
-    Router,
-};
-use crate::bridge::system;
+use crate::bridge;
+use axum::Router;
 
-pub fn define_system_routes() -> Router { 
+pub fn bridge_routes() -> Router {
     Router::new()
-        .route("/health/check", get(system::service::health_check))
-        .route("/reboot", post(system::service::reboot))
+        .merge(bridge::system::routes::define())
+        .nest("/draw", bridge::draw::routes::define())
 }
- 
