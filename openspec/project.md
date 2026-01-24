@@ -7,6 +7,10 @@ pixoo-bridge.rs consumes the Pixoo LED matrix's proprietary protocol and re‑ex
 - Rust (stable toolchain via `cargo`)
 - Native networking (HTTP/UDP) plus any minimal crates needed to talk to the Pixoo device; no frontend/runtime dependencies.
 - Standard formatter/workflow via `rustfmt`/`cargo clippy`.
+- Resulting binary is packaged as a Docker image for easy deployment, so keep the runtime minimal.
+
+## Deployment
+- Docker image published to GitHub Container Registry (GHCR); releases are driven by `release-please`.
 
 ## Project Conventions
 
@@ -14,13 +18,13 @@ pixoo-bridge.rs consumes the Pixoo LED matrix's proprietary protocol and re‑ex
 Follow Rust idioms and tooling: prioritize readability, explicit error handling with `Result`, `snake_case` for functions/variables, and `UpperCamelCase` for public types. Keep `Cargo.toml` tidy and run `cargo fmt` before committing.
 
 ### Architecture Patterns
-Standalone Rust bridge service: single crate providing an HTTP server that translates incoming REST/JSON commands into the device-specific protocol. Keep the HTTP layer thin, push all Pixoo-specific framing to dedicated modules/traits, and isolate transport retries so the bridge can stay responsive and testable.
+Standalone Rust bridge service: single crate providing an HTTP server that translates incoming REST/JSON commands into the device-specific protocol. Keep the HTTP layer thin, push all Pixoo-specific framing to dedicated modules/traits, and isolate transport retries so the bridge can stay responsive and testable. Prioritize a very small resource footprint so the Docker image stays lean and the service runs comfortably on constrained hosts.
 
 ### Testing Strategy
 Run `cargo test` for unit/regression coverage. For device-focused behavior, rely on mocks or fixtures that emulate the Pixoo API; keep actual hardware calls at the edges of the crate.
 
 ### Git Workflow
-Trunk-based development on `main`. Create short-lived feature branches named after the task. Commits should be focused, human-readable, and mention the why; run `cargo fmt && cargo test` locally before committing. Pushing is never allowed; only local commits are recorded until someone else handles upstream sync.
+Trunk-based development on `main`. Create short-lived feature branches named after the task. Commits must follow conventional commit format because releases are driven by `release-please`; run `cargo fmt && cargo test` locally before committing. Pushing is never allowed; only local commits are recorded until someone else handles upstream sync.
 
 ## Domain Context
 The Pixoo LED matrix only exposes an awkward proprietary control API. This project acts as a bridge (not a library) so downstream automation systems can issue simple HTTP commands (`display_frame`, `set_gradient`, etc.) while the service handles packet formatting, command sequencing, retries, and acknowledgement quirks.
