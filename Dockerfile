@@ -4,7 +4,13 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 
-RUN cargo build --release
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+      cargo build --release --target x86_64-unknown-linux-gnu; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+      apt-get update && apt-get install -y gcc-aarch64-linux-gnu && \
+      CC=aarch64-linux-gnu-gcc cargo build --release --target aarch64-unknown-linux-gnu; \
+    fi
 
 FROM debian:bookworm-slim
 
@@ -12,7 +18,12 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/target/release/pixoo-bridge /usr/local/bin/
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+      COPY --from=builder /app/target/x86_64-unknown-linux-gnu/release/pixoo-bridge /usr/local/bin/; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+      COPY --from=builder /app/target/aarch64-unknown-linux-gnu/release/pixoo-bridge /usr/local/bin/; \
+    fi
 
 EXPOSE 8080
 
