@@ -23,8 +23,11 @@ Standalone Rust bridge service: single crate providing an HTTP server that trans
 ### Testing Strategy
 Run `cargo test` for unit/regression coverage. For device-focused behavior, rely on mocks or fixtures that emulate the Pixoo API; keep actual hardware calls at the edges of the crate.
 
+### Documentation Maintenance
+After feature implementation, agents must check if README.md needs updates and keep it in sync with project changes. The README should reflect current capabilities and usage patterns.
+
 ### Git Workflow
-Trunk-based development on `main`. Create short-lived feature branches named after the task. Commits must follow conventional commit format because releases are driven by `release-please`; run `cargo fmt && cargo test` locally before committing. Pushing is never allowed; only local commits are recorded until someone else handles upstream sync.
+Trunk-based development on `main`. Create short-lived feature branches named after the task. Commits must follow conventional commit format because releases are driven by `release-please`; run `cargo fmt && cargo test` locally before committing. Pushing is never allowed; only local commits are recorded until someone else handles upstream sync. Never merge or commit to main if not explicitly told to. PRs are reviewed by human.
 
 ## Domain Context
 The Pixoo LED matrix only exposes an awkward proprietary control API. This project acts as a bridge (not a library) so downstream automation systems can issue simple HTTP commands (`display_frame`, `set_gradient`, etc.) while the service handles packet formatting, command sequencing, retries, and acknowledgement quirks.
