@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.1.1...v0.1.2) (2026-01-25)
+
+
+### Bug Fixes
+
+* resolve Docker build COPY instruction error ([04cf9d7](https://github.com/simplyRoba/pixoo-bridge.rs/commit/04cf9d7877963a4cfb0603b80b7e18e4f07a9a98))
+
 ## [0.1.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.1.0...v0.1.1) (2026-01-25)
 
 
