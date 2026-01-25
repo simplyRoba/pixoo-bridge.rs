@@ -9,7 +9,7 @@ repository = "https://github.com/axel-linux/pixoo-bridge.rs"
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
-axum = "0.7"
+axum = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
