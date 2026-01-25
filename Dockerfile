@@ -11,6 +11,7 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 RUN apt-get update && apt-get install -y gcc-aarch64-linux-gnu && \
+    rustup target add aarch64-unknown-linux-gnu && \
     CC=aarch64-linux-gnu-gcc RUSTFLAGS='-Clinker=aarch64-linux-gnu-gcc' \
     cargo build --release --target aarch64-unknown-linux-gnu
 
