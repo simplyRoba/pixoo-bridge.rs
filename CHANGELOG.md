@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.1.0...v0.1.1) (2026-01-25)
+
+
+### Bug Fixes
+
+* use RELEASE_PLEASE_TOKEN to trigger publish workflow ([9e71b92](https://github.com/simplyRoba/pixoo-bridge.rs/commit/9e71b929631a063d2706e4c9e6c8a4dfb2af3bd9))
+
 ## 0.1.0 (2026-01-25)
 
 
