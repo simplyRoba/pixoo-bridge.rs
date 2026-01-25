@@ -9,7 +9,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
       cargo build --release --target x86_64-unknown-linux-gnu; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
       apt-get update && apt-get install -y gcc-aarch64-linux-gnu && \
-      CC=aarch64-linux-gnu-gcc cargo build --release --target aarch64-unknown-linux-gnu; \
+      CC=aarch64-linux-gnu-gcc RUSTFLAGS='-Clinker=aarch64-linux-gnu-gcc' cargo build --release --target aarch64-unknown-linux-gnu; \
     fi
 
 FROM debian:bookworm-slim
