@@ -19,10 +19,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 ARG TARGETARCH
+COPY --from=builder /app/target/x86_64-unknown-linux-gnu/release/pixoo-bridge /usr/local/bin/pixoo-bridge-amd64
+COPY --from=builder /app/target/aarch64-unknown-linux-gnu/release/pixoo-bridge /usr/local/bin/pixoo-bridge-arm64
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      COPY --from=builder /app/target/x86_64-unknown-linux-gnu/release/pixoo-bridge /usr/local/bin/; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-      COPY --from=builder /app/target/aarch64-unknown-linux-gnu/release/pixoo-bridge /usr/local/bin/; \
+      mv /usr/local/bin/pixoo-bridge-amd64 /usr/local/bin/pixoo-bridge && \
+      rm /usr/local/bin/pixoo-bridge-arm64; \
+    else \
+      mv /usr/local/bin/pixoo-bridge-arm64 /usr/local/bin/pixoo-bridge && \
+      rm /usr/local/bin/pixoo-bridge-amd64; \
     fi
 
 EXPOSE 8080
