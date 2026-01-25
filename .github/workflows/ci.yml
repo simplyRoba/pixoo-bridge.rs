@@ -56,7 +56,7 @@ jobs:
         run: CC=aarch64-linux-gnu-gcc RUSTFLAGS='-Clinker=aarch64-linux-gnu-gcc' cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Upload release binary (x86_64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: github.ref == 'refs/heads/main'
         with:
           name: pixoo-bridge-rs-x86_64
@@ -64,7 +64,7 @@ jobs:
           retention-days: 7
 
       - name: Upload release binary (aarch64)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: github.ref == 'refs/heads/main'
         with:
           name: pixoo-bridge-rs-aarch64
