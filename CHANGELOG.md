@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.0...v0.2.1) (2026-01-25)
+
+
+### Bug Fixes
+
+* use separate builder stages for multi-arch support ([#13](https://github.com/simplyRoba/pixoo-bridge.rs/issues/13)) ([37a32ad](https://github.com/simplyRoba/pixoo-bridge.rs/commit/37a32ad9e98ed3a2e2a1b8a2d2e5729d25eef6c6))
+
 ## [0.2.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.1.2...v0.2.0) (2026-01-25)
 
 
