@@ -53,7 +53,7 @@ jobs:
         run: CC=gcc cargo build --release --target x86_64-unknown-linux-gnu
 
       - name: Build release (aarch64)
-        run: CC=aarch64-linux-gnu-gcc cargo build --release --target aarch64-unknown-linux-gnu
+        run: CC=aarch64-linux-gnu-gcc RUSTFLAGS='-Clinker=aarch64-linux-gnu-gcc' cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Upload release binary (x86_64)
         uses: actions/upload-artifact@v4
