@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.1.2...v0.2.0) (2026-01-25)
+
+
+### Features
+
+* update Rust to latest stable 1.92 ([cfbbe3a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/cfbbe3a8bb3d279778125efd3fd149767cdb07b2))
+
 ## [0.1.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.1.1...v0.1.2) (2026-01-25)
 
 
