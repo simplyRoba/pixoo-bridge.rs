@@ -3,7 +3,8 @@ FROM rust:1.92-slim as builder-amd64
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
-RUN cargo build --release --target x86_64-unknown-linux-gnu
+RUN rustup target add x86_64-unknown-linux-gnu && \
+    cargo build --release --target x86_64-unknown-linux-gnu
 
 FROM rust:1.92-slim as builder-arm64
 
