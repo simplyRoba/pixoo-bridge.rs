@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.2...v0.2.3) (2026-01-25)
+
+
+### Bug Fixes
+
+* trigger release ([2ca9d1d](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2ca9d1da82769b734aa188fccdeb41a6b519438c))
+
 ## [0.2.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.1...v0.2.2) (2026-01-25)
 
 
