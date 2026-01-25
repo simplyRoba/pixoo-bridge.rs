@@ -18,4 +18,4 @@ EXPOSE 8080
 
 USER 1000:1000
 
-ENTRYPOINT ["pixoo-bridge"]
+CMD ["pixoo-bridge"]
