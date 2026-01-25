@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.1...v0.2.2) (2026-01-25)
+
+
+### Bug Fixes
+
+* install arm64 target in Docker build ([#15](https://github.com/simplyRoba/pixoo-bridge.rs/issues/15)) ([f2c4163](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f2c4163a0f1cbf162de729c761baebfc9f161c62))
+
 ## [0.2.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.0...v0.2.1) (2026-01-25)
 
 
