@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.3...v0.2.4) (2026-01-25)
+
+
+### Bug Fixes
+
+* install amd64 target before build ([#19](https://github.com/simplyRoba/pixoo-bridge.rs/issues/19)) ([e96b628](https://github.com/simplyRoba/pixoo-bridge.rs/commit/e96b62885e834496c21a7f6d6be6c82e9f85aaa1))
+
 ## [0.2.3](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.2...v0.2.3) (2026-01-25)
 
 
