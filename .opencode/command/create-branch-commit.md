@@ -12,7 +12,7 @@ description: Create a feature branch from main and commit changes with a convent
 - Stop without pushing—branch and commit remain local unless an explicit push request follows.
 
 **Steps**
-1. Run `git switch main && git pull` to ensure the base branch is current.
+1. Run `git switch main` and attempt `git pull` to ensure the base branch is current—if pull fails (e.g., due to auth), proceed anyway after noting the state.
 2. Create the feature branch using a descriptive name aligned to the change (for example `feat/target-install`).
 3. Stage the updated files (e.g., `git add <files>`).
 4. Commit with the agreed conventional commit message, such as `git commit -m "build: install amd64 target before build"`.
