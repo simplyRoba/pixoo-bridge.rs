@@ -19,6 +19,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
+
+      - name: Install cross compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Add targets
+        run: |
+          rustup target add x86_64-unknown-linux-gnu
+          rustup target add aarch64-unknown-linux-gnu
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -38,13 +49,24 @@ jobs:
       - name: Run tests
         run: cargo test
 
-      - name: Build release
-        run: cargo build --release
+      - name: Build release (x86_64)
+        run: CC=gcc cargo build --release --target x86_64-unknown-linux-gnu
 
-      - name: Upload release binary
+      - name: Build release (aarch64)
+        run: CC=aarch64-linux-gnu-gcc cargo build --release --target aarch64-unknown-linux-gnu
+
+      - name: Upload release binary (x86_64)
         uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main'
         with:
-          name: pixoo-bridge
-          path: target/release/pixoo-bridge
+          name: pixoo-bridge-x86_64
+          path: target/x86_64-unknown-linux-gnu/release/pixoo-bridge
+          retention-days: 7
+
+      - name: Upload release binary (aarch64)
+        uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: pixoo-bridge-aarch64
+          path: target/aarch64-unknown-linux-gnu/release/pixoo-bridge
           retention-days: 7
