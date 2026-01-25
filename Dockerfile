@@ -3,7 +3,10 @@ FROM rust:1.92-slim as builder-amd64
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
-RUN rustup target add x86_64-unknown-linux-gnu && \
+RUN apt-get update && apt-get install -y gcc-x86-64-linux-gnu && \
+    rustup target add x86_64-unknown-linux-gnu && \
+    CC_x86_64_unknown_linux_gnu=x86_64-linux-gnu-gcc \
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc \
     cargo build --release --target x86_64-unknown-linux-gnu
 
 FROM rust:1.92-slim as builder-arm64
