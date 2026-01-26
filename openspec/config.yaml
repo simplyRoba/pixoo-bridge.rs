@@ -2,8 +2,8 @@ schema: spec-driven
 
 context: |
   Rust/cargo single-crate HTTP bridge to the Pixoo matrix, shipped as a minimal Docker image with
-  rustfmt/clippy guardrails. Deploy via GHCR/release-please from protected main; run `rustfmt` +
-  `cargo test` locally before committing. Expect Pixoo's proprietary HTTP/UDP API to misbehave
+  rustfmt/clippy guardrails. Deploy via GHCR/release-please from protected main; run `rustfmt`,
+  `cargo clippy`, and `cargo test` locally before committing. Expect Pixoo's proprietary HTTP/UDP API to misbehave
   (unfriendly endpoints, inconsistent acknowledgements, flaky networking), so keep the HTTP layer
   thin, push framing/retries into dedicated modules, and plan simple backoff strategies. Capture
   only delta requirements (ADDED/MODIFIED/REMOVED) so `openspec/specs/` stays lean as the source of truth.
@@ -21,5 +21,5 @@ rules:
     - "Leverage Rust’s type system to enforce correctness and keep HTTP interactions explicit."
   tasks:
     - "Create branches off main for the change; never merge or push to main."
-    - "Include a final task to run `cargo fmt`, `cargo test`, and `openspec verify` (or `/opsx:verify`) before archiving so implementation matches the artifacts."
+    - "Include a final task to run `cargo fmt`, `cargo clippy`, and `cargo test` before archiving so implementation matches the artifacts."
     - "After implementing features, revisit README.md so it always reflects current capabilities and usage for the enduser. no implementation details."

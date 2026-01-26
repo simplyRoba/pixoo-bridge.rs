@@ -5,7 +5,7 @@
 
 ## Review expectations
 - Treat every change as pending until a human explicitly reviews it; nothing merges without that approval.
-- Before requesting review, run `cargo fmt`, `cargo test`, and `openspec verify` (or `/opsx:verify`) so artifacts and implementation stay in sync.
+- Before requesting review, run `cargo fmt`, `cargo clippy`, and `cargo test` so artifacts and implementation stay in sync.
 
 ## Tooling constraints
 - Rust work stays on the latest stable toolchain via `rustup`; do not depend on nightly-only features or pin a custom channel in `AGENTS.md`.
