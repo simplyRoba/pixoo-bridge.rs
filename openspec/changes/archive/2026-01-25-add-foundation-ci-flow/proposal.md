@@ -12,5 +12,5 @@ The project still lacks a runnable Rust crate and release automation, which bloc
   - `publish-release.yml`: publishes the Docker image to GHCR after a GitHub release is published
 
 ## Impact
-- Affected specs: `bridge-foundation`
+- Affected specs: `core`
 - Affected code: `Cargo.toml`, `src/main.rs`, `.github/workflows/ci.yml`, `.github/workflows/release-please.yml`, `.github/workflows/publish-release.yml`

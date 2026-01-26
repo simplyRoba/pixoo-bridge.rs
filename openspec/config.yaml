@@ -12,9 +12,11 @@ rules:
   proposal:
     - "Pack intent, scope (in/out), and approach into the proposal, mention affected modules/APIs, and tie the plan back to Pixoo constraints."
     - "Keep each change focused on one logical goal and name it descriptively so `openspec list` stays readable."
+    - "State the target spec domain(s) for this change (for example `core`) and ask to confirm if unsure."
   specs:
     - "Describe deltas in ADDED/MODIFIED/REMOVED sections and never rewrite the full spec—refer to existing requirements when modifying."
     - "Use RFC 2119 keywords (SHALL/MUST/SHOULD) and Given/When/Then scenarios to keep requirements testable."
+    - "Prefix delta specs with the chosen domain folder (for example `specs/core/`) and confirm the domain when creating new specs."
   design:
     - "Favor simplicity and minimal dependencies to preserve a small Docker image."
     - "Document error handling, retry/backoff, and fallback behavior for Pixoo’s flaky API while explaining architecture decisions, trade-offs, and alternatives."
