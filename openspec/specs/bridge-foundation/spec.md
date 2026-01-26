@@ -1,8 +1,10 @@
 # bridge-foundation Specification
 
 ## Purpose
-TBD - created by archiving change add-foundation-ci-flow. Update Purpose after archive.
+Define the baseline bridge foundation: a runnable Rust HTTP service layout plus a curated async/dependency set, CI checks, and release/publish automation so downstream Pixoo services can rely on consistent runtime plumbing and workflows without re-implementing the basics.
+
 ## Requirements
+
 ### Requirement: Rust bridge foundation layout
 The repository SHALL define a Rust binary crate rooted at `Cargo.toml` with the canonical `src/main.rs` entry point and supporting modules so the bridge compiles to a runnable HTTP service stub without Pixoo-specific logic yet.
 
@@ -41,4 +43,3 @@ A GitHub Actions workflow located at `.github/workflows/publish-release.yml` SHA
 #### Scenario: Container publishing on release
 - **WHEN** a GitHub release is published
 - **THEN** the workflow builds the Docker image and pushes it to GHCR with the release tag.
-
