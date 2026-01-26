@@ -20,7 +20,6 @@ rules:
     - "Document error handling, retry/backoff, and fallback behavior for Pixoo’s flaky API while explaining architecture decisions, trade-offs, and alternatives."
     - "Leverage Rust’s type system to enforce correctness and keep HTTP interactions explicit."
   tasks:
-    - "Create branches off main per change and keep them short-lived; never merge or push to main without human review."
-    - "Break work into 2-hour-or-less chunks with hierarchical numbering and group related steps."
+    - "Create branches off main for the change; never merge or push to main."
     - "Include a final task to run `cargo fmt`, `cargo test`, and `openspec verify` (or `/opsx:verify`) before archiving so implementation matches the artifacts."
     - "After implementing features, revisit README.md so it always reflects current capabilities and usage."
