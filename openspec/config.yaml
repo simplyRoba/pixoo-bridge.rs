@@ -22,4 +22,4 @@ rules:
   tasks:
     - "Create branches off main for the change; never merge or push to main."
     - "Include a final task to run `cargo fmt`, `cargo test`, and `openspec verify` (or `/opsx:verify`) before archiving so implementation matches the artifacts."
-    - "After implementing features, revisit README.md so it always reflects current capabilities and usage."
+    - "After implementing features, revisit README.md so it always reflects current capabilities and usage for the enduser. no implementation details."
