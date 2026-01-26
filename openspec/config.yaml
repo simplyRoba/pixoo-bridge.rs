@@ -1,0 +1,26 @@
+schema: spec-driven
+
+context: |
+  Rust/cargo single-crate HTTP bridge to the Pixoo matrix, shipped as a minimal Docker image with
+  rustfmt/clippy guardrails. Deploy via GHCR/release-please from protected main; run `rustfmt` +
+  `cargo test` locally before committing. Expect Pixoo's proprietary HTTP/UDP API to misbehave
+  (unfriendly endpoints, inconsistent acknowledgements, flaky networking), so keep the HTTP layer
+  thin, push framing/retries into dedicated modules, and plan simple backoff strategies. Capture
+  only delta requirements (ADDED/MODIFIED/REMOVED) so `openspec/specs/` stays lean as the source of truth.
+
+rules:
+  proposal:
+    - "Pack intent, scope (in/out), and approach into the proposal, mention affected modules/APIs, and tie the plan back to Pixoo constraints."
+    - "Keep each change focused on one logical goal and name it descriptively so `openspec list` stays readable."
+  specs:
+    - "Describe deltas in ADDED/MODIFIED/REMOVED sections and never rewrite the full spec—refer to existing requirements when modifying."
+    - "Use RFC 2119 keywords (SHALL/MUST/SHOULD) and Given/When/Then scenarios to keep requirements testable."
+  design:
+    - "Favor simplicity and minimal dependencies to preserve a small Docker image."
+    - "Document error handling, retry/backoff, and fallback behavior for Pixoo’s flaky API while explaining architecture decisions, trade-offs, and alternatives."
+    - "Leverage Rust’s type system to enforce correctness and keep HTTP interactions explicit."
+  tasks:
+    - "Create branches off main per change and keep them short-lived; never merge or push to main without human review."
+    - "Break work into 2-hour-or-less chunks with hierarchical numbering and group related steps."
+    - "Include a final task to run `cargo fmt`, `cargo test`, and `openspec verify` (or `/opsx:verify`) before archiving so implementation matches the artifacts."
+    - "After implementing features, revisit README.md so it always reflects current capabilities and usage."
