@@ -19,12 +19,12 @@ The bridge SHALL read `PIXOO_BRIDGE_HEALTH_FORWARD` to control whether the healt
 - **THEN** the bridge responds with HTTP 200 without contacting the Pixoo device
 
 ### Requirement: Forwarded health behavior
-When health forwarding is enabled, the bridge SHALL issue a Pixoo GET `/get` request and treat any non-200 status or invalid response as unhealthy.
+When health forwarding is enabled, the bridge SHALL issue a Pixoo GET `/get` request and treat any non-200 status as unhealthy.
 
 #### Scenario: Pixoo health success
-- **WHEN** the Pixoo device responds to `GET /get` with HTTP 200 and valid JSON
+- **WHEN** the Pixoo device responds to `GET /get` with HTTP 200
 - **THEN** the bridge responds to `GET /health` with HTTP 200 and `{ "status": "ok" }`
 
 #### Scenario: Pixoo health failure
-- **WHEN** the Pixoo device responds to `GET /get` with a non-200 status or invalid JSON
+- **WHEN** the Pixoo device responds to `GET /get` with a non-200 status
 - **THEN** the bridge responds to `GET /health` with HTTP 503

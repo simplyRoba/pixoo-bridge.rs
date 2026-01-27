@@ -88,7 +88,16 @@ mod tests {
     use axum::http::Request;
     use httpmock::Method::GET;
     use httpmock::MockServer;
+    use std::sync::{Mutex, OnceLock};
     use tower::util::ServiceExt;
+
+    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
+        static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
+        ENV_MUTEX
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("lock")
+    }
 
     #[tokio::test]
     async fn health_ok_when_forwarding_disabled() {
@@ -120,7 +129,7 @@ mod tests {
         let server = MockServer::start_async().await;
         let mock = server.mock(|when, then| {
             when.method(GET).path("/get");
-            then.status(200).body(r#"{}"#);
+            then.status(200);
         });
 
         let client = PixooClient::new(server.base_url()).expect("client");
@@ -141,7 +150,54 @@ mod tests {
             .expect("response");
 
         assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body");
+        assert_eq!(body, r#"{"status":"ok"}"#);
         mock.assert();
+    }
+
+    #[tokio::test]
+    async fn health_forwarding_enabled_by_default() {
+        let _guard = env_lock();
+        let original = env::var("PIXOO_BRIDGE_HEALTH_FORWARD").ok();
+        unsafe {
+            env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD");
+        }
+
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/get");
+            then.status(200);
+        });
+
+        let state = AppState {
+            health_forward: read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true),
+            pixoo_client: Some(PixooClient::new(server.base_url()).expect("client")),
+        };
+        let app = build_app(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        mock.assert();
+
+        match original {
+            Some(value) => unsafe {
+                env::set_var("PIXOO_BRIDGE_HEALTH_FORWARD", value);
+            },
+            None => unsafe {
+                env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD");
+            },
+        }
     }
 
     #[tokio::test]
@@ -149,7 +205,7 @@ mod tests {
         let server = MockServer::start_async().await;
         let mock = server.mock(|when, then| {
             when.method(GET).path("/get");
-            then.status(500).body("oops");
+            then.status(500);
         });
 
         let client = PixooClient::new(server.base_url()).expect("client");

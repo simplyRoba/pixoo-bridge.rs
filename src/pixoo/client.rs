@@ -132,15 +132,12 @@ impl PixooClient {
         let response = self.http.get(&self.get_url).send().await?;
 
         let status = response.status();
-        let body = response.text().await?;
 
         if !status.is_success() {
             return Err(PixooError::HttpStatus(status.as_u16()));
         }
 
-        serde_json::from_str::<Value>(&body)
-            .map(|_| ())
-            .map_err(|err| PixooError::InvalidResponse(err.to_string()))
+        Ok(())
     }
 }
 
