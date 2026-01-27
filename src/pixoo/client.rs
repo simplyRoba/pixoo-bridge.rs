@@ -9,7 +9,7 @@ pub type PixooResponse = Map<String, Value>;
 
 #[derive(Debug, Clone)]
 pub struct PixooClient {
-    base_url: String,
+    post_url: String,
     get_url: String,
     http: reqwest::Client,
     retries: usize,
@@ -19,6 +19,12 @@ pub struct PixooClient {
 impl PixooClient {
     pub fn new(base_url: impl Into<String>) -> Result<Self, PixooError> {
         let base_url = base_url.into();
+        let post_url = reqwest::Url::parse(&base_url)
+            .map_err(|err| PixooError::InvalidBaseUrl(err.to_string()))
+            .map(|mut url| {
+                url.set_path("/post");
+                url.to_string()
+            })?;
         let get_url = reqwest::Url::parse(&base_url)
             .map_err(|err| PixooError::InvalidBaseUrl(err.to_string()))
             .map(|mut url| {
@@ -30,7 +36,7 @@ impl PixooClient {
             .build()?;
 
         Ok(Self {
-            base_url,
+            post_url,
             get_url,
             http,
             retries: 2,
@@ -40,7 +46,7 @@ impl PixooClient {
 
     pub fn from_ip(ip: impl Into<String>) -> Result<Self, PixooError> {
         let ip = ip.into();
-        let base_url = format!("http://{ip}/post");
+        let base_url = format!("http://{ip}");
         Self::new(base_url)
     }
 
@@ -121,7 +127,7 @@ impl PixooClient {
     ) -> Result<PixooResponse, PixooError> {
         let response = self
             .http
-            .post(&self.base_url)
+            .post(&self.post_url)
             .header(CONTENT_TYPE, "application/json")
             .json(payload)
             .send()
@@ -335,7 +341,7 @@ mod tests {
             then.status(503).body(r#"{"error_code":0}"#);
         });
 
-        let client = PixooClient::new(server.url("/post"))
+        let client = PixooClient::new(server.base_url())
             .expect("client")
             .with_retry_policy(0, Duration::from_millis(10));
         let err = client
@@ -450,7 +456,7 @@ mod tests {
                 .body(r#"{"error_code":0}"#);
         });
 
-        let client = PixooClient::new(server.url("/post")).expect("client");
+        let client = PixooClient::new(server.base_url()).expect("client");
         let response = client
             .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
             .await

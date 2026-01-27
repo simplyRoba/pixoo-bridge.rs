@@ -17,9 +17,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init();
 
     let health_forward = read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true);
-    let pixoo_client = env::var("PIXOO_DEVICE_IP")
+    let pixoo_client = env::var("PIXOO_BASE_URL")
         .ok()
-        .and_then(|ip| PixooClient::from_ip(ip).ok());
+        .and_then(|base_url| PixooClient::new(base_url).ok());
     let state = AppState {
         health_forward,
         pixoo_client,
@@ -124,7 +124,7 @@ mod tests {
             then.status(200).body(r#"{}"#);
         });
 
-        let client = PixooClient::new(server.url("/post"))
+        let client = PixooClient::new(server.base_url())
             .expect("client")
             .with_retry_policy(0, Duration::from_millis(10));
         let state = AppState {
@@ -155,7 +155,7 @@ mod tests {
             then.status(500).body("oops");
         });
 
-        let client = PixooClient::new(server.url("/post"))
+        let client = PixooClient::new(server.base_url())
             .expect("client")
             .with_retry_policy(0, Duration::from_millis(10));
         let state = AppState {

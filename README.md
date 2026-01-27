@@ -15,7 +15,7 @@ The bridge exposes `GET /health` for container probes. On success it returns HTT
 
 Environment variables:
 - `PIXOO_BRIDGE_HEALTH_FORWARD`: `true`/`false`, defaults to `true`.
-- `PIXOO_DEVICE_IP`: IP address of the Pixoo device used for health forwarding.
+- `PIXOO_BASE_URL`: Base URL for the Pixoo device (for example `http://<ip>`) used for health forwarding.
 
 ## Contributing
 
