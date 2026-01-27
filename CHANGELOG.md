@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.4...v0.3.0) (2026-01-27)
+
+
+### Features
+
+* add dependabot config ([#22](https://github.com/simplyRoba/pixoo-bridge.rs/issues/22)) ([98aae06](https://github.com/simplyRoba/pixoo-bridge.rs/commit/98aae06673bae08438d6810a51f163d58e0ce064))
+* Add new skills for OpenSpec workflow management ([#29](https://github.com/simplyRoba/pixoo-bridge.rs/issues/29)) ([dbdecf3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/dbdecf34f298c9fe56cb7fdbb84b3b12afb2cd1c))
+* **core:** define core domain for Pixoo bridge with HTTP client and Rust foundation ([bd6c468](https://github.com/simplyRoba/pixoo-bridge.rs/commit/bd6c468fa395cfc7593a70cbafa317c8a7b693a4))
+* pixoo health check ([#34](https://github.com/simplyRoba/pixoo-bridge.rs/issues/34)) ([30f9c44](https://github.com/simplyRoba/pixoo-bridge.rs/commit/30f9c4478f40e9c12a0b6bb83145532282f2d10c))
+* **pixoo:** add HTTP client with command payloads and response validation ([f09588b](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f09588bc3431c02bb283b47d254882e04f0ba514))
+
+
+### Bug Fixes
+
+* **ci:** bump actions/cache from 4 to 5 ([#24](https://github.com/simplyRoba/pixoo-bridge.rs/issues/24)) ([7e8e424](https://github.com/simplyRoba/pixoo-bridge.rs/commit/7e8e424e926ca1b0f430dcdba2e21e3fa08e25be))
+* **ci:** bump actions/checkout from 4 to 6 ([#28](https://github.com/simplyRoba/pixoo-bridge.rs/issues/28)) ([b1441da](https://github.com/simplyRoba/pixoo-bridge.rs/commit/b1441da54e0f118c8211002955a0b370e7dcd88f))
+* **ci:** bump actions/upload-artifact from 4 to 6 ([#27](https://github.com/simplyRoba/pixoo-bridge.rs/issues/27)) ([e4b9aa7](https://github.com/simplyRoba/pixoo-bridge.rs/commit/e4b9aa7b0403e6e5e59c8889c52b9fa81d901d75))
+* **ci:** bump docker/build-push-action from 5 to 6 ([#25](https://github.com/simplyRoba/pixoo-bridge.rs/issues/25)) ([1aeb97a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/1aeb97aa3d1e01fe45c49e185a099d4df34e3dd2))
+* **deps:** bump axum from 0.7.9 to 0.8.8 ([#26](https://github.com/simplyRoba/pixoo-bridge.rs/issues/26)) ([b68a10d](https://github.com/simplyRoba/pixoo-bridge.rs/commit/b68a10d52aea09a4ccf83b0072c0c85696a1d04a))
+* **deps:** bump httpmock from 0.7.0 to 0.8.2 ([5c7f858](https://github.com/simplyRoba/pixoo-bridge.rs/commit/5c7f858f26023de5627cf2c282ed6c21b891907b))
+* **docs:** update review and task instructions to include `cargo clippy` ([ef5ecd5](https://github.com/simplyRoba/pixoo-bridge.rs/commit/ef5ecd5af0ecd2d9fafce9b5f3b6d52035e386e0))
+* **spec:** simplify task rules for branch management and work chunking ([88e9b32](https://github.com/simplyRoba/pixoo-bridge.rs/commit/88e9b32eef9ef276c617f8ba558d04e0594b3007))
+* **spec:** update Purpose section to define baseline bridge foundation ([1223a97](https://github.com/simplyRoba/pixoo-bridge.rs/commit/1223a97715571c6364f02ab367f562d84bad30ab))
+
 ## [0.2.4](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.3...v0.2.4) (2026-01-25)
 
 
