@@ -23,6 +23,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 ARG TARGETARCH
@@ -37,6 +38,9 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     fi
 
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -fsS http://localhost:8080/health || exit 1
 
 USER 1000:1000
 

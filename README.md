@@ -9,6 +9,17 @@ pixoo-bridge.rs consumes the Pixoo LED matrix's proprietary protocol and re‑ex
 
 This project is under heavy development and does not provide user-facing functionality yet. It aims to become a simple bridge for controlling a Pixoo matrix without vendor tooling.
 
+## Configuration
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `PIXOO_BASE_URL` | yes | - | Base URL for the Pixoo device, for example `http://<ip>`. |
+| `PIXOO_BRIDGE_HEALTH_FORWARD` | no | `true` | `true`/`false` to control whether `/health` cascades to the device. |
+
+## API
+
+- `GET /health`: Returns HTTP 200 with `{"status":"ok"}` when healthy. Returns HTTP 503 when forwarding is enabled and the Pixoo device health check fails.
+
 ## Contributing
 
 If you want to build or contribute, this project targets a minimal Rust service that bridges Pixoo device protocols to a more usable HTTP interface.

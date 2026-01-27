@@ -34,3 +34,24 @@ impl From<String> for PixooCommand {
         PixooCommand::Raw(value)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn raw_command_passthrough() {
+        let command = PixooCommand::Raw("Custom/Command".to_string());
+        assert_eq!(command.as_str(), "Custom/Command");
+        assert_eq!(command.to_string(), "Custom/Command");
+    }
+
+    #[test]
+    fn from_str_and_string_create_raw() {
+        let from_str: PixooCommand = "Custom/Command".into();
+        let from_string: PixooCommand = "Custom/Command".to_string().into();
+
+        assert_eq!(from_str, PixooCommand::Raw("Custom/Command".to_string()));
+        assert_eq!(from_string, PixooCommand::Raw("Custom/Command".to_string()));
+    }
+}
