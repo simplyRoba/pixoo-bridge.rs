@@ -9,13 +9,16 @@ pixoo-bridge.rs consumes the Pixoo LED matrix's proprietary protocol and re‑ex
 
 This project is under heavy development and does not provide user-facing functionality yet. It aims to become a simple bridge for controlling a Pixoo matrix without vendor tooling.
 
-### Healthcheck
+## Configuration
 
-The bridge exposes `GET /health` for container probes. On success it returns HTTP 200 with `{"status":"ok"}`. When `PIXOO_BRIDGE_HEALTH_FORWARD` is enabled (default), the bridge will call the Pixoo device `/get` endpoint and return HTTP 503 if the device is unhealthy.
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `PIXOO_BASE_URL` | yes | - | Base URL for the Pixoo device, for example `http://<ip>`. |
+| `PIXOO_BRIDGE_HEALTH_FORWARD` | no | `true` | `true`/`false` to control whether `/health` cascades to the device. |
 
-Environment variables:
-- `PIXOO_BRIDGE_HEALTH_FORWARD`: `true`/`false`, defaults to `true`.
-- `PIXOO_BASE_URL`: Base URL for the Pixoo device (for example `http://<ip>`) used for health forwarding.
+## API
+
+- `GET /health`: Returns HTTP 200 with `{"status":"ok"}` when healthy. Returns HTTP 503 when forwarding is enabled and the Pixoo device health check fails.
 
 ## Contributing
 
