@@ -10,3 +10,12 @@ The client SHALL send Pixoo commands via HTTP POST to a configured device IP and
 #### Scenario: Get health from device
 - **WHEN** the caller requests a Pixoo health check
 - **THEN** the client issues an HTTP GET to the device `/get` endpoint
+
+## ADDED Requirements
+
+### Requirement: Container healthcheck
+The Docker image SHALL define a container healthcheck that calls `GET /health` on the bridge.
+
+#### Scenario: Container healthcheck configured
+- **WHEN** the Docker image is built
+- **THEN** the container healthcheck invokes the bridge `/health` endpoint
