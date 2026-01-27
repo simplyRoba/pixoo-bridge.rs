@@ -11,10 +11,10 @@ Pixoo devices expose an undocumented `/get` endpoint that can be used to verify 
 ## Capabilities
 
 ### New Capabilities
-- `healthcheck-forwarding`: Bridge healthcheck endpoint that can optionally proxy device health.
+- `api`: Bridge HTTP healthcheck behavior for downstream clients.
 
 ### Modified Capabilities
-- `core`: Pixoo HTTP client requirements expand to include `/get` healthcheck calls and bridge healthcheck behavior. (Target domain: core; please confirm. confirmed!)
+- `core`: Pixoo HTTP client requirements expand to include `/get` healthcheck calls.
 
 ## Impact
 

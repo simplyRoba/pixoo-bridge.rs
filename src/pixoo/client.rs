@@ -10,6 +10,7 @@ pub type PixooResponse = Map<String, Value>;
 #[derive(Debug, Clone)]
 pub struct PixooClient {
     base_url: String,
+    get_url: String,
     http: reqwest::Client,
     retries: usize,
     backoff: Duration,
@@ -17,12 +18,20 @@ pub struct PixooClient {
 
 impl PixooClient {
     pub fn new(base_url: impl Into<String>) -> Result<Self, PixooError> {
+        let base_url = base_url.into();
+        let get_url = reqwest::Url::parse(&base_url)
+            .map_err(|err| PixooError::InvalidBaseUrl(err.to_string()))
+            .map(|mut url| {
+                url.set_path("/get");
+                url.to_string()
+            })?;
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .build()?;
 
         Ok(Self {
-            base_url: base_url.into(),
+            base_url,
+            get_url,
             http,
             retries: 2,
             backoff: Duration::from_millis(200),
@@ -61,6 +70,10 @@ impl PixooClient {
         self.execute_with_retry(&payload).await
     }
 
+    pub async fn health_check(&self) -> Result<(), PixooError> {
+        self.execute_health_with_retry().await
+    }
+
     async fn execute_with_retry(
         &self,
         payload: &Map<String, Value>,
@@ -70,6 +83,25 @@ impl PixooClient {
         loop {
             match self.execute_once(payload).await {
                 Ok(response) => return Ok(response),
+                Err(err) => {
+                    if attempt >= self.retries || !is_retriable(&err) {
+                        return Err(err);
+                    }
+
+                    attempt += 1;
+                    let delay = self.backoff * attempt as u32;
+                    sleep(delay).await;
+                }
+            }
+        }
+    }
+
+    async fn execute_health_with_retry(&self) -> Result<(), PixooError> {
+        let mut attempt = 0;
+
+        loop {
+            match self.execute_health_once().await {
+                Ok(()) => return Ok(()),
                 Err(err) => {
                     if attempt >= self.retries || !is_retriable(&err) {
                         return Err(err);
@@ -103,6 +135,21 @@ impl PixooClient {
         }
 
         parse_response(&body)
+    }
+
+    async fn execute_health_once(&self) -> Result<(), PixooError> {
+        let response = self.http.get(&self.get_url).send().await?;
+
+        let status = response.status();
+        let body = response.text().await?;
+
+        if !status.is_success() {
+            return Err(PixooError::HttpStatus(status.as_u16()));
+        }
+
+        serde_json::from_str::<Value>(&body)
+            .map(|_| ())
+            .map_err(|err| PixooError::InvalidResponse(err.to_string()))
     }
 }
 
