@@ -44,22 +44,7 @@ impl PixooClient {
         })
     }
 
-    pub fn from_ip(ip: impl Into<String>) -> Result<Self, PixooError> {
-        let ip = ip.into();
-        let base_url = format!("http://{ip}");
-        Self::new(base_url)
-    }
-
-    pub fn with_retry_policy(mut self, retries: usize, backoff: Duration) -> Self {
-        self.retries = retries;
-        self.backoff = backoff;
-        self
-    }
-
-    pub fn build_payload(
-        command: &PixooCommand,
-        mut args: Map<String, Value>,
-    ) -> Map<String, Value> {
+    fn build_payload(command: &PixooCommand, mut args: Map<String, Value>) -> Map<String, Value> {
         args.insert(
             "Command".to_string(),
             Value::String(command.as_str().to_string()),
@@ -219,6 +204,16 @@ mod tests {
     use tokio::task::yield_now;
     use tokio::time::{advance, pause, Duration as TokioDuration};
 
+    fn with_retry_policy(
+        mut client: PixooClient,
+        retries: usize,
+        backoff: Duration,
+    ) -> PixooClient {
+        client.retries = retries;
+        client.backoff = backoff;
+        client
+    }
+
     #[derive(Clone)]
     struct SequenceState {
         statuses: Arc<Vec<StatusCode>>,
@@ -341,9 +336,11 @@ mod tests {
             then.status(503).body(r#"{"error_code":0}"#);
         });
 
-        let client = PixooClient::new(server.base_url())
-            .expect("client")
-            .with_retry_policy(0, Duration::from_millis(10));
+        let client = with_retry_policy(
+            PixooClient::new(server.base_url()).expect("client"),
+            0,
+            Duration::from_millis(10),
+        );
         let err = client
             .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
             .await
@@ -396,9 +393,11 @@ mod tests {
         ])
         .await;
 
-        let client = PixooClient::new(base_url)
-            .expect("client")
-            .with_retry_policy(2, Duration::from_millis(200));
+        let client = with_retry_policy(
+            PixooClient::new(base_url).expect("client"),
+            2,
+            Duration::from_millis(200),
+        );
         let task = tokio::spawn(async move {
             client
                 .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())

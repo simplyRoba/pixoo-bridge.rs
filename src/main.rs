@@ -88,7 +88,6 @@ mod tests {
     use axum::http::Request;
     use httpmock::Method::GET;
     use httpmock::MockServer;
-    use std::time::Duration;
     use tower::util::ServiceExt;
 
     #[tokio::test]
@@ -124,9 +123,7 @@ mod tests {
             then.status(200).body(r#"{}"#);
         });
 
-        let client = PixooClient::new(server.base_url())
-            .expect("client")
-            .with_retry_policy(0, Duration::from_millis(10));
+        let client = PixooClient::new(server.base_url()).expect("client");
         let state = AppState {
             health_forward: true,
             pixoo_client: Some(client),
@@ -155,9 +152,7 @@ mod tests {
             then.status(500).body("oops");
         });
 
-        let client = PixooClient::new(server.base_url())
-            .expect("client")
-            .with_retry_policy(0, Duration::from_millis(10));
+        let client = PixooClient::new(server.base_url()).expect("client");
         let state = AppState {
             health_forward: true,
             pixoo_client: Some(client),
@@ -175,6 +170,6 @@ mod tests {
             .expect("response");
 
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
-        mock.assert();
+        mock.assert_calls(3);
     }
 }
