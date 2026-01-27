@@ -153,9 +153,62 @@ fn parse_error_code(value: &Value) -> Result<i64, PixooError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::extract::State;
+    use axum::http::StatusCode;
+    use axum::routing::post;
+    use axum::Router;
     use httpmock::Method::POST;
     use httpmock::MockServer;
     use serde_json::json;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::net::TcpListener;
+    use tokio::task::yield_now;
+    use tokio::time::{advance, pause, Duration as TokioDuration};
+
+    #[derive(Clone)]
+    struct SequenceState {
+        statuses: Arc<Vec<StatusCode>>,
+        counter: Arc<AtomicUsize>,
+    }
+
+    async fn sequence_handler(State(state): State<SequenceState>) -> (StatusCode, String) {
+        let index = state.counter.fetch_add(1, Ordering::SeqCst);
+        let status = state
+            .statuses
+            .get(index)
+            .copied()
+            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        (status, r#"{"error_code":0}"#.to_string())
+    }
+
+    async fn start_sequence_server(statuses: Vec<StatusCode>) -> (String, Arc<AtomicUsize>) {
+        let counter = Arc::new(AtomicUsize::new(0));
+        let state = SequenceState {
+            statuses: Arc::new(statuses),
+            counter: counter.clone(),
+        };
+        let app = Router::new()
+            .route("/post", post(sequence_handler))
+            .with_state(state);
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("server");
+        });
+
+        (format!("http://{addr}/post"), counter)
+    }
+
+    async fn wait_for_count(counter: &AtomicUsize, expected: usize) {
+        for _ in 0..20 {
+            if counter.load(Ordering::SeqCst) == expected {
+                return;
+            }
+            yield_now().await;
+        }
+        assert_eq!(counter.load(Ordering::SeqCst), expected);
+    }
 
     #[test]
     fn builds_payload_with_command_and_args() {
@@ -201,6 +254,141 @@ mod tests {
             PixooError::DeviceError { code, .. } => assert_eq!(code, 12),
             other => panic!("unexpected error: {other}"),
         }
+    }
+
+    #[test]
+    fn rejects_invalid_responses() {
+        let err = parse_response("not-json").expect_err("expected invalid response");
+        assert!(matches!(err, PixooError::InvalidResponse(_)));
+
+        let err = parse_response(&json!({ "Status": 1 }).to_string())
+            .expect_err("expected missing error_code");
+        assert!(matches!(err, PixooError::MissingErrorCode));
+
+        let err = parse_response(&json!(true).to_string()).expect_err("expected non-object error");
+        assert!(matches!(err, PixooError::InvalidResponse(_)));
+    }
+
+    #[test]
+    fn parses_error_code_from_strings() {
+        let response = parse_response(&json!({ "error_code": "0" }).to_string())
+            .expect("string error_code should parse");
+        assert!(response.is_empty());
+
+        let err = parse_response(&json!({ "error_code": "abc" }).to_string())
+            .expect_err("expected invalid error_code");
+        assert!(matches!(err, PixooError::InvalidErrorCode(_)));
+    }
+
+    #[tokio::test]
+    async fn returns_http_status_error_on_failure() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(POST).path("/post");
+            then.status(503).body(r#"{"error_code":0}"#);
+        });
+
+        let client = PixooClient::new(server.url("/post"))
+            .expect("client")
+            .with_retry_policy(0, Duration::from_millis(10));
+        let err = client
+            .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+            .await
+            .expect_err("expected http status error");
+
+        assert!(matches!(err, PixooError::HttpStatus(503)));
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn retries_on_server_errors_until_success() {
+        let (base_url, counter) = start_sequence_server(vec![
+            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::OK,
+        ])
+        .await;
+
+        let client = PixooClient::new(base_url).expect("client");
+        let response = client
+            .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+            .await
+            .expect("request should succeed");
+
+        assert!(response.is_empty());
+        assert_eq!(counter.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn does_not_retry_on_client_errors() {
+        let (base_url, counter) = start_sequence_server(vec![StatusCode::BAD_REQUEST]).await;
+
+        let client = PixooClient::new(base_url).expect("client");
+        let err = client
+            .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+            .await
+            .expect_err("expected http status error");
+
+        assert!(matches!(err, PixooError::HttpStatus(400)));
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn backoff_increments_between_retries() {
+        pause();
+        let (base_url, counter) = start_sequence_server(vec![
+            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::OK,
+        ])
+        .await;
+
+        let client = PixooClient::new(base_url)
+            .expect("client")
+            .with_retry_policy(2, Duration::from_millis(200));
+        let task = tokio::spawn(async move {
+            client
+                .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+                .await
+        });
+
+        // Wait for the initial request to hit the server before advancing time.
+        wait_for_count(&counter, 1).await;
+
+        // Confirm we have not reached the first backoff yet.
+        advance(TokioDuration::from_millis(199)).await;
+        for _ in 0..5 {
+            yield_now().await;
+        }
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
+
+        // Advance time in tiny steps until the first retry (200ms) fires.
+        let mut advanced = 0u64;
+        while counter.load(Ordering::SeqCst) < 2 && advanced < 300 {
+            advance(TokioDuration::from_millis(1)).await;
+            advanced += 1;
+            yield_now().await;
+        }
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+
+        // Confirm we have not reached the second backoff yet.
+        advance(TokioDuration::from_millis(399)).await;
+        for _ in 0..5 {
+            yield_now().await;
+        }
+        assert_eq!(counter.load(Ordering::SeqCst), 2);
+
+        // Advance time in tiny steps until the second retry (400ms) fires.
+        let mut advanced = 0u64;
+        while counter.load(Ordering::SeqCst) < 3 && advanced < 600 {
+            advance(TokioDuration::from_millis(1)).await;
+            advanced += 1;
+            yield_now().await;
+        }
+        assert_eq!(counter.load(Ordering::SeqCst), 3);
+
+        let response = task.await.expect("join").expect("response");
+        assert!(response.is_empty());
     }
 
     #[tokio::test]
