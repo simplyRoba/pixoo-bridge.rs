@@ -26,4 +26,4 @@ Run `cargo fmt && cargo clippy && cargo test` before committing. Follow conventi
 
 ---
 
-**This project is developed with AI assistance.**
+**This project is developed spec driven with AI assistance, reviewed by a critical human.**
