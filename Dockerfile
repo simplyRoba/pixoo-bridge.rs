@@ -1,4 +1,4 @@
-FROM rust:1.92-slim as builder-amd64
+FROM rust:1.92-slim AS builder-amd64
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y gcc-x86-64-linux-gnu && \
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-linux-gnu-gcc \
     cargo build --release --target x86_64-unknown-linux-gnu
 
-FROM rust:1.92-slim as builder-arm64
+FROM rust:1.92-slim AS builder-arm64
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
