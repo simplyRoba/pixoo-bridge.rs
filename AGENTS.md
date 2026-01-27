@@ -12,7 +12,10 @@
 - Before requesting review, run `cargo fmt`, `cargo clippy`, and `cargo test` so artifacts and implementation stay in sync.
 
 ## Clarifications
-- When requirements or intent are unclear, asking for information is mandatory and preferred over proceeding with assumptions.
+- When requirements or intent are unclear, asking for information is mandatory and preferred over proceeding with assumptions. Use **AskUserQuestion tool** if feasable.
+
+## Testing notes
+- Test names should describe the state under test, not the desired result; assertions already express expected outcomes.
 
 ## Tooling constraints
 - Rust work stays on the latest stable toolchain via `rustup`; do not depend on nightly-only features or pin a custom channel in `AGENTS.md`.
