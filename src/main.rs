@@ -143,13 +143,13 @@ mod tests {
         let _guard = env_lock();
         let original = env::var(key).ok();
         match value {
-            Some(v) => env::set_var(key, v),
-            None => env::remove_var(key),
+            Some(v) => unsafe { env::set_var(key, v) },
+            None => unsafe { env::remove_var(key) },
         }
         let result = f();
         match original {
-            Some(v) => env::set_var(key, v),
-            None => env::remove_var(key),
+            Some(v) => unsafe { env::set_var(key, v) },
+            None => unsafe { env::remove_var(key) },
         }
         result
     }
@@ -214,18 +214,17 @@ mod tests {
 
     #[tokio::test]
     async fn health_forwarding_enabled_by_default() {
-        let _guard = env_lock();
-        let original = env::var("PIXOO_BRIDGE_HEALTH_FORWARD").ok();
-        env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD");
-
         let server = MockServer::start_async().await;
         let mock = server.mock(|when, then| {
             when.method(GET).path("/get");
             then.status(200);
         });
 
+        let health_forward = with_env_var("PIXOO_BRIDGE_HEALTH_FORWARD", None, || {
+            read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true)
+        });
         let state = AppState {
-            health_forward: read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true),
+            health_forward,
             pixoo_client: Some(PixooClient::new(server.base_url()).expect("client")),
         };
         let app = build_app(state);
@@ -242,11 +241,6 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         mock.assert();
-
-        match original {
-            Some(value) => env::set_var("PIXOO_BRIDGE_HEALTH_FORWARD", value),
-            None => env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD"),
-        }
     }
 
     #[tokio::test]
