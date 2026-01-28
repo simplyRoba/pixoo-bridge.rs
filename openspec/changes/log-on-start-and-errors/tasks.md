@@ -1,6 +1,6 @@
 ## 1. Logging implementation
 
-- [x] 1.1 Log the sanitized runtime configuration (health forwarding, Pixoo base URL, listener address, retry/backoff policy) when `main()` finishes building the shared state and before serving requests.
+- [x] 1.1 Log the sanitized runtime configuration (health forwarding, Pixoo base URL, listener address) when `main()` finishes building the shared state and before serving requests.
 - [x] 1.2 Emit structured `error!` entries for every Pixoo client failure path (`execute_once`, `execute_health_once`, and any downstream call that returns non-zero `error_code`), tagging HTTP status, device `error_code`, retriable flag, and payload when available.
 - [x] 1.3 Log the health handler failure reason before returning `503 SERVICE_UNAVAILABLE`, referencing the Pixoo error context so operators can triage downstream failures.
 - [x] 1.4 Add the `PIXOO_BRIDGE_LOG_LEVEL` environment variable with a default of `info` as the source of truth for the runtime logging filter so operators can adjust verbosity without rebuilding.

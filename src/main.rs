@@ -27,11 +27,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pixoo_client = base_url
         .as_deref()
         .and_then(|base| PixooClient::new(base).ok());
-    let retry_policy = pixoo_client.as_ref().map(|client| client.retry_policy());
-    let (client_retries, client_backoff_ms) = match retry_policy {
-        Some((retries, backoff)) => (Some(retries), Some(backoff.as_millis())),
-        None => (None, None),
-    };
     let sanitized_base_url = base_url.as_deref().and_then(sanitize_pixoo_url);
     let state = AppState {
         health_forward,
@@ -46,8 +41,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         health_forward,
         pixoo_client = has_pixoo_client,
         sanitized_pixoo_base_url = ?sanitized_base_url,
-        retries = ?client_retries,
-        backoff_ms = ?client_backoff_ms,
         address = %addr,
         "Pixoo bridge configuration loaded"
     );

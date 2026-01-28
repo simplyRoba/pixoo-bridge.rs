@@ -45,10 +45,6 @@ impl PixooClient {
         })
     }
 
-    pub fn retry_policy(&self) -> (usize, Duration) {
-        (self.retries, self.backoff)
-    }
-
     fn build_payload(command: &PixooCommand, mut args: Map<String, Value>) -> Map<String, Value> {
         args.insert(
             "Command".to_string(),

@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Startup logging records runtime configuration
-The bridge SHALL emit an info-level log once at startup that lists the resolved health forwarding flag, the sanitized Pixoo base URL (scheme and host only), and the configured retry/backoff policy so operators know what settings the container began with.
+The bridge SHALL emit an info-level log once at startup that lists the resolved health forwarding flag, the sanitized Pixoo base URL (scheme and host only), and the listener address so operators know what settings the container began with.
 
 #### Scenario: Container starts with health forwarding enabled
 - **WHEN** the service finishes building `AppState` or equivalent and before it accepts HTTP traffic
-- **THEN** it logs an info entry containing `health_forward=true`, the sanitized base URL, the listener address, and the retry/backoff policy values
+- **THEN** it logs an info entry containing `health_forward=true`, the sanitized base URL, and the listener address
 
 ### Requirement: Log level configurable via environment variable
 The bridge SHALL honor `PIXOO_BRIDGE_LOG_LEVEL` by mapping it to the logging framework’s level filter while defaulting to `info` so operators can increase or decrease verbosity without rebuilding the container.
