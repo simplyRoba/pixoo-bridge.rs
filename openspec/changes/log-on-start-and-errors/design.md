@@ -4,11 +4,12 @@ The repo boots a tiny Axum HTTP bridge that already wires `tracing`/`tracing_sub
 
 ## Goals / Non-Goals
 
-**Goals:**
+- **Goals:**
 - Emit an info-level log at startup that states the resolved configuration (health forwarding setting, Pixoo base URL, and timeout policy) without leaking secrets.
 - Log every unexpected error path with structured metadata (error kind, HTTP status, payload, Pixoo error code) so operators can debug failures using container logs instead of needing to reproduce flows.
 - Keep logging dependencies minimal by building on the existing `tracing` instrumentation and the single `axum` binary crate.
 - Allow operators to tune the verbosity via a `PIXOO_BRIDGE_LOG_LEVEL` environment variable that defaults to `info`.
+- Surface notable success events at `debug` level (e.g., health checks or command retries that eventually succeed) so operators can opt-in to richer traces without cluttering standard logs.
 
 **Non-Goals:**
 - Instrumenting a full distributed tracing stack or shipping log aggregation infrastructure.
@@ -21,6 +22,8 @@ The repo boots a tiny Axum HTTP bridge that already wires `tracing`/`tracing_sub
 3. **Surface errors where they originate in the Pixoo client** (`execute_once`, `execute_health_once`, and the `health` handler). Each `Err(PixooError)` will be accompanied by an `error!` log that annotates retriable vs. terminal cases, HTTP status, raw response, and device `error_code` when available. Health handler failures will also log why the bridge responded `SERVICE_UNAVAILABLE`.
 4. **Sanitize logged configuration**: we will log the Pixoo host and scheme but omit query parameters or user info to avoid leaking credentials. If future requirements demand masking extra values, we can centralize sanitization before logging fields.
 5. **Expose log level control**: map `PIXOO_BRIDGE_LOG_LEVEL` to the logging backend so we can upgrade/downgrade verbosity at runtime without rebuilding the container.
+6. **Use debug logs for successes**: keep production verbosity clean by logging only failures and startup info at info/error levels, while allowing debug mode to mention successful health checks or retries that finished cleanly.
+7. **Document README options**: update README.md to describe the supported log levels (e.g., debug/info/warn/error) so operators know what values they can set for `PIXOO_BRIDGE_LOG_LEVEL` and what behavior to expect.
 
 ## Risks / Trade-offs
 

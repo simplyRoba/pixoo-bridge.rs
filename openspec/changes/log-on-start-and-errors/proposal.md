@@ -8,6 +8,7 @@ The bridge container currently starts silently, making it hard to verify that co
 - Emit structured logs for unexpected conditions (invalid responses, HTTP errors, serialization failures) so those failures appear in container logs instead of being swallowed by the HTTP layer.
 - Keep logging lightweight and tied to the existing Rust core runtime so the Docker image and downstream automation stacks can capture everything written to stdout/stderr.
 - Introduce `PIXOO_BRIDGE_LOG_LEVEL` (default `info`) so operators can lower or raise the emitted verbosity without rebuilding the container.
+- Document the available log-level values in the README so operators know how to adjust verbosity (debug/info/warn/error).
 
 ## Capabilities
 
