@@ -1,0 +1,23 @@
+## Why
+
+The bridge container currently starts silently, making it hard to verify that configuration values (device host, timeout, etc.) are what the service is using, and unexpected situations disappear without useful context. Capturing startup details and logging unexpected errors with their metadata improves observability for operators running the Docker image.
+
+## What Changes
+
+- Log the resolved configuration (device endpoint, timeouts, and feature toggles) when the service starts so operators can confirm the runtime settings they rely on.
+- Emit structured logs for unexpected conditions (invalid responses, HTTP errors, serialization failures) so those failures appear in container logs instead of being swallowed by the HTTP layer.
+- Keep logging lightweight and tied to the existing Rust core runtime so the Docker image and downstream automation stacks can capture everything written to stdout/stderr.
+- Introduce `PIXOO_BRIDGE_LOG_LEVEL` (default `info`) so operators can lower or raise the emitted verbosity without rebuilding the container.
+
+## Capabilities
+
+### New Capabilities
+- `startup-and-error-logging` (core): Provide deterministic, contextual logging when the bridge starts and when unexpected errors arise so container logs contain enough information to diagnose failures without inspecting the Pixoo device.
+
+### Modified Capabilities
+- None.
+
+## Impact
+
+- Core HTTP bridge startup path (`src/main.rs` and any logging helpers) must emit these statements.
+- Error-handling helpers need to attach contextual metadata when logging so the logs describe why the failure occurred.

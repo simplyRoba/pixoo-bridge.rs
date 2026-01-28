@@ -4,7 +4,7 @@ description: Create a feature branch from main and commit changes with a convent
 <CreateBranch>
   $ARGUMENTS
 </CreateBranch>
-<!-- OPENSPEC:START -->
+
 **Guardrails**
 - Always sync with the latest `main` before creating a branch and keep commands minimal.
 - Favor the most straightforward branching workflow; do not introduce extra work beyond staging and committing the requested files.
@@ -20,4 +20,3 @@ description: Create a feature branch from main and commit changes with a convent
 
 **Reference**
 - Use `git status` and `git log -1` to verify the branch contains the intended changes.
-<!-- OPENSPEC:END -->
