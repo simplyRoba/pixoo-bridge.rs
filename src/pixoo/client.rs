@@ -4,6 +4,7 @@ use reqwest::header::CONTENT_TYPE;
 use serde_json::{Map, Value};
 use std::time::Duration;
 use tokio::time::sleep;
+use tracing::{debug, error};
 
 pub type PixooResponse = Map<String, Value>;
 
@@ -73,9 +74,19 @@ impl PixooClient {
 
         loop {
             match self.execute_once(payload).await {
-                Ok(response) => return Ok(response),
+                Ok(response) => {
+                    if attempt > 0 {
+                        debug!(
+                            attempts = attempt + 1,
+                            "Pixoo command succeeded after retries"
+                        );
+                    }
+                    return Ok(response);
+                }
                 Err(err) => {
-                    if attempt >= self.retries || !is_retriable(&err) {
+                    let retriable = is_retriable(&err);
+                    if attempt >= self.retries || !retriable {
+                        log_pixoo_error("sending Pixoo command", &err, retriable);
                         return Err(err);
                     }
 
@@ -92,9 +103,19 @@ impl PixooClient {
 
         loop {
             match self.execute_health_once().await {
-                Ok(()) => return Ok(()),
+                Ok(()) => {
+                    if attempt > 0 {
+                        debug!(
+                            attempts = attempt + 1,
+                            "Pixoo health check succeeded after retries"
+                        );
+                    }
+                    return Ok(());
+                }
                 Err(err) => {
-                    if attempt >= self.retries || !is_retriable(&err) {
+                    let retriable = is_retriable(&err);
+                    if attempt >= self.retries || !retriable {
+                        log_pixoo_error("Pixoo health check", &err, retriable);
                         return Err(err);
                     }
 
@@ -183,6 +204,18 @@ fn parse_error_code(value: &Value) -> Result<i64, PixooError> {
             .map_err(|_| PixooError::InvalidErrorCode(value.clone())),
         _ => Err(PixooError::InvalidErrorCode(value.clone())),
     }
+}
+
+fn log_pixoo_error(context: &str, err: &PixooError, retriable: bool) {
+    error!(
+        context = context,
+        error = %err,
+        http_status = ?err.http_status(),
+        error_code = ?err.error_code(),
+        retriable,
+        payload = ?err.payload(),
+        "Pixoo interaction failed"
+    );
 }
 
 #[cfg(test)]

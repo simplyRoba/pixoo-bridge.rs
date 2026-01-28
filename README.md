@@ -15,6 +15,9 @@ This project is under heavy development and does not provide user-facing functio
 | --- | --- | --- | --- |
 | `PIXOO_BASE_URL` | yes | - | Base URL for the Pixoo device, for example `http://<ip>`. |
 | `PIXOO_BRIDGE_HEALTH_FORWARD` | no | `true` | `true`/`false` to control whether `/health` cascades to the device. |
+| `PIXOO_BRIDGE_LOG_LEVEL` | no | `info` | Controls logging verbosity (`debug`, `info`, `warn`, `error`). |
+
+On startup the container logs the resolved configuration (health forwarding flag, sanitized Pixoo base URL, and listener address). Unexpected Pixoo errors are logged with context; set `PIXOO_BRIDGE_LOG_LEVEL=debug` to also see notable successes like health checks or retries that eventually succeed.
 
 ## API
 
