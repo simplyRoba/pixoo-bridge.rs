@@ -1,8 +1,9 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Json, Router};
+use reqwest::Url;
 use serde_json::json;
 use std::{env, net::SocketAddr};
-use tracing::info;
-use tracing_subscriber::fmt::init;
+use tracing::{debug, error, info, warn};
+use tracing_subscriber::filter::LevelFilter;
 
 use pixoo_bridge::pixoo::PixooClient;
 
@@ -14,20 +15,42 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    init();
+    let (max_level, invalid_level) = resolve_log_level();
+    tracing_subscriber::fmt().with_max_level(max_level).init();
+
+    if let Some(raw) = invalid_level {
+        warn!(invalid_level = %raw, "Invalid PIXOO_BRIDGE_LOG_LEVEL, defaulting to info");
+    }
 
     let health_forward = read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true);
-    let pixoo_client = env::var("PIXOO_BASE_URL")
-        .ok()
-        .and_then(|base_url| PixooClient::new(base_url).ok());
+    let base_url = env::var("PIXOO_BASE_URL").ok();
+    let pixoo_client = base_url
+        .as_deref()
+        .and_then(|base| PixooClient::new(base).ok());
+    let retry_policy = pixoo_client.as_ref().map(|client| client.retry_policy());
+    let (client_retries, client_backoff_ms) = match retry_policy {
+        Some((retries, backoff)) => (Some(retries), Some(backoff.as_millis())),
+        None => (None, None),
+    };
+    let sanitized_base_url = base_url.as_deref().and_then(sanitize_pixoo_url);
     let state = AppState {
         health_forward,
         pixoo_client,
     };
+    let has_pixoo_client = state.pixoo_client.is_some();
     let app = build_app(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    info!("Pixoo bridge listening on {}", addr);
+    info!(
+        log_level = ?max_level,
+        health_forward,
+        pixoo_client = has_pixoo_client,
+        sanitized_pixoo_base_url = ?sanitized_base_url,
+        retries = ?client_retries,
+        backoff_ms = ?client_backoff_ms,
+        address = %addr,
+        "Pixoo bridge configuration loaded"
+    );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
@@ -62,11 +85,21 @@ async fn health(State(state): State<AppState>) -> impl IntoResponse {
     };
 
     match client.health_check().await {
-        Ok(()) => (StatusCode::OK, Json(json!({ "status": "ok" }))),
-        Err(_) => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({ "status": "unhealthy" })),
-        ),
+        Ok(()) => {
+            debug!("Pixoo health check succeeded");
+            (StatusCode::OK, Json(json!({ "status": "ok" })))
+        }
+        Err(err) => {
+            error!(
+                error = ?err,
+                status = %StatusCode::SERVICE_UNAVAILABLE,
+                "Pixoo health check failed"
+            );
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({ "status": "unhealthy" })),
+            )
+        }
     }
 }
 
@@ -79,6 +112,20 @@ fn read_bool_env(key: &str, default: bool) -> bool {
         },
         Err(_) => default,
     }
+}
+
+fn resolve_log_level() -> (LevelFilter, Option<String>) {
+    let raw = env::var("PIXOO_BRIDGE_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
+    match raw.parse::<LevelFilter>() {
+        Ok(level) => (level, None),
+        Err(_) => (LevelFilter::INFO, Some(raw)),
+    }
+}
+
+fn sanitize_pixoo_url(value: &str) -> Option<String> {
+    let url = Url::parse(value).ok()?;
+    let host = url.host_str()?;
+    Some(format!("{}://{}", url.scheme(), host))
 }
 
 #[cfg(test)]
@@ -97,6 +144,21 @@ mod tests {
             .get_or_init(|| Mutex::new(()))
             .lock()
             .expect("lock")
+    }
+
+    fn with_env_var<T>(key: &str, value: Option<&str>, f: impl FnOnce() -> T) -> T {
+        let _guard = env_lock();
+        let original = env::var(key).ok();
+        match value {
+            Some(v) => env::set_var(key, v),
+            None => env::remove_var(key),
+        }
+        let result = f();
+        match original {
+            Some(v) => env::set_var(key, v),
+            None => env::remove_var(key),
+        }
+        result
     }
 
     #[tokio::test]
@@ -161,9 +223,7 @@ mod tests {
     async fn health_forwarding_enabled_by_default() {
         let _guard = env_lock();
         let original = env::var("PIXOO_BRIDGE_HEALTH_FORWARD").ok();
-        unsafe {
-            env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD");
-        }
+        env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD");
 
         let server = MockServer::start_async().await;
         let mock = server.mock(|when, then| {
@@ -191,12 +251,8 @@ mod tests {
         mock.assert();
 
         match original {
-            Some(value) => unsafe {
-                env::set_var("PIXOO_BRIDGE_HEALTH_FORWARD", value);
-            },
-            None => unsafe {
-                env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD");
-            },
+            Some(value) => env::set_var("PIXOO_BRIDGE_HEALTH_FORWARD", value),
+            None => env::remove_var("PIXOO_BRIDGE_HEALTH_FORWARD"),
         }
     }
 
@@ -227,5 +283,31 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
         mock.assert_calls(3);
+    }
+
+    #[test]
+    fn resolves_log_level_defaults_to_info() {
+        let (level, invalid) = with_env_var("PIXOO_BRIDGE_LOG_LEVEL", None, resolve_log_level);
+        assert_eq!(level, LevelFilter::INFO);
+        assert!(invalid.is_none());
+    }
+
+    #[test]
+    fn resolves_log_level_from_env() {
+        let (level, invalid) =
+            with_env_var("PIXOO_BRIDGE_LOG_LEVEL", Some("debug"), resolve_log_level);
+        assert_eq!(level, LevelFilter::DEBUG);
+        assert!(invalid.is_none());
+    }
+
+    #[test]
+    fn resolves_log_level_invalid_falls_back_to_info() {
+        let (level, invalid) = with_env_var(
+            "PIXOO_BRIDGE_LOG_LEVEL",
+            Some("not-a-level"),
+            resolve_log_level,
+        );
+        assert_eq!(level, LevelFilter::INFO);
+        assert_eq!(invalid, Some("not-a-level".to_string()));
     }
 }

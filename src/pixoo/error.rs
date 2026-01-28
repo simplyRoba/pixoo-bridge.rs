@@ -49,3 +49,26 @@ impl From<reqwest::Error> for PixooError {
         PixooError::Http(err)
     }
 }
+
+impl PixooError {
+    pub fn http_status(&self) -> Option<u16> {
+        match self {
+            PixooError::HttpStatus(status) => Some(*status),
+            _ => None,
+        }
+    }
+
+    pub fn error_code(&self) -> Option<i64> {
+        match self {
+            PixooError::DeviceError { code, .. } => Some(*code),
+            _ => None,
+        }
+    }
+
+    pub fn payload(&self) -> Option<&Value> {
+        match self {
+            PixooError::DeviceError { payload, .. } => Some(payload),
+            _ => None,
+        }
+    }
+}
