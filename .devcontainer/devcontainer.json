@@ -1,0 +1,31 @@
+{
+  "name": "rust-node-opencode-docker",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    // Node LTS installed via devcontainer feature
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    // Rust stable + rust-analyzer installed via devcontainer feature
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "stable",
+      "components": "rust-analyzer"
+    },
+    // Docker CLI installed; dind=true to enable Docker-in-Docker
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "dind": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  // Install global npm tools and initialize starship after container creation
+  "postCreateCommand": "npm install -g opencode-ai @fission-ai/openspec && grep -qxF 'eval \"$(starship init bash)\"' ~/.bashrc || echo 'eval \"$(starship init bash)\"' >> ~/.bashrc"
+}
