@@ -37,10 +37,11 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
       rm /usr/local/bin/pixoo-bridge-amd64; \
     fi
 
-EXPOSE 8080
+## The listener honors PIXOO_BRIDGE_PORT (default 4000)
+EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -fsS http://localhost:8080/health || exit 1
+  CMD curl -fsS http://localhost:4000/health || exit 1
 
 USER 1000:1000
 

@@ -5,6 +5,10 @@ use std::{env, net::SocketAddr};
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::filter::LevelFilter;
 
+const DEFAULT_LISTENER_PORT: u16 = 4000;
+const MIN_LISTENER_PORT: u16 = 1024;
+const MAX_LISTENER_PORT: u16 = 65535;
+
 use pixoo_bridge::pixoo::PixooClient;
 
 #[derive(Clone)]
@@ -35,12 +39,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let has_pixoo_client = state.pixoo_client.is_some();
     let app = build_app(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    let listener_port = resolve_listener_port();
+    let addr = SocketAddr::from(([0, 0, 0, 0], listener_port));
     info!(
         log_level = ?max_level,
         health_forward,
         pixoo_client = has_pixoo_client,
         sanitized_pixoo_base_url = ?sanitized_base_url,
+        listener_port,
         address = %addr,
         "Pixoo bridge configuration loaded"
     );
@@ -112,6 +118,35 @@ fn resolve_log_level() -> (LevelFilter, Option<String>) {
     match raw.parse::<LevelFilter>() {
         Ok(level) => (level, None),
         Err(_) => (LevelFilter::INFO, Some(raw)),
+    }
+}
+
+fn resolve_listener_port() -> u16 {
+    match env::var("PIXOO_BRIDGE_PORT") {
+        Ok(raw) => {
+            let value = raw.trim();
+            match value.parse::<u16>() {
+                Ok(port) if (MIN_LISTENER_PORT..=MAX_LISTENER_PORT).contains(&port) => port,
+                _ => {
+                    warn!(
+                        provided = %value,
+                        min = MIN_LISTENER_PORT,
+                        max = MAX_LISTENER_PORT,
+                        default_port = DEFAULT_LISTENER_PORT,
+                        "Invalid PIXOO_BRIDGE_PORT; falling back to default port {}",
+                        DEFAULT_LISTENER_PORT
+                    );
+                    DEFAULT_LISTENER_PORT
+                }
+            }
+        }
+        Err(_) => {
+            warn!(
+                default_port = DEFAULT_LISTENER_PORT,
+                "PIXOO_BRIDGE_PORT is not set; binding to default port {}", DEFAULT_LISTENER_PORT
+            );
+            DEFAULT_LISTENER_PORT
+        }
     }
 }
 
@@ -296,5 +331,27 @@ mod tests {
         );
         assert_eq!(level, LevelFilter::INFO);
         assert_eq!(invalid, Some("not-a-level".to_string()));
+    }
+
+    #[test]
+    fn listener_port_defaults_to_4000_when_env_missing() {
+        let port = with_env_var("PIXOO_BRIDGE_PORT", None, resolve_listener_port);
+        assert_eq!(port, DEFAULT_LISTENER_PORT);
+    }
+
+    #[test]
+    fn listener_port_uses_custom_override_when_valid() {
+        let port = with_env_var("PIXOO_BRIDGE_PORT", Some("5050"), resolve_listener_port);
+        assert_eq!(port, 5050);
+    }
+
+    #[test]
+    fn listener_port_falls_back_on_invalid_values() {
+        let port = with_env_var(
+            "PIXOO_BRIDGE_PORT",
+            Some("not-a-port"),
+            resolve_listener_port,
+        );
+        assert_eq!(port, DEFAULT_LISTENER_PORT);
     }
 }
