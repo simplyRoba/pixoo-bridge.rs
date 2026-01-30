@@ -1,4 +1,6 @@
-## ADDED Requirements
+# api/health-endpoint Capability
+
+## Requirements
 
 ### Requirement: Bridge health endpoint
 The bridge SHALL expose an HTTP GET `/health` endpoint for container health checks.
@@ -6,7 +8,6 @@ The bridge SHALL expose an HTTP GET `/health` endpoint for container health chec
 #### Scenario: Health endpoint responds
 - **WHEN** a client sends `GET /health`
 - **THEN** the bridge responds with HTTP 200 and a JSON body containing `{ "status": "ok" }`
-
 
 ### Requirement: Health forwarding toggle
 The bridge SHALL read `PIXOO_BRIDGE_HEALTH_FORWARD` to control whether the health endpoint cascades to the Pixoo device, defaulting to `true` when unset.

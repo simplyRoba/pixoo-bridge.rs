@@ -181,7 +181,7 @@ Resolution: Only add-oauth is implemented. Will sync add-oauth specs only.
 
 Example 2: Both implemented
 ```
-Conflict: specs/api/api/specs.md touched by [add-rest-api, add-graphql]
+Conflict: specs/api/health-endpoint/specs.md touched by [add-rest-api, add-graphql]
 
 Checking add-rest-api (created 2026-01-10):
 - Delta adds "REST Endpoints" requirement

@@ -1,5 +1,9 @@
 ## MODIFIED Requirements
 
+# core/health-forwarding Capability
+
+## MODIFIED Requirements
+
 ### Requirement: HTTP request shape
 The client SHALL send Pixoo commands via HTTP POST to a configured device IP and set the request `Content-Type` to `application/json`. The client SHALL send Pixoo health checks via HTTP GET to the device `/get` endpoint without a request body.
 
