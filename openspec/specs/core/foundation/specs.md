@@ -1,4 +1,4 @@
-# core/foundation-layout Capability
+# core/foundation Capability
 
 ## Requirements
 

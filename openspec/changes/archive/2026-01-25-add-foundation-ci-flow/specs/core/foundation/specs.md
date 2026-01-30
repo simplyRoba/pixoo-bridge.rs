@@ -1,3 +1,5 @@
+# core/foundation Capability
+
 ## ADDED Requirements
 
 ### Requirement: Rust bridge foundation layout
