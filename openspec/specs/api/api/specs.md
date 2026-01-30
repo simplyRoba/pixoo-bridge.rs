@@ -1,7 +1,4 @@
-# api Specification
-
-## Purpose
-Define the bridge's public HTTP API behavior exposed to downstream clients.
+# api/api Capability
 
 ## Requirements
 
@@ -11,7 +8,6 @@ The bridge SHALL expose an HTTP GET `/health` endpoint for container health chec
 #### Scenario: Health endpoint responds
 - **WHEN** a client sends `GET /health`
 - **THEN** the bridge responds with HTTP 200 and a JSON body containing `{ "status": "ok" }`
-
 
 ### Requirement: Health forwarding toggle
 The bridge SHALL read `PIXOO_BRIDGE_HEALTH_FORWARD` to control whether the health endpoint cascades to the Pixoo device, defaulting to `true` when unset.

@@ -20,4 +20,4 @@ The HTTP bridge currently binds to a hard-coded `8080`, which clashes with other
 
 - `src/main.rs` (port binding and configuration parsing), plus any helpers/tests that rely on the listener address.
 - `Dockerfile`, `README.md`, and other documentation so deployers know the new env var and default socket.
-- adapt `openspec/specs/core/spec.md` defining requirements for the configurable HTTP surface.
+- adapt `openspec/specs/core/configurable-port/specs.md` defining requirements for the configurable HTTP surface.
