@@ -1,4 +1,4 @@
-# core/release Capability
+# core/release-workflow Capability
 
 ## Requirements
 

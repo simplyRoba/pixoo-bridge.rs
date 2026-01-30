@@ -1,4 +1,4 @@
-# core/ci Capability
+# core/ci-workflow Capability
 
 ## Requirements
 
