@@ -1,6 +1,4 @@
-## MODIFIED Requirements
-
-# core/health-forwarding Capability
+# core/pixoo-api-client Capability
 
 ## MODIFIED Requirements
 
