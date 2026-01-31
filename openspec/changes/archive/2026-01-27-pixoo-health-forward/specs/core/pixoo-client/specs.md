@@ -1,3 +1,5 @@
+# core/pixoo-client Capability
+
 ## MODIFIED Requirements
 
 ### Requirement: HTTP request shape

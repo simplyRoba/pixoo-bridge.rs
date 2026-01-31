@@ -1,3 +1,5 @@
+# api/health Capability
+
 ## ADDED Requirements
 
 ### Requirement: Bridge health endpoint

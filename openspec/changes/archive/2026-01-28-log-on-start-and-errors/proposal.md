@@ -13,10 +13,10 @@ The bridge container currently starts silently, making it hard to verify that co
 ## Capabilities
 
 ### New Capabilities
-- `startup-and-error-logging` (core): Provide deterministic, contextual logging when the bridge starts and when unexpected errors arise so container logs contain enough information to diagnose failures without inspecting the Pixoo device.
+- `logging` (core): Surface deterministic startup configuration logging and ensure unexpected Pixoo errors emit contextual logs so container output captures both the runtime settings and failure metadata operators need.
 
 ### Modified Capabilities
-- None.
+- `configuration` (core): Add the `PIXOO_BASE_URL` knob so the bridge can log a sanitized scheme/host pair at startup and keep the Pixoo client pointed at the configured device without exposing credentials.
 
 ## Impact
 
