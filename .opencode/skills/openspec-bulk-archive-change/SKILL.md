@@ -6,7 +6,7 @@ compatibility: Requires openspec CLI.
 metadata:
   author: openspec
   version: "1.0"
-  generatedBy: "1.1.0"
+  generatedBy: "1.1.1"
 ---
 
 Archive multiple completed changes in a single operation.
@@ -166,7 +166,7 @@ This skill allows you to batch-archive changes, handling spec conflicts intellig
 
 Example 1: Only one implemented
 ```
-Conflict: specs/auth/oauth/specs.md touched by [add-oauth, add-jwt]
+Conflict: specs/auth/spec.md touched by [add-oauth, add-jwt]
 
 Checking add-oauth:
 - Delta adds "OAuth Provider Integration" requirement
@@ -181,7 +181,7 @@ Resolution: Only add-oauth is implemented. Will sync add-oauth specs only.
 
 Example 2: Both implemented
 ```
-Conflict: specs/api/health/specs.md touched by [add-rest-api, add-graphql]
+Conflict: specs/api/spec.md touched by [add-rest-api, add-graphql]
 
 Checking add-rest-api (created 2026-01-10):
 - Delta adds "REST Endpoints" requirement
@@ -229,7 +229,7 @@ Failed K changes:
 ```
 ## No Changes to Archive
 
-No active changes found. Use `/opsx:new` to create a new change.
+No active changes found. Use `/opsx-new` to create a new change.
 ```
 
 **Guardrails**
