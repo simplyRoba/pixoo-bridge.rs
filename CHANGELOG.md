@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.3.0...v0.4.0) (2026-01-31)
+
+
+### Features
+
+* add configurable startup and error logging ([#36](https://github.com/simplyRoba/pixoo-bridge.rs/issues/36)) ([c7a7b01](https://github.com/simplyRoba/pixoo-bridge.rs/commit/c7a7b0196bae6c30c4dcd364a8131154f0025185))
+* add Dockerfile and devcontainer configuration for development environment ([0f8ad6f](https://github.com/simplyRoba/pixoo-bridge.rs/commit/0f8ad6fe7f37f6837a4b8acfdf6839f56e90e94c))
+* add purpose sections to multiple capability specs for clarity ([bc8ef9c](https://github.com/simplyRoba/pixoo-bridge.rs/commit/bc8ef9c6c4b66fd8b49e62e7f9937e73468213c9))
+* add reboot endpoint ([#38](https://github.com/simplyRoba/pixoo-bridge.rs/issues/38)) ([d5bb267](https://github.com/simplyRoba/pixoo-bridge.rs/commit/d5bb267844033722ae68e73a59028725e8c81e7c))
+* add VSCode settings for default panel location ([e6467ae](https://github.com/simplyRoba/pixoo-bridge.rs/commit/e6467ae89f132776f131a2e9c6b8b17f4452b02c))
+* introduce configurable HTTP listener port via PIXOO_BRIDGE_PORT ([5bd519e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/5bd519ed9a52b937a946e1cfec4f4cbde1871e83))
+
+
+### Bug Fixes
+
+* standardize Dockerfile stage names to uppercase ([815dcc4](https://github.com/simplyRoba/pixoo-bridge.rs/commit/815dcc416ddee35ff1cc4d7181c56a6975586465))
+* update command syntax for opsx commands and increment version to 1.1.1 ([fd2407d](https://github.com/simplyRoba/pixoo-bridge.rs/commit/fd2407d6a4c5a7014a833cf97fb545d99cf65f5d))
+
 ## [0.3.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.2.4...v0.3.0) (2026-01-27)
 
 
