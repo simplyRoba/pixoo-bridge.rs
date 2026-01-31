@@ -6,9 +6,8 @@
 
 ## 2. Release workflow & artifacts
 
-- [ ] 2.1 Update `.github/workflows/publish-release.yml` to compile the x86_64 and aarch64 binaries using the same commands the Dockerfile expects and upload them as release assets.
+- [ ] 2.1 Update `.github/workflows/publish-release.yml` to compile the x86_64 and aarch64 binaries using the same commands the Dockerfile expects and upload them as release assets, then split the workflow into scoped setup/compile/upload/docker build jobs.
 - [ ] 2.2 Simplify `Dockerfile` so it copies the precompiled binary for `TARGETPLATFORM` instead of rebuilding the code, and ensure the unused binary is removed.
-- [ ] 2.3 Document the new release behavior (release assets originate from the publish workflow, CI stays limited to lint/test) in `README.md`.
 
 ## 3. Validation
 

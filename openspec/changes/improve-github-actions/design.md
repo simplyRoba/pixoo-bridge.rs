@@ -49,7 +49,6 @@
 1. Keep `.github/workflows/ci.yml` focused on setup, lint, and test jobs with the shared cache key.
 2. Split `.github/workflows/publish-release.yml` into setup/compile/upload/docker build jobs and ensure each job documents its dependency chain.
 3. Simplify `Dockerfile` to copy the correct prebuilt binary based on `TARGETPLATFORM` and clean up unused artifacts.
-4. Note the new release asset process in the README and verify the release workflow publishes both binaries.
 
 ## Open Questions
 
