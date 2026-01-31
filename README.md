@@ -22,8 +22,10 @@ On startup the container logs the resolved configuration (health forwarding flag
 
 ## API
 
-- `GET /health`: Returns HTTP 200 with `{"status":"ok"}` when healthy. Returns HTTP 503 when forwarding is enabled and the Pixoo device health check fails.
-- `POST /reboot`: Triggers Pixoo's `Device/SysReboot` command when `PIXOO_BASE_URL` is configured. Returns HTTP 204 on success and HTTP 503 with an error payload if the device cannot be reached.
+| Method | Endpoint | Description | Responses |
+| --- | --- | --- | --- |
+| `GET` | `/health` | Container health probe; optionally cascades to the Pixoo device when `PIXOO_BRIDGE_HEALTH_FORWARD=true`. | `200 { "status": "ok" }` when healthy, `503` when forwarding fails or the Pixoo client is unreachable |
+| `POST` | `/reboot` | Triggers Pixoo's `Device/SysReboot` command (only available when `PIXOO_BASE_URL` is configured). | `204 No Content` on success, `503` with `{"error":"Pixoo reboot failed"}` when Pixoo is unreachable or rejects the command |
 
 The HTTP handlers for system maintenance now live in a dedicated `routes/system` module so `/health` and `/reboot` share the same middleware and routing surface while keeping `main.rs` lean.
 
