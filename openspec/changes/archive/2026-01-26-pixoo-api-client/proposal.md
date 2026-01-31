@@ -11,7 +11,7 @@ We need a stable, typed foundation for talking to Pixoo devices because the curr
 ## Capabilities
 
 ### New Capabilities
-- `pixoo-api-client`: Define how the bridge constructs POST requests for Pixoo commands, parses response payloads despite inconsistent content-types, and returns structured data after `error_code` validation.
+- `pixoo-client`: Define how the bridge constructs POST requests for Pixoo commands, parses response payloads despite inconsistent content-types, and returns structured data after `error_code` validation.
 
 ### Modified Capabilities
 

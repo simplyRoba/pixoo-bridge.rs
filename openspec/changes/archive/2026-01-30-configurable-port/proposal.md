@@ -11,7 +11,7 @@ The HTTP bridge currently binds to a hard-coded `8080`, which clashes with other
 ## Capabilities
 
 ### New Capabilities
-- `configurable-port`: Expose the HTTP listener port through `PIXOO_BRIDGE_PORT`, defaulting to `4000` and ensuring the bound port is valid before starting the Axum server; covers configuration loading, logging, and deployment guidance for the HTTP API domain (`core`).
+- `configuration`: Expose the HTTP listener port through `PIXOO_BRIDGE_PORT`, defaulting to `4000` and ensuring the bound port is valid before starting the Axum server; covers configuration loading, logging, and deployment guidance for the HTTP API domain (`core`).
 
 ### Modified Capabilities
 - None.
@@ -20,4 +20,4 @@ The HTTP bridge currently binds to a hard-coded `8080`, which clashes with other
 
 - `src/main.rs` (port binding and configuration parsing), plus any helpers/tests that rely on the listener address.
 - `Dockerfile`, `README.md`, and other documentation so deployers know the new env var and default socket.
-- adapt `openspec/specs/core/configurable-port/specs.md` defining requirements for the configurable HTTP surface.
+- adapt `openspec/specs/core/configuration/specs.md` defining requirements for the configurable HTTP surface.

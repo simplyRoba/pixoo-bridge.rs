@@ -20,6 +20,7 @@ rules:
     - "Describe deltas in ADDED/MODIFIED/REMOVED sections and never rewrite the full spec—refer to existing requirements when modifying."
     - "Use RFC 2119 keywords (SHALL/MUST/SHOULD) and Given/When/Then scenarios to keep requirements testable."
     - "Capabilities in specs need to pe put under a domain folder (like `core`, `ui`, `api` ..). The schema is specs/{domain}/{capability}/specs.md. A change can have more than one capability in mor than  one domain. Confirm the domain when creating new specs. Use **AskUserQuestion tool** if unclear."
+    - "Prefer existing capabilities over creating new ones to keep the spec surface area manageable."
   tasks:
     - "Create branches off main for the change; never merge or push to main."
     - "Always write enough tests to cover new/modified functionality and edge cases before implementation."

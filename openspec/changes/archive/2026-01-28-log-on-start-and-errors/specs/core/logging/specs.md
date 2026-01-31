@@ -9,17 +9,6 @@ The bridge SHALL emit an info-level log once at startup that lists the resolved 
 - **WHEN** the service finishes building `AppState` or equivalent and before it accepts HTTP traffic
 - **THEN** it logs an info entry containing `health_forward=true`, the sanitized base URL, and the listener address
 
-### Requirement: Log level configurable via environment variable
-The bridge SHALL honor `PIXOO_BRIDGE_LOG_LEVEL` by mapping it to the logging framework’s level filter while defaulting to `info` so operators can increase or decrease verbosity without rebuilding the container.
-
-#### Scenario: Environment overrides level
-- **WHEN** `PIXOO_BRIDGE_LOG_LEVEL=debug` is set
-- **THEN** the bridge initializes tracing with the `debug` filter so debug statements become visible in the container logs
-
-#### Scenario: Invalid value falls back to info
-- **WHEN** `PIXOO_BRIDGE_LOG_LEVEL` contains an unsupported value
-- **THEN** the bridge logs a warning about the invalid setting and continues with `info` as the active level
-
 ### Requirement: Unexpected Pixoo errors are logged with context
 The bridge SHALL log every unexpected Pixoo interaction that results in an error (HTTP failures, invalid responses, non-zero `error_code`) at error level, including `error_code`, HTTP status if present, and any retriable flag so failures surface in container logs.
 

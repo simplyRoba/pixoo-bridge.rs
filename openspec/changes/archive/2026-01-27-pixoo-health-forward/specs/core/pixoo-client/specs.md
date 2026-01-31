@@ -1,4 +1,4 @@
-# core/pixoo-api-client Capability
+# core/pixoo-client Capability
 
 ## MODIFIED Requirements
 

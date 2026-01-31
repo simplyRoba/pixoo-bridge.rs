@@ -14,7 +14,7 @@ Pixoo devices expose an undocumented `/get` endpoint that can be used to verify 
 - `health`: Bridge HTTP healthcheck behavior for downstream clients.
 
 ### Modified Capabilities
-- `pixoo-api-client`: Pixoo HTTP client requirements expand to include `/get` healthcheck calls.
+- `pixoo-client`: Pixoo HTTP client requirements expand to include `/get` healthcheck calls.
 
 ## Impact
 
