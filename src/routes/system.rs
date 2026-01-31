@@ -61,10 +61,7 @@ async fn reboot(Extension(state): Extension<Arc<AppState>>) -> impl IntoResponse
     };
 
     match client
-        .send_command(
-            PixooCommand::DeviceSysReboot,
-            Map::<String, Value>::new(),
-        )
+        .send_command(PixooCommand::DeviceSysReboot, Map::<String, Value>::new())
         .await
     {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
