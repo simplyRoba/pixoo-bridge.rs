@@ -9,7 +9,7 @@ Clarify how Pixoo commands and health checks should be serialized, dispatched, a
 The client SHALL construct a JSON request body that includes the `Command` field derived from a command enum plus all provided argument fields flattened into the same JSON object.
 
 #### Scenario: Command with additional fields
-- **WHEN** the caller issues a `Tools/SetTimer` command with `Minute`, `Second`, and `Status` arguments
+- **WHEN** the caller issues a Pixoo command with `Minute`, `Second`, and `Status` arguments
 - **THEN** the client sends a JSON object containing `Command`, `Minute`, `Second`, and `Status` in the request body
 
 ### Requirement: HTTP request shape

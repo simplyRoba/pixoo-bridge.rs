@@ -295,11 +295,11 @@ mod tests {
         args.insert("Second".to_string(), Value::Number(0.into()));
         args.insert("Status".to_string(), Value::Number(1.into()));
 
-        let payload = PixooClient::build_payload(&PixooCommand::ToolsSetTimer, args);
+        let payload = PixooClient::build_payload(&PixooCommand::DeviceSysReboot, args);
 
         assert_eq!(
             payload.get("Command"),
-            Some(&Value::String("Tools/SetTimer".to_string()))
+            Some(&Value::String("Device/SysReboot".to_string()))
         );
         assert_eq!(payload.get("Minute"), Some(&Value::Number(1.into())));
         assert_eq!(payload.get("Second"), Some(&Value::Number(0.into())));
@@ -372,7 +372,7 @@ mod tests {
             Duration::from_millis(10),
         );
         let err = client
-            .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+            .send_command(PixooCommand::DeviceSysReboot, Map::new())
             .await
             .expect_err("expected http status error");
 
@@ -391,7 +391,7 @@ mod tests {
 
         let client = PixooClient::new(base_url).expect("client");
         let response = client
-            .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+            .send_command(PixooCommand::DeviceSysReboot, Map::new())
             .await
             .expect("request should succeed");
 
@@ -405,7 +405,7 @@ mod tests {
 
         let client = PixooClient::new(base_url).expect("client");
         let err = client
-            .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+            .send_command(PixooCommand::DeviceSysReboot, Map::new())
             .await
             .expect_err("expected http status error");
 
@@ -430,7 +430,7 @@ mod tests {
         );
         let task = tokio::spawn(async move {
             client
-                .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+                .send_command(PixooCommand::DeviceSysReboot, Map::new())
                 .await
         });
 
@@ -487,7 +487,7 @@ mod tests {
 
         let client = PixooClient::new(server.base_url()).expect("client");
         let response = client
-            .send_command(PixooCommand::ChannelSetCloudIndex, Map::new())
+            .send_command(PixooCommand::DeviceSysReboot, Map::new())
             .await
             .expect("request should succeed");
 
