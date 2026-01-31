@@ -1,5 +1,8 @@
 # core/pixoo-client Capability
 
+## Purpose
+Clarify how Pixoo commands and health checks should be serialized, dispatched, and validated so downstream code knows how to interact with the device consistently.
+
 ## Requirements
 
 ### Requirement: Command payload construction

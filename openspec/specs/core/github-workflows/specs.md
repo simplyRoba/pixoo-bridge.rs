@@ -1,5 +1,8 @@
 # core/github-workflows Capability
 
+## Purpose
+State how the repository’s automated GitHub workflows verify, release, and publish the bridge so maintainers know which CI/CD guarantees must stay intact.
+
 ## Requirements
 
 ### Requirement: CI workflow for testing and building

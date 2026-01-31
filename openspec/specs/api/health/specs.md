@@ -1,5 +1,8 @@
 # api/health Capability
 
+## Purpose
+Describe the bridge’s health endpoint behavior so container operators know how to interpret probes and the optional Pixoo forwarding signal.
+
 ## Requirements
 
 ### Requirement: Bridge health endpoint

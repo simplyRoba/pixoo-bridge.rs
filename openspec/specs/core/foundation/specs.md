@@ -1,5 +1,8 @@
 # core/foundation Capability
 
+## Purpose
+Describe the foundational Rust bridge layout and dependencies so downstream contributors understand the minimal crate structure and runtime stack that every capability builds on.
+
 ## Requirements
 
 ### Requirement: Rust bridge foundation layout

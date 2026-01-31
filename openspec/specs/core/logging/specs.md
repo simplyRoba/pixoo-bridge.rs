@@ -1,5 +1,8 @@
 # core/logging Capability
 
+## Purpose
+Explain the logging expectations (startup visibility and structured failure insights) so operators know what runtime signals the bridge must emit.
+
 ## Requirements
 
 ### Requirement: Startup logging records runtime configuration

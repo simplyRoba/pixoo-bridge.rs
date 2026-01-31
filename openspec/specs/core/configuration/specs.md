@@ -1,5 +1,8 @@
 # core/configuration Capability
 
+## Purpose
+Document how configuration knobs (listener port, log level, health forwarding, Pixoo base URL) shape the bridge so operators can understand how runtime settings affect behavior.
+
 ## Requirements
 
 ### Requirement: Configurable HTTP listener port
