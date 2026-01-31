@@ -12,8 +12,8 @@ use tracing::{debug, error};
 
 use crate::state::AppState;
 
-pub fn mount_system_routes() -> Router {
-    Router::new()
+pub fn mount_system_routes(router: Router) -> Router {
+    router
         .route("/health", get(health))
         .route("/reboot", post(reboot))
 }

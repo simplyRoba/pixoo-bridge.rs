@@ -61,9 +61,8 @@ async fn root() -> &'static str {
 }
 
 fn build_app(state: Arc<AppState>) -> Router {
-    mount_system_routes()
-        .route("/", get(root))
-        .layer(Extension(state))
+    let app = Router::new().route("/", get(root));
+    mount_system_routes(app).layer(Extension(state))
 }
 
 fn read_bool_env(key: &str, default: bool) -> bool {
