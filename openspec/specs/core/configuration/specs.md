@@ -17,6 +17,17 @@ The bridge SHALL honor `PIXOO_BRIDGE_PORT` when provided, parsing it as a `u16` 
 - **WHEN** `PIXOO_BRIDGE_PORT` is set to a non-numeric or out-of-range value
 - **THEN** the bridge logs a warning naming the invalid provisioned value and falls back to port `4000` to keep the HTTP endpoint reachable
 
+### Requirement: Health forwarding toggle
+The bridge SHALL read `PIXOO_BRIDGE_HEALTH_FORWARD` to control whether the health endpoint cascades to the Pixoo device, defaulting to `true` when unset.
+
+#### Scenario: Forwarding enabled by default
+- **WHEN** `PIXOO_BRIDGE_HEALTH_FORWARD` is unset
+- **THEN** the bridge performs a Pixoo health check as part of `GET /health`
+
+#### Scenario: Forwarding disabled
+- **WHEN** `PIXOO_BRIDGE_HEALTH_FORWARD` is set to `false`
+- **THEN** the bridge responds with HTTP 200 without contacting the Pixoo device
+
 ### Requirement: Log level configurable via environment variable
 The bridge SHALL honor `PIXOO_BRIDGE_LOG_LEVEL` by mapping it to the logging framework’s level filter while defaulting to `info` so operators can increase or decrease verbosity without rebuilding the container.
 
