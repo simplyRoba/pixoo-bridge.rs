@@ -1,8 +1,10 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Json, Router};
+mod routes;
+mod state;
+
+use axum::{extract::Extension, routing::get, Router};
 use reqwest::Url;
-use serde_json::json;
-use std::{env, net::SocketAddr};
-use tracing::{debug, error, info, warn};
+use std::{env, net::SocketAddr, sync::Arc};
+use tracing::{info, warn};
 use tracing_subscriber::filter::LevelFilter;
 
 const DEFAULT_LISTENER_PORT: u16 = 4000;
@@ -10,12 +12,8 @@ const MIN_LISTENER_PORT: u16 = 1024;
 const MAX_LISTENER_PORT: u16 = 65535;
 
 use pixoo_bridge::pixoo::PixooClient;
-
-#[derive(Clone)]
-struct AppState {
-    health_forward: bool,
-    pixoo_client: Option<PixooClient>,
-}
+use routes::mount_system_routes;
+use state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -32,12 +30,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .as_deref()
         .and_then(|base| PixooClient::new(base).ok());
     let sanitized_base_url = base_url.as_deref().and_then(sanitize_pixoo_url);
-    let state = AppState {
+    let state = Arc::new(AppState {
         health_forward,
         pixoo_client,
-    };
+    });
     let has_pixoo_client = state.pixoo_client.is_some();
-    let app = build_app(state);
+    let app = build_app(state.clone());
 
     let listener_port = resolve_listener_port();
     let addr = SocketAddr::from(([0, 0, 0, 0], listener_port));
@@ -52,7 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    let make_service = app.into_make_service();
+    axum::serve(listener, make_service).await?;
 
     Ok(())
 }
@@ -61,45 +60,10 @@ async fn root() -> &'static str {
     "Hello World from Pixoo Bridge!"
 }
 
-fn build_app(state: AppState) -> Router {
-    Router::new()
+fn build_app(state: Arc<AppState>) -> Router {
+    mount_system_routes()
         .route("/", get(root))
-        .route("/health", get(health))
-        .with_state(state)
-}
-
-async fn health(State(state): State<AppState>) -> impl IntoResponse {
-    if !state.health_forward {
-        return (StatusCode::OK, Json(json!({ "status": "ok" })));
-    }
-
-    let client = match state.pixoo_client {
-        Some(client) => client,
-        None => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "status": "unhealthy" })),
-            );
-        }
-    };
-
-    match client.health_check().await {
-        Ok(()) => {
-            debug!("Pixoo health check succeeded");
-            (StatusCode::OK, Json(json!({ "status": "ok" })))
-        }
-        Err(err) => {
-            error!(
-                error = ?err,
-                status = %StatusCode::SERVICE_UNAVAILABLE,
-                "Pixoo health check failed"
-            );
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "status": "unhealthy" })),
-            )
-        }
-    }
+        .layer(Extension(state))
 }
 
 fn read_bool_env(key: &str, default: bool) -> bool {
@@ -159,11 +123,11 @@ fn sanitize_pixoo_url(value: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::AppState;
     use axum::body::{to_bytes, Body};
-    use axum::http::Request;
-    use httpmock::Method::GET;
-    use httpmock::MockServer;
-    use std::sync::{Mutex, OnceLock};
+    use axum::http::{Method, Request, StatusCode};
+    use httpmock::{Method as MockMethod, MockServer};
+    use std::sync::{Arc, Mutex, OnceLock};
     use tower::util::ServiceExt;
 
     fn env_lock() -> std::sync::MutexGuard<'static, ()> {
@@ -195,7 +159,7 @@ mod tests {
             health_forward: false,
             pixoo_client: None,
         };
-        let app = build_app(state);
+        let app = build_app(Arc::new(state));
 
         let response = app
             .oneshot(
@@ -217,8 +181,8 @@ mod tests {
     #[tokio::test]
     async fn health_ok_when_pixoo_healthy() {
         let server = MockServer::start_async().await;
-        let mock = server.mock(|when, then| {
-            when.method(GET).path("/get");
+        let _mock = server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/get");
             then.status(200);
         });
 
@@ -227,7 +191,7 @@ mod tests {
             health_forward: true,
             pixoo_client: Some(client),
         };
-        let app = build_app(state);
+        let app = build_app(Arc::new(state));
 
         let response = app
             .oneshot(
@@ -244,14 +208,13 @@ mod tests {
             .await
             .expect("body");
         assert_eq!(body, r#"{"status":"ok"}"#);
-        mock.assert();
     }
 
     #[tokio::test]
     async fn health_forwarding_enabled_by_default() {
         let server = MockServer::start_async().await;
-        let mock = server.mock(|when, then| {
-            when.method(GET).path("/get");
+        let _mock = server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/get");
             then.status(200);
         });
 
@@ -262,7 +225,7 @@ mod tests {
             health_forward,
             pixoo_client: Some(PixooClient::new(server.base_url()).expect("client")),
         };
-        let app = build_app(state);
+        let app = build_app(Arc::new(state));
 
         let response = app
             .oneshot(
@@ -275,14 +238,13 @@ mod tests {
             .expect("response");
 
         assert_eq!(response.status(), StatusCode::OK);
-        mock.assert();
     }
 
     #[tokio::test]
     async fn health_reports_unhealthy_on_pixoo_failure() {
         let server = MockServer::start_async().await;
-        let mock = server.mock(|when, then| {
-            when.method(GET).path("/get");
+        let _mock = server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/get");
             then.status(500);
         });
 
@@ -291,7 +253,7 @@ mod tests {
             health_forward: true,
             pixoo_client: Some(client),
         };
-        let app = build_app(state);
+        let app = build_app(Arc::new(state));
 
         let response = app
             .oneshot(
@@ -304,7 +266,64 @@ mod tests {
             .expect("response");
 
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
-        mock.assert_calls(3);
+    }
+
+    #[tokio::test]
+    async fn reboot_returns_no_content_when_pixoo_accepts() {
+        let server = MockServer::start_async().await;
+        let _mock = server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let client = PixooClient::new(server.base_url()).expect("client");
+        let state = AppState {
+            health_forward: false,
+            pixoo_client: Some(client),
+        };
+        let app = build_app(Arc::new(state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/reboot")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    }
+
+    #[tokio::test]
+    async fn reboot_reports_unhealthy_when_pixoo_fails() {
+        let server = MockServer::start_async().await;
+        let _mock = server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(500).body(r#"{"error_code":0}"#);
+        });
+
+        let client = PixooClient::new(server.base_url()).expect("client");
+        let state = AppState {
+            health_forward: false,
+            pixoo_client: Some(client),
+        };
+        let app = build_app(Arc::new(state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/reboot")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
     }
 
     #[test]

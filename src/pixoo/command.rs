@@ -4,6 +4,7 @@ use std::fmt;
 pub enum PixooCommand {
     ChannelSetCloudIndex,
     ToolsSetTimer,
+    DeviceSysReboot,
     Raw(String),
 }
 
@@ -12,6 +13,7 @@ impl PixooCommand {
         match self {
             PixooCommand::ChannelSetCloudIndex => "Channel/SetCloudIndex",
             PixooCommand::ToolsSetTimer => "Tools/SetTimer",
+            PixooCommand::DeviceSysReboot => "Device/SysReboot",
             PixooCommand::Raw(command) => command,
         }
     }
@@ -44,6 +46,13 @@ mod tests {
         let command = PixooCommand::Raw("Custom/Command".to_string());
         assert_eq!(command.as_str(), "Custom/Command");
         assert_eq!(command.to_string(), "Custom/Command");
+    }
+
+    #[test]
+    fn device_sys_reboot_command() {
+        let command = PixooCommand::DeviceSysReboot;
+        assert_eq!(command.as_str(), "Device/SysReboot");
+        assert_eq!(command.to_string(), "Device/SysReboot");
     }
 
     #[test]
