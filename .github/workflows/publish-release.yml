@@ -90,7 +90,7 @@ jobs:
           cp target/${{ matrix.triple }}/release/pixoo-bridge release-artifacts/${{ matrix.target }}/pixoo-bridge
 
       - name: Upload release binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-binaries-${{ matrix.target }}
           path: release-artifacts/${{ matrix.target }}
