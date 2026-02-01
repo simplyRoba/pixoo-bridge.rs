@@ -6,13 +6,13 @@ on:
   push:
     branches: [main]
 
-env:
-  CACHE_KEY: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
 jobs:
   setup:
     name: Prepare toolchain and cache
     runs-on: ubuntu-latest
+    env:
+      CACHE_KEY: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -49,6 +49,8 @@ jobs:
     name: Lint
     needs: setup
     runs-on: ubuntu-latest
+    env:
+      CACHE_KEY: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -72,6 +74,8 @@ jobs:
     name: Test
     needs: setup
     runs-on: ubuntu-latest
+    env:
+      CACHE_KEY: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
