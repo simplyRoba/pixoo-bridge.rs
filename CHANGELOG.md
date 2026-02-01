@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.0...v0.5.1) (2026-02-01)
+
+
+### Bug Fixes
+
+* **ci:** bump actions/download-artifact from 4 to 7 ([cbe24e1](https://github.com/simplyRoba/pixoo-bridge.rs/commit/cbe24e1150ee7109c705385ab64aba8e5f530203))
+* **ci:** bump actions/upload-artifact from 4 to 6 ([9e6596b](https://github.com/simplyRoba/pixoo-bridge.rs/commit/9e6596b7681cb02ba9cd0950468e14b9f983a796))
+* update upload-artifact action to v4 in publish-release workflow ([0f696a2](https://github.com/simplyRoba/pixoo-bridge.rs/commit/0f696a2caeee13d92641826fde909a1edfefae4b))
+
 ## [0.5.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.4.0...v0.5.0) (2026-02-01)
 
 
