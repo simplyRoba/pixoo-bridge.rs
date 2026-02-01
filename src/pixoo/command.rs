@@ -7,6 +7,9 @@ pub enum PixooCommand {
     ToolsSetStopWatch,
     ToolsSetScoreBoard,
     ToolsSetNoiseStatus,
+    ChannelGetAllConf,
+    DeviceGetDeviceTime,
+    DeviceGetWeatherInfo,
 }
 
 impl PixooCommand {
@@ -17,6 +20,9 @@ impl PixooCommand {
             PixooCommand::ToolsSetStopWatch => "Tools/SetStopWatch",
             PixooCommand::ToolsSetScoreBoard => "Tools/SetScoreBoard",
             PixooCommand::ToolsSetNoiseStatus => "Tools/SetNoiseStatus",
+            PixooCommand::ChannelGetAllConf => "Channel/GetAllConf",
+            PixooCommand::DeviceGetDeviceTime => "Device/GetDeviceTime",
+            PixooCommand::DeviceGetWeatherInfo => "Device/GetWeatherInfo",
         }
     }
 }
@@ -52,6 +58,22 @@ mod tests {
         assert_eq!(
             PixooCommand::ToolsSetNoiseStatus.as_str(),
             "Tools/SetNoiseStatus"
+        );
+    }
+
+    #[test]
+    fn manage_commands_have_expected_strings() {
+        assert_eq!(
+            PixooCommand::ChannelGetAllConf.as_str(),
+            "Channel/GetAllConf"
+        );
+        assert_eq!(
+            PixooCommand::DeviceGetDeviceTime.as_str(),
+            "Device/GetDeviceTime"
+        );
+        assert_eq!(
+            PixooCommand::DeviceGetWeatherInfo.as_str(),
+            "Device/GetWeatherInfo"
         );
     }
 }
