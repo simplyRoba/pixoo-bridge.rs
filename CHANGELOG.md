@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.5](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.4...v0.5.5) (2026-02-01)
+
+
+### Bug Fixes
+
+* add missing chmod command for pixoo-bridge binaries in Dockerfile ([fc91ae5](https://github.com/simplyRoba/pixoo-bridge.rs/commit/fc91ae50b98df7bb5d92030fa4f0f0d17bcd97b9))
+* simplify compile job name in publish-release workflow ([f9085dd](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f9085dd9f7c05f341b68326bf2f600f3247b0a25))
+
 ## [0.5.4](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.3...v0.5.4) (2026-02-01)
 
 
