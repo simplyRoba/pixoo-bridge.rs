@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.1...v0.5.2) (2026-02-01)
+
+
+### Bug Fixes
+
+* split release build and fix wrong actions call ([3acc6f1](https://github.com/simplyRoba/pixoo-bridge.rs/commit/3acc6f143279d07032258d3c3e32867487647a91))
+
 ## [0.5.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.0...v0.5.1) (2026-02-01)
 
 
