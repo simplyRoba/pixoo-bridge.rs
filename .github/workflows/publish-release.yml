@@ -4,13 +4,14 @@ on:
   release:
     types: [published]
 
+env:
+  CACHE_KEY: ${{ hashFiles('**/Cargo.lock') }}
+
 
 jobs:
   setup:
     name: Prepare release toolchain
     runs-on: ubuntu-latest
-    env:
-      CACHE_KEY: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -41,8 +42,6 @@ jobs:
     name: Compile release binaries
     needs: setup
     runs-on: ubuntu-latest
-    env:
-      CACHE_KEY: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
