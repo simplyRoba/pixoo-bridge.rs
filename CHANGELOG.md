@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.5...v0.6.0) (2026-02-01)
+
+
+### Features
+
+* **api:** add tool bridging endpoints for timer, stopwatch, scoreboard and soundmeter ([#50](https://github.com/simplyRoba/pixoo-bridge.rs/issues/50)) ([7cfcfe3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/7cfcfe3b77f5caced45b8e64438197ece3031913))
+
+
+### Bug Fixes
+
+* formatting ([8ab458b](https://github.com/simplyRoba/pixoo-bridge.rs/commit/8ab458b813d785cb94e4e0cbe957ac91410dc9aa))
+* include binary version in startup logging information ([e181c5c](https://github.com/simplyRoba/pixoo-bridge.rs/commit/e181c5cd2b9771d330ef03acab92b5a8deb9c62f))
+* remove warning log for default listener port in resolve_listener_port function ([c946692](https://github.com/simplyRoba/pixoo-bridge.rs/commit/c9466928a09515d6a72cf625a19821b790c5ecad))
+
 ## [0.5.5](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.4...v0.5.5) (2026-02-01)
 
 
