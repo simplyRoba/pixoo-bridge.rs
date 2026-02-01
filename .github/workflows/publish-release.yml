@@ -114,12 +114,17 @@ jobs:
           name: release-binaries-linux-arm64
           path: release-artifacts/linux-arm64
 
+      - name: Rename release assets
+        run: |
+          mv release-artifacts/linux-amd64/pixoo-bridge release-artifacts/linux-amd64/pixoo-bridge-linux-amd64
+          mv release-artifacts/linux-arm64/pixoo-bridge release-artifacts/linux-arm64/pixoo-bridge-linux-arm64
+
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-artifacts/linux-amd64/pixoo-bridge
-            release-artifacts/linux-arm64/pixoo-bridge
+            release-artifacts/linux-amd64/pixoo-bridge-linux-amd64
+            release-artifacts/linux-arm64/pixoo-bridge-linux-arm64
 
   docker:
     name: Build and push Docker image
