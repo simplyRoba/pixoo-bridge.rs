@@ -13,7 +13,7 @@ const MAX_LISTENER_PORT: u16 = 65535;
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use pixoo_bridge::pixoo::PixooClient;
-use routes::mount_system_routes;
+use routes::{mount_system_routes, mount_tool_routes};
 use state::AppState;
 
 #[tokio::main]
@@ -63,6 +63,7 @@ async fn root() -> &'static str {
 
 fn build_app(state: Arc<AppState>) -> Router {
     let app = Router::new().route("/", get(root));
+    let app = mount_tool_routes(app);
     mount_system_routes(app).layer(Extension(state))
 }
 
@@ -118,9 +119,10 @@ fn sanitize_pixoo_url(value: &str) -> Option<String> {
 mod tests {
     use super::*;
     use crate::state::AppState;
-    use axum::body::{to_bytes, Body};
+    use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
+    use pixoo_bridge::pixoo::PixooClient;
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::util::ServiceExt;
 
@@ -148,122 +150,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn health_ok_when_forwarding_disabled() {
-        let state = AppState {
-            health_forward: false,
-            pixoo_client: None,
-        };
-        let app = build_app(Arc::new(state));
-
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .expect("response");
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = to_bytes(response.into_body(), usize::MAX)
-            .await
-            .expect("body");
-        assert_eq!(body, r#"{"status":"ok"}"#);
-    }
-
-    #[tokio::test]
-    async fn health_ok_when_pixoo_healthy() {
-        let server = MockServer::start_async().await;
-        let _mock = server.mock(|when, then| {
-            when.method(MockMethod::GET).path("/get");
-            then.status(200);
-        });
-
-        let client = PixooClient::new(server.base_url()).expect("client");
-        let state = AppState {
-            health_forward: true,
-            pixoo_client: Some(client),
-        };
-        let app = build_app(Arc::new(state));
-
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .expect("response");
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = to_bytes(response.into_body(), usize::MAX)
-            .await
-            .expect("body");
-        assert_eq!(body, r#"{"status":"ok"}"#);
-    }
-
-    #[tokio::test]
-    async fn health_forwarding_enabled_by_default() {
-        let server = MockServer::start_async().await;
-        let _mock = server.mock(|when, then| {
-            when.method(MockMethod::GET).path("/get");
-            then.status(200);
-        });
-
-        let health_forward = with_env_var("PIXOO_BRIDGE_HEALTH_FORWARD", None, || {
-            read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true)
-        });
-        let state = AppState {
-            health_forward,
-            pixoo_client: Some(PixooClient::new(server.base_url()).expect("client")),
-        };
-        let app = build_app(Arc::new(state));
-
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .expect("response");
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn health_reports_unhealthy_on_pixoo_failure() {
-        let server = MockServer::start_async().await;
-        let _mock = server.mock(|when, then| {
-            when.method(MockMethod::GET).path("/get");
-            then.status(500);
-        });
-
-        let client = PixooClient::new(server.base_url()).expect("client");
-        let state = AppState {
-            health_forward: true,
-            pixoo_client: Some(client),
-        };
-        let app = build_app(Arc::new(state));
-
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .expect("response");
-
-        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
-    }
-
-    #[tokio::test]
-    async fn reboot_returns_no_content_when_pixoo_accepts() {
+    async fn integration_build_app_includes_tool_routes() {
         let server = MockServer::start_async().await;
         let _mock = server.mock(|when, then| {
             when.method(MockMethod::POST).path("/post");
@@ -281,27 +168,27 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(Method::POST)
-                    .uri("/reboot")
+                    .uri("/tools/stopwatch/start")
                     .body(Body::empty())
                     .unwrap(),
             )
             .await
             .expect("response");
 
-        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[tokio::test]
-    async fn reboot_reports_unhealthy_when_pixoo_fails() {
+    async fn integration_build_app_includes_system_routes() {
         let server = MockServer::start_async().await;
-        let _mock = server.mock(|when, then| {
-            when.method(MockMethod::POST).path("/post");
-            then.status(500).body(r#"{"error_code":0}"#);
+        server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/get");
+            then.status(200);
         });
 
         let client = PixooClient::new(server.base_url()).expect("client");
         let state = AppState {
-            health_forward: false,
+            health_forward: true,
             pixoo_client: Some(client),
         };
         let app = build_app(Arc::new(state));
@@ -309,15 +196,15 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .method(Method::POST)
-                    .uri("/reboot")
+                    .method(Method::GET)
+                    .uri("/health")
                     .body(Body::empty())
                     .unwrap(),
             )
             .await
             .expect("response");
 
-        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[test]
