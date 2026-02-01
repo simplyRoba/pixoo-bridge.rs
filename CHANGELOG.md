@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.4](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.3...v0.5.4) (2026-02-01)
+
+
+### Bug Fixes
+
+* rename release assets for clarity in upload step ([64d295c](https://github.com/simplyRoba/pixoo-bridge.rs/commit/64d295c458bc6636e26c8914b6439492d9c13a6c))
+* simplify compile job name in publish-release workflow ([379eb14](https://github.com/simplyRoba/pixoo-bridge.rs/commit/379eb148e20c880996585c7bb8a0c25bb42294da))
+
 ## [0.5.3](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.2...v0.5.3) (2026-02-01)
 
 
