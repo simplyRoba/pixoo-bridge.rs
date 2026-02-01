@@ -103,10 +103,6 @@ fn resolve_listener_port() -> u16 {
             }
         }
         Err(_) => {
-            warn!(
-                default_port = DEFAULT_LISTENER_PORT,
-                "PIXOO_BRIDGE_PORT is not set; binding to default port {}", DEFAULT_LISTENER_PORT
-            );
             DEFAULT_LISTENER_PORT
         }
     }
