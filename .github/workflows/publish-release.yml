@@ -114,25 +114,12 @@ jobs:
           name: release-binaries-linux-arm64
           path: release-artifacts/linux-arm64
 
-      - name: Upload x86_64 release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: release-artifacts/linux-amd64/pixoo-bridge
-          asset_name: pixoo-bridge-linux-amd64
-          asset_content_type: application/octet-stream
-
-      - name: Upload aarch64 release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: release-artifacts/linux-arm64/pixoo-bridge
-          asset_name: pixoo-bridge-linux-arm64
-          asset_content_type: application/octet-stream
+          files: |
+            release-artifacts/linux-amd64/pixoo-bridge
+            release-artifacts/linux-arm64/pixoo-bridge
 
   docker:
     name: Build and push Docker image
