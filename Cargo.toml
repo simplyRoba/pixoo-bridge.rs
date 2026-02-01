@@ -1,6 +1,6 @@
 [package]
 name = "pixoo-bridge"
-version = "0.5.4"
+version = "0.5.5"
 edition = "2021"
 description = "HTTP bridge for Pixoo LED matrix devices"
 authors = ["pixoo-bridge maintainers"]
