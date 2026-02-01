@@ -12,6 +12,7 @@ rules:
   proposal:
     - "Pack intent, scope (in/out), and approach into the proposal, mention affected modules/APIs, and tie the plan back to Pixoo constraints."
     - "Keep each change focused on one logical goal and name it descriptively so `openspec list` stays readable."
+    - "Prefer adding requirements to existing capabilities over creating new ones to keep the spec surface area manageable."
   design:
     - "Favor simplicity and minimal dependencies to preserve a small Docker image."
     - "Document error handling, retry/backoff, and fallback behavior for Pixoo’s flaky API while explaining architecture decisions, trade-offs, and alternatives."
@@ -20,10 +21,9 @@ rules:
     - "Describe deltas in ADDED/MODIFIED/REMOVED sections and never rewrite the full spec—refer to existing requirements when modifying."
     - "Use RFC 2119 keywords (SHALL/MUST/SHOULD) and Given/When/Then scenarios to keep requirements testable."
     - "Capabilities in specs need to pe put under a domain folder (like `core`, `ui`, `api` ..). The schema is specs/{domain}/{capability}/specs.md. A change can have more than one capability in mor than  one domain. Confirm the domain when creating new specs. Use **AskUserQuestion tool** if unclear."
-    - "Prefer existing capabilities over creating new ones to keep the spec surface area manageable."
   tasks:
     - "Create branches off main for the change; never merge or push to main."
     - "Always write enough tests to cover new/modified functionality and edge cases before implementation."
-    - "Prioratize unit tests over integrations tests. But when necessary do not hesitate to write integration tests to cover end-to-end behavior."
+    - "Prioritize unit tests over integration tests. But when necessary do not hesitate to write integration tests to cover end-to-end behavior."
     - "Include a final task to run `cargo fmt`, `cargo clippy`, and `cargo test` before archiving so implementation matches the artifacts."
     - "After implementing features, revisit README.md so it always reflects current capabilities and usage for the enduser. no implementation details."

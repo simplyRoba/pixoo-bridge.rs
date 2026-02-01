@@ -5,15 +5,129 @@ on:
     types: [published]
 
 jobs:
+  setup:
+    name: Prepare release toolchain
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
+
+      - name: Install cross compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Cache Cargo registry and target artifacts
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Prime cache
+        run: cargo fetch
+
+  compile:
+    name: Compile release binaries
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
+
+      - name: Install aarch64 cross compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build release binary (x86_64)
+        run: CC=gcc cargo build --release --target x86_64-unknown-linux-gnu
+
+      - name: Build release binary (aarch64)
+        run: CC=aarch64-linux-gnu-gcc RUSTFLAGS='-Clinker=aarch64-linux-gnu-gcc' cargo build --release --target aarch64-unknown-linux-gnu
+
+      - name: Collect release binaries
+        run: |
+          mkdir -p release-artifacts/linux-amd64
+          cp target/x86_64-unknown-linux-gnu/release/pixoo-bridge release-artifacts/linux-amd64/pixoo-bridge
+          mkdir -p release-artifacts/linux-arm64
+          cp target/aarch64-unknown-linux-gnu/release/pixoo-bridge release-artifacts/linux-arm64/pixoo-bridge
+
+      - name: Upload release binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-binaries
+          path: release-artifacts
+
+  upload-release-assets:
+    name: Upload binaries to release
+    needs: compile
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download compiled binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: release-artifacts
+
+      - name: Upload x86_64 release asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: release-artifacts/linux-amd64/pixoo-bridge
+          asset_name: pixoo-bridge-linux-amd64
+          asset_content_type: application/octet-stream
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload aarch64 release asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: release-artifacts/linux-arm64/pixoo-bridge
+          asset_name: pixoo-bridge-linux-arm64
+          asset_content_type: application/octet-stream
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   docker:
+    name: Build and push Docker image
+    needs: upload-release-assets
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Download release binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: release-artifacts
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
