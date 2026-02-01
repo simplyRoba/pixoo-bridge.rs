@@ -38,6 +38,17 @@ jobs:
     name: Compile release binaries
     needs: setup
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: linux-amd64
+            triple: x86_64-unknown-linux-gnu
+            cc: gcc
+            rustflags: ''
+          - target: linux-arm64
+            triple: aarch64-unknown-linux-gnu
+            cc: aarch64-linux-gnu-gcc
+            rustflags: "-Clinker=aarch64-linux-gnu-gcc"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -58,28 +69,31 @@ jobs:
           targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
 
       - name: Install aarch64 cross compiler
+        if: ${{ matrix.target == 'linux-arm64' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      - name: Build release binary (x86_64)
-        run: CC=gcc cargo build --release --target x86_64-unknown-linux-gnu
-
-      - name: Build release binary (aarch64)
-        run: CC=aarch64-linux-gnu-gcc RUSTFLAGS='-Clinker=aarch64-linux-gnu-gcc' cargo build --release --target aarch64-unknown-linux-gnu
-
-      - name: Collect release binaries
+      - name: Build release binary
         run: |
-          mkdir -p release-artifacts/linux-amd64
-          cp target/x86_64-unknown-linux-gnu/release/pixoo-bridge release-artifacts/linux-amd64/pixoo-bridge
-          mkdir -p release-artifacts/linux-arm64
-          cp target/aarch64-unknown-linux-gnu/release/pixoo-bridge release-artifacts/linux-arm64/pixoo-bridge
+          if [ "${{ matrix.rustflags }}" != "" ]; then
+            export RUSTFLAGS="${{ matrix.rustflags }}"
+          else
+            unset RUSTFLAGS
+          fi
+          export CC=${{ matrix.cc }}
+          cargo build --release --target ${{ matrix.triple }}
 
-      - name: Upload release binaries
-        uses: actions/upload-artifact@v6
+      - name: Collect release binary
+        run: |
+          mkdir -p release-artifacts/${{ matrix.target }}
+          cp target/${{ matrix.triple }}/release/pixoo-bridge release-artifacts/${{ matrix.target }}/pixoo-bridge
+
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
         with:
-          name: release-binaries
-          path: release-artifacts
+          name: release-binaries-${{ matrix.target }}
+          path: release-artifacts/${{ matrix.target }}
 
   upload-release-assets:
     name: Upload binaries to release
@@ -88,29 +102,37 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download compiled binaries
+      - name: Download linux/amd64 binary
         uses: actions/download-artifact@v7
         with:
-          name: release-binaries
-          path: release-artifacts
+          name: release-binaries-linux-amd64
+          path: release-artifacts/linux-amd64
+
+      - name: Download linux/arm64 binary
+        uses: actions/download-artifact@v7
+        with:
+          name: release-binaries-linux-arm64
+          path: release-artifacts/linux-arm64
 
       - name: Upload x86_64 release asset
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: release-artifacts/linux-amd64/pixoo-bridge
           asset_name: pixoo-bridge-linux-amd64
           asset_content_type: application/octet-stream
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload aarch64 release asset
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: release-artifacts/linux-arm64/pixoo-bridge
           asset_name: pixoo-bridge-linux-arm64
           asset_content_type: application/octet-stream
-          token: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     name: Build and push Docker image
@@ -123,11 +145,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Download release binaries
+      - name: Download linux/amd64 binary
         uses: actions/download-artifact@v7
         with:
-          name: release-binaries
-          path: release-artifacts
+          name: release-binaries-linux-amd64
+          path: release-artifacts/linux-amd64
+
+      - name: Download linux/arm64 binary
+        uses: actions/download-artifact@v7
+        with:
+          name: release-binaries-linux-arm64
+          path: release-artifacts/linux-arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
