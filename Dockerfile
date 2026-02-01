@@ -24,4 +24,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 
 USER 1000:1000
 
-CMD ["pixoo-bridge"]
+CMD ["/usr/local/bin/pixoo-bridge"]
