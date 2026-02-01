@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.4.0...v0.5.0) (2026-02-01)
+
+
+### Features
+
+* add GitHub Actions extension to VSCode customizations ([ac64335](https://github.com/simplyRoba/pixoo-bridge.rs/commit/ac64335ff0e9ee7e6366f4990905533a71dd773a))
+* enhance github ations by splitting up jobs also move release compilation to the action ([#40](https://github.com/simplyRoba/pixoo-bridge.rs/issues/40)) ([8e24513](https://github.com/simplyRoba/pixoo-bridge.rs/commit/8e245139555b10f4931c6a33f14d9309fa445026))
+
 ## [0.4.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.3.0...v0.4.0) (2026-01-31)
 
 
