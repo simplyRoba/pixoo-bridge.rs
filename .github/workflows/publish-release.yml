@@ -35,7 +35,7 @@ jobs:
         run: cargo fetch
 
   compile:
-    name: Compile release binaries
+    name: Compile release binaries ({{ matrix.target }})
     needs: setup
     runs-on: ubuntu-latest
     strategy:
