@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.3](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.2...v0.5.3) (2026-02-01)
+
+
+### Bug Fixes
+
+* **ci:** bump actions/upload-artifact from 4 to 6 ([f497a8c](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f497a8cbc35eb8305c26322b324669c04b8d103b))
+* **release:** switch to softprops/action-gh-release for uploading release assets ([4a7a10e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/4a7a10e946e7b11daff236d1f139fc8109cb1a46))
+* update CMD in Dockerfile to use full path for pixoo-bridge ([809b3c8](https://github.com/simplyRoba/pixoo-bridge.rs/commit/809b3c847f1e5bc0dc2fd90ce847d664366d93e9))
+* update compile job name to include target matrix ([eacaea3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/eacaea3c4ecfd5db77e7ea9896bacfd9c7de0bd1))
+
 ## [0.5.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.1...v0.5.2) (2026-02-01)
 
 
