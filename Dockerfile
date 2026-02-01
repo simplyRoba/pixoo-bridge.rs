@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
 ARG TARGETPLATFORM
 COPY release-artifacts/linux-amd64/pixoo-bridge /usr/local/bin/pixoo-bridge-amd64
 COPY release-artifacts/linux-arm64/pixoo-bridge /usr/local/bin/pixoo-bridge-arm64
+
+RUN chmod +x /usr/local/bin/pixoo-bridge-amd64 /usr/local/bin/pixoo-bridge-arm64
+
 RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
       mv /usr/local/bin/pixoo-bridge-amd64 /usr/local/bin/pixoo-bridge && \
       rm /usr/local/bin/pixoo-bridge-arm64; \
