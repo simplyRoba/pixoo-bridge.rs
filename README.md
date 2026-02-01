@@ -26,6 +26,11 @@ On startup the container logs the resolved configuration (health forwarding flag
 | --- | --- | --- | --- |
 | `GET` | `/health` | Container health probe; optionally cascades to the Pixoo device when `PIXOO_BRIDGE_HEALTH_FORWARD=true`. | `200 { "status": "ok" }` when healthy, `503` when forwarding fails or the Pixoo client is unreachable |
 | `POST` | `/reboot` | Triggers Pixoo's `Device/SysReboot` command (only available when `PIXOO_BASE_URL` is configured). | `204 No Content` on success, `503` with `{"error":"Pixoo reboot failed"}` when Pixoo is unreachable or rejects the command |
+| `POST` | `/tools/timer/start` | Starts the Pixoo timer by supplying `minute`/`second` in the request body; the route translates to `Tools/SetTimer` with `Status: 1` so callers never see the vendor status codes. | `200` when Pixoo acknowledges, `400` when the payload is invalid, `503` if the Pixoo client is missing or the command fails |
+| `POST` | `/tools/timer/stop` | Stops the Pixoo timer by issuing `Tools/SetTimer` with `Status: 0`. | `200` on success, `503` when Pixoo rejects or is unavailable |
+| `POST` | `/tools/stopwatch/{action}` | `action` is one of `start`, `stop`, or `reset`; each verb maps to the corresponding `Tools/SetStopWatch` status so automation clients never send raw numbers. | `200` on success, `400` for invalid verbs, `503` for Pixoo failures |
+| `POST` | `/tools/scoreboard` | Accepts `{ "blue_score": 0..999, "red_score": 0..999 }` and forwards them as `BlueScore`/`RedScore` via `Tools/SetScoreBoard`. | `200` on success, `400` for out-of-range scores, `503` when Pixoo rejects the update |
+| `POST` | `/tools/soundmeter/{action}` | `action` is `start` or `stop` and maps to `Tools/SetNoiseStatus`, hiding the vendor’s numeric `NoiseStatus` values. | `200` when Pixoo accepts the command, `400` for invalid verbs, `503` when Pixoo fails |
 
 The HTTP handlers for system maintenance now live in a dedicated `routes/system` module so `/health` and `/reboot` share the same middleware and routing surface while keeping `main.rs` lean.
 

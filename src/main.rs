@@ -13,7 +13,7 @@ const MAX_LISTENER_PORT: u16 = 65535;
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use pixoo_bridge::pixoo::PixooClient;
-use routes::mount_system_routes;
+use routes::{mount_system_routes, mount_tool_routes};
 use state::AppState;
 
 #[tokio::main]
@@ -63,6 +63,7 @@ async fn root() -> &'static str {
 
 fn build_app(state: Arc<AppState>) -> Router {
     let app = Router::new().route("/", get(root));
+    let app = mount_tool_routes(app);
     mount_system_routes(app).layer(Extension(state))
 }
 
@@ -121,6 +122,7 @@ mod tests {
     use axum::body::{to_bytes, Body};
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
+    use pixoo_bridge::pixoo::PixooClient;
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::util::ServiceExt;
 
@@ -318,6 +320,35 @@ mod tests {
             .expect("response");
 
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[tokio::test]
+    async fn tools_stopwatch_route_available_via_build_app() {
+        let server = MockServer::start_async().await;
+        let _mock = server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let client = PixooClient::new(server.base_url()).expect("client");
+        let state = AppState {
+            health_forward: false,
+            pixoo_client: Some(client),
+        };
+        let app = build_app(Arc::new(state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/tools/stopwatch/start")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[test]
