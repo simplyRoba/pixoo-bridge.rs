@@ -1,10 +1,18 @@
 mod routes;
 mod state;
 
-use axum::{extract::Extension, routing::get, Router};
+use axum::{
+    body::Body,
+    extract::Extension,
+    http::Request,
+    middleware::{from_fn, Next},
+    response::Response,
+    routing::get,
+    Router,
+};
 use reqwest::Url;
-use std::{env, net::SocketAddr, sync::Arc};
-use tracing::{info, warn};
+use std::{env, net::SocketAddr, sync::Arc, time::Instant};
+use tracing::{debug, info, warn};
 use tracing_subscriber::filter::LevelFilter;
 
 const DEFAULT_LISTENER_PORT: u16 = 4000;
@@ -64,7 +72,20 @@ async fn root() -> &'static str {
 fn build_app(state: Arc<AppState>) -> Router {
     let app = Router::new().route("/", get(root));
     let app = mount_tool_routes(app);
-    mount_system_routes(app).layer(Extension(state))
+    let app = mount_system_routes(app);
+
+    app.layer(from_fn(access_log)).layer(Extension(state))
+}
+
+async fn access_log(req: Request<Body>, next: Next) -> Response {
+    let method = req.method().clone();
+    let path = req.uri().path().to_string();
+    let start = Instant::now();
+    let response = next.run(req).await;
+    let latency = start.elapsed();
+    let status = response.status();
+    debug!(method=%method, path=%path, status=%status, latency=?latency, "access log");
+    response
 }
 
 fn read_bool_env(key: &str, default: bool) -> bool {
