@@ -150,7 +150,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn tools_stopwatch_route_available_via_build_app() {
+    async fn integration_build_app_includes_tool_routes() {
         let server = MockServer::start_async().await;
         let _mock = server.mock(|when, then| {
             when.method(MockMethod::POST).path("/post");
@@ -169,6 +169,35 @@ mod tests {
                 Request::builder()
                     .method(Method::POST)
                     .uri("/tools/stopwatch/start")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn integration_build_app_includes_system_routes() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/get");
+            then.status(200);
+        });
+
+        let client = PixooClient::new(server.base_url()).expect("client");
+        let state = AppState {
+            health_forward: true,
+            pixoo_client: Some(client),
+        };
+        let app = build_app(Arc::new(state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/health")
                     .body(Body::empty())
                     .unwrap(),
             )
