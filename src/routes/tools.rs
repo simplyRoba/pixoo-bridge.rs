@@ -35,7 +35,7 @@ struct ScoreboardRequest {
 async fn timer_start(
     Extension(state): Extension<Arc<AppState>>,
     Json(payload): Json<TimerRequest>,
- ) -> Response {
+) -> Response {
     let mut args = Map::new();
     args.insert("Minute".to_string(), Value::from(payload.minute));
     args.insert("Second".to_string(), Value::from(payload.second));
@@ -54,7 +54,7 @@ async fn timer_stop(Extension(state): Extension<Arc<AppState>>) -> Response {
 async fn stopwatch(
     Path(action): Path<String>,
     Extension(state): Extension<Arc<AppState>>,
- ) -> Response {
+) -> Response {
     let status = match action.as_str() {
         "start" => 1,
         "stop" => 0,
@@ -80,7 +80,7 @@ async fn stopwatch(
 async fn scoreboard(
     Extension(state): Extension<Arc<AppState>>,
     Json(payload): Json<ScoreboardRequest>,
- ) -> Response {
+) -> Response {
     if payload.blue_score > 999 || payload.red_score > 999 {
         return (
             StatusCode::BAD_REQUEST,
@@ -99,7 +99,7 @@ async fn scoreboard(
 async fn soundmeter(
     Path(action): Path<String>,
     Extension(state): Extension<Arc<AppState>>,
- ) -> Response {
+) -> Response {
     let status = match action.as_str() {
         "start" => 1,
         "stop" => 0,
