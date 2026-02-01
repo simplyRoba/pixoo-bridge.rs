@@ -20,3 +20,9 @@
 ## Tooling constraints
 - Rust work stays on the latest stable toolchain via `rustup`; do not depend on nightly-only features or pin a custom channel in `AGENTS.md`.
 - If the CLI is used, prefer the bundled OpenSpec commands (`openspec status`, `openspec instructions`, etc.) that read from the current repo structure.
+
+## Vocabulary
+- **Change**: the scoped OpenSpec artifact you are working on (proposal → implementation → verification). A change captures one logical goal, outlines the affected capabilities/apis, and stores only delta requirements.
+- **Requirement**: a concrete, testable statement in a change’s ADDED/MODIFIED/REMOVED sections. Requirements should use RFC 2119 keywords and Given/When/Then structure so they can be verified during testing.
+- **Capability**: the functional area covered by one or more requirements. Capabilities are represented by folders under `openspec/specs/{domain}/{capability}` and help teams scope work before implementation begins.
+- **Domain**: the broader grouping for related capabilities (for example `core`, `ui`, `api`). Every new capability must be placed in the correct domain folder.
