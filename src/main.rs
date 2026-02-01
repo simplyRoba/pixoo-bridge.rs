@@ -104,9 +104,7 @@ fn resolve_listener_port() -> u16 {
                 }
             }
         }
-        Err(_) => {
-            DEFAULT_LISTENER_PORT
-        }
+        Err(_) => DEFAULT_LISTENER_PORT,
     }
 }
 
