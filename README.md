@@ -44,6 +44,10 @@ If you want to build or contribute, this project targets a minimal Rust service 
 
 Run `cargo fmt && cargo clippy && cargo test` before committing. Follow conventional commit format.
 
+## Releases
+
+Release binaries for `linux/amd64` and `linux/arm64` are now compiled in `publish-release.yml` using the same commands the Docker image expects. The workflow uploads those binaries as release assets, and the Dockerfile copies the matching prebuilt artifact for each `TARGETPLATFORM` so the container image no longer rebuilds the bridge.
+
 ---
 
 **This project is developed spec driven with AI assistance, reviewed by a critical human.**

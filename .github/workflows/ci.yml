@@ -6,16 +6,18 @@ on:
   push:
     branches: [main]
 
+env:
+  CACHE_KEY: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
 jobs:
-  test:
-    name: Test
+  setup:
+    name: Prepare toolchain and cache
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Rust
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -26,19 +28,39 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      - name: Add targets
+      - name: Add Rust targets
         run: |
           rustup target add x86_64-unknown-linux-gnu
           rustup target add aarch64-unknown-linux-gnu
 
-      - name: Cache Cargo registry
+      - name: Cache Cargo registry and target artifacts
         uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ env.CACHE_KEY }}
+
+      - name: Prime cache
+        run: cargo fetch
+
+  lint:
+    name: Lint
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ env.CACHE_KEY }}
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -46,27 +68,22 @@ jobs:
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
+  test:
+    name: Test
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Restore Cargo cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ env.CACHE_KEY }}
+
       - name: Run tests
         run: cargo test
-
-      - name: Build release (x86_64)
-        run: CC=gcc cargo build --release --target x86_64-unknown-linux-gnu
-
-      - name: Build release (aarch64)
-        run: CC=aarch64-linux-gnu-gcc RUSTFLAGS='-Clinker=aarch64-linux-gnu-gcc' cargo build --release --target aarch64-unknown-linux-gnu
-
-      - name: Upload release binary (x86_64)
-        uses: actions/upload-artifact@v6
-        if: github.ref == 'refs/heads/main'
-        with:
-          name: pixoo-bridge-rs-x86_64
-          path: target/x86_64-unknown-linux-gnu/release/pixoo-bridge
-          retention-days: 7
-
-      - name: Upload release binary (aarch64)
-        uses: actions/upload-artifact@v6
-        if: github.ref == 'refs/heads/main'
-        with:
-          name: pixoo-bridge-rs-aarch64
-          path: target/aarch64-unknown-linux-gnu/release/pixoo-bridge
-          retention-days: 7
