@@ -53,6 +53,10 @@ Run `cargo fmt && cargo clippy && cargo test` before committing. Follow conventi
 
 Release binaries for `linux/amd64` and `linux/arm64` are now compiled in `publish-release.yml` using the same commands the Docker image expects. The workflow uploads those binaries as release assets, and the Dockerfile copies the matching prebuilt artifact for each `TARGETPLATFORM` so the container image no longer rebuilds the bridge.
 
+## Migration
+
+Projects upgrading from the legacy `pixoo-bridge` package should now use `pixoo.bridge.rs`. All existing automation clients are expected to replay their calls against the same routes, except for the tools namespace: `/tools/...` is the current endpoint surface and the singular `/tool/...` variants are no longer supported.
+
 ---
 
 **This project is developed spec driven with AI assistance, reviewed by a critical human.**
