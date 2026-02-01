@@ -225,6 +225,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn timer_stop_succeeds() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_tool_app(tool_state_with_client(&server.base_url()));
+        let (status, body) = send_json_request(&app, Method::POST, "/tools/timer/stop", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.is_empty());
+    }
+
+    #[tokio::test]
     async fn timer_stop_missing_client() {
         let state = Arc::new(AppState {
             health_forward: false,
@@ -297,6 +312,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn scoreboard_accepts_valid_scores() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_tool_app(tool_state_with_client(&server.base_url()));
+        let (status, body) = send_json_request(
+            &app,
+            Method::POST,
+            "/tools/scoreboard",
+            Some(json!({"blue_score": 12, "red_score": 9})),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.is_empty());
+    }
+
+    #[tokio::test]
     async fn soundmeter_start_succeeds() {
         let server = MockServer::start_async().await;
         server.mock(|when, then| {
@@ -307,6 +343,51 @@ mod tests {
         let app = build_tool_app(tool_state_with_client(&server.base_url()));
         let (status, _) =
             send_json_request(&app, Method::POST, "/tools/soundmeter/start", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn soundmeter_stop_succeeds() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_tool_app(tool_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/tools/soundmeter/stop", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn stopwatch_stop_succeeds() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_tool_app(tool_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/tools/stopwatch/stop", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn stopwatch_reset_succeeds() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_tool_app(tool_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/tools/stopwatch/reset", None).await;
 
         assert_eq!(status, StatusCode::OK);
     }
