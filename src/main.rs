@@ -10,6 +10,7 @@ use tracing_subscriber::filter::LevelFilter;
 const DEFAULT_LISTENER_PORT: u16 = 4000;
 const MIN_LISTENER_PORT: u16 = 1024;
 const MAX_LISTENER_PORT: u16 = 65535;
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use pixoo_bridge::pixoo::PixooClient;
 use routes::mount_system_routes;
@@ -45,6 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pixoo_client = has_pixoo_client,
         sanitized_pixoo_base_url = ?sanitized_base_url,
         listener_port,
+        version = APP_VERSION,
         address = %addr,
         "Pixoo bridge configuration loaded"
     );

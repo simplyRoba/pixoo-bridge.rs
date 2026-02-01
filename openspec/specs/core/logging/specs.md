@@ -6,7 +6,7 @@ Explain the logging expectations (startup visibility and structured failure insi
 ## Requirements
 
 ### Requirement: Startup logging records runtime configuration
-The bridge SHALL emit an info-level log once at startup that lists the resolved health forwarding flag, the sanitized Pixoo base URL (scheme and host only), and the listener address so operators know what settings the container began with.
+The bridge SHALL emit an info-level log once at startup that lists the resolved health forwarding flag, the sanitized Pixoo base URL (scheme and host only), the listener address, and the binary version so operators know what settings the container began with and which artifact they deployed.
 
 #### Scenario: Container starts with health forwarding enabled
 - **WHEN** the service finishes building `AppState` or equivalent and before it accepts HTTP traffic
