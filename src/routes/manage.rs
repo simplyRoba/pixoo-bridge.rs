@@ -347,7 +347,7 @@ mod tests {
         let server = MockServer::start_async().await;
         server.mock(|when, then| {
             when.method(MockMethod::POST).path("/post");
-            then.status(500).body(r#"{"error_code":0}"#);
+            then.status(200).body(r#"{"error_code":1}"#);
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
@@ -398,7 +398,7 @@ mod tests {
         let server = MockServer::start_async().await;
         server.mock(|when, then| {
             when.method(MockMethod::POST).path("/post");
-            then.status(500).body(r#"{"error_code":0}"#);
+            then.status(200).body(r#"{"error_code":1}"#);
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
