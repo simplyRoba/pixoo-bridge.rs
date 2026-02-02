@@ -343,6 +343,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn time_handles_failure() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(500).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_get(&app, "/manage/time").await;
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(body.contains("Pixoo command failed"));
+    }
+
+    #[tokio::test]
     async fn weather_returns_normalized_fields() {
         let server = MockServer::start_async().await;
         server.mock(|when, then| {
