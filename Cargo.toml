@@ -4,7 +4,7 @@ version = "0.6.0"
 edition = "2021"
 description = "HTTP bridge for Pixoo LED matrix devices"
 authors = ["pixoo-bridge maintainers"]
-license = "MIT"
+license = "AGPL-3.0"
 repository = "https://github.com/axel-linux/pixoo-bridge.rs"
 
 [dependencies]
@@ -16,6 +16,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tower = "0.5"
+chrono = { version = "0.4", features = ["alloc"] }
 
 [dev-dependencies]
 tokio-test = "0.4"

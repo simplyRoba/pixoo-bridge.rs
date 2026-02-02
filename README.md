@@ -33,6 +33,9 @@ Request logging now runs across the entire router so every HTTP call emits its m
 | `POST` | `/tools/stopwatch/{action}` | Control the stopwatch by sending `action`=`start`, `stop`, or `reset`. | `200` on success, `400` for invalid verbs, `503` when Pixoo rejects the request |
 | `POST` | `/tools/scoreboard` | Set scores by supplying `{ "blue_score": 0..999, "red_score": 0..999 }`. | `200` on success, `400` for out-of-range scores, `503` when Pixoo rejects the update |
 | `POST` | `/tools/soundmeter/{action}` | Control the soundmeter with `action`=`start` or `stop`. | `200` on success, `400` for invalid verbs, `503` when Pixoo rejects the request |
+| `GET` | `/manage/settings` | Return derived display settings (visibility, brightness, rotation, mirror, temperature unit, and clock ID) from `Channel/GetAllConf`. | `200` with typed JSON, `503` when Pixoo is unreachable |
+| `GET` | `/manage/time` | Provide normalized UTC/local timestamps derived from `Device/GetDeviceTime`. | `200` with ISO-8601 strings, `503` on failure |
+| `GET` | `/manage/weather` | Report normalized weather data (current/min/max temperatures, pressure, humidity, wind speed, and tracked weather string) without mutating Pixoo's original values. | `200` with typed JSON, `503` when Pixoo rejects the command |
 
 The HTTP handlers for system maintenance now live in a dedicated `routes/system` module so `/health` and `/reboot` share the same middleware and routing surface while keeping `main.rs` lean.
 
