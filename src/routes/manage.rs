@@ -21,7 +21,7 @@ pub fn mount_manage_routes(router: Router) -> Router {
 }
 
 async fn manage_settings(Extension(state): Extension<Arc<AppState>>) -> Response {
-    let response = match dispatch_manage_command(&state, PixooCommand::ChannelGetAllConf).await {
+    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetSettings).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };
@@ -36,7 +36,7 @@ async fn manage_settings(Extension(state): Extension<Arc<AppState>>) -> Response
 }
 
 async fn manage_time(Extension(state): Extension<Arc<AppState>>) -> Response {
-    let response = match dispatch_manage_command(&state, PixooCommand::DeviceGetDeviceTime).await {
+    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetTime).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };
@@ -51,7 +51,7 @@ async fn manage_time(Extension(state): Extension<Arc<AppState>>) -> Response {
 }
 
 async fn manage_weather(Extension(state): Extension<Arc<AppState>>) -> Response {
-    let response = match dispatch_manage_command(&state, PixooCommand::DeviceGetWeatherInfo).await {
+    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetWeather).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };

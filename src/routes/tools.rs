@@ -41,14 +41,14 @@ async fn timer_start(
     args.insert("Second".to_string(), Value::from(payload.second));
     args.insert("Status".to_string(), Value::from(1));
 
-    dispatch_command(&state, PixooCommand::ToolsSetTimer, args).await
+    dispatch_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
 async fn timer_stop(Extension(state): Extension<Arc<AppState>>) -> Response {
     let mut args = Map::new();
     args.insert("Status".to_string(), Value::from(0));
 
-    dispatch_command(&state, PixooCommand::ToolsSetTimer, args).await
+    dispatch_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
 async fn stopwatch(
@@ -74,7 +74,7 @@ async fn stopwatch(
     let mut args = Map::new();
     args.insert("Status".to_string(), Value::from(status));
 
-    dispatch_command(&state, PixooCommand::ToolsSetStopWatch, args).await
+    dispatch_command(&state, PixooCommand::ToolsStopwatch, args).await
 }
 
 async fn scoreboard(
@@ -93,7 +93,7 @@ async fn scoreboard(
     args.insert("BlueScore".to_string(), Value::from(payload.blue_score));
     args.insert("RedScore".to_string(), Value::from(payload.red_score));
 
-    dispatch_command(&state, PixooCommand::ToolsSetScoreBoard, args).await
+    dispatch_command(&state, PixooCommand::ToolsScoreboard, args).await
 }
 
 async fn soundmeter(
@@ -118,7 +118,7 @@ async fn soundmeter(
     let mut args = Map::new();
     args.insert("NoiseStatus".to_string(), Value::from(status));
 
-    dispatch_command(&state, PixooCommand::ToolsSetNoiseStatus, args).await
+    dispatch_command(&state, PixooCommand::ToolsSoundMeter, args).await
 }
 
 async fn dispatch_command(

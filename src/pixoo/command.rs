@@ -2,27 +2,27 @@ use std::fmt;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum PixooCommand {
-    DeviceSysReboot,
-    ToolsSetTimer,
-    ToolsSetStopWatch,
-    ToolsSetScoreBoard,
-    ToolsSetNoiseStatus,
-    ChannelGetAllConf,
-    DeviceGetDeviceTime,
-    DeviceGetWeatherInfo,
+    SystemReboot,
+    ToolsTimer,
+    ToolsStopwatch,
+    ToolsScoreboard,
+    ToolsSoundMeter,
+    ManageGetSettings,
+    ManageGetTime,
+    ManageGetWeather,
 }
 
 impl PixooCommand {
     pub fn as_str(&self) -> &str {
         match self {
-            PixooCommand::DeviceSysReboot => "Device/SysReboot",
-            PixooCommand::ToolsSetTimer => "Tools/SetTimer",
-            PixooCommand::ToolsSetStopWatch => "Tools/SetStopWatch",
-            PixooCommand::ToolsSetScoreBoard => "Tools/SetScoreBoard",
-            PixooCommand::ToolsSetNoiseStatus => "Tools/SetNoiseStatus",
-            PixooCommand::ChannelGetAllConf => "Channel/GetAllConf",
-            PixooCommand::DeviceGetDeviceTime => "Device/GetDeviceTime",
-            PixooCommand::DeviceGetWeatherInfo => "Device/GetWeatherInfo",
+            PixooCommand::SystemReboot => "Device/SysReboot",
+            PixooCommand::ToolsTimer => "Tools/SetTimer",
+            PixooCommand::ToolsStopwatch => "Tools/SetStopWatch",
+            PixooCommand::ToolsScoreboard => "Tools/SetScoreBoard",
+            PixooCommand::ToolsSoundMeter => "Tools/SetNoiseStatus",
+            PixooCommand::ManageGetSettings => "Channel/GetAllConf",
+            PixooCommand::ManageGetTime => "Device/GetDeviceTime",
+            PixooCommand::ManageGetWeather => "Device/GetWeatherInfo",
         }
     }
 }
@@ -38,41 +38,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn device_sys_reboot_command() {
-        let command = PixooCommand::DeviceSysReboot;
-        assert_eq!(command.as_str(), "Device/SysReboot");
-        assert_eq!(command.to_string(), "Device/SysReboot");
-    }
-
-    #[test]
-    fn tools_commands_have_expected_strings() {
-        assert_eq!(PixooCommand::ToolsSetTimer.as_str(), "Tools/SetTimer");
+    fn string_values_remain_unchanged() {
+        assert_eq!(PixooCommand::SystemReboot.as_str(), "Device/SysReboot");
+        assert_eq!(PixooCommand::ToolsTimer.as_str(), "Tools/SetTimer");
+        assert_eq!(PixooCommand::ToolsStopwatch.as_str(), "Tools/SetStopWatch");
         assert_eq!(
-            PixooCommand::ToolsSetStopWatch.as_str(),
-            "Tools/SetStopWatch"
-        );
-        assert_eq!(
-            PixooCommand::ToolsSetScoreBoard.as_str(),
+            PixooCommand::ToolsScoreboard.as_str(),
             "Tools/SetScoreBoard"
         );
         assert_eq!(
-            PixooCommand::ToolsSetNoiseStatus.as_str(),
+            PixooCommand::ToolsSoundMeter.as_str(),
             "Tools/SetNoiseStatus"
         );
-    }
-
-    #[test]
-    fn manage_commands_have_expected_strings() {
         assert_eq!(
-            PixooCommand::ChannelGetAllConf.as_str(),
+            PixooCommand::ManageGetSettings.as_str(),
             "Channel/GetAllConf"
         );
+        assert_eq!(PixooCommand::ManageGetTime.as_str(), "Device/GetDeviceTime");
         assert_eq!(
-            PixooCommand::DeviceGetDeviceTime.as_str(),
-            "Device/GetDeviceTime"
-        );
-        assert_eq!(
-            PixooCommand::DeviceGetWeatherInfo.as_str(),
+            PixooCommand::ManageGetWeather.as_str(),
             "Device/GetWeatherInfo"
         );
     }
