@@ -6,8 +6,10 @@ use axum::Router;
 use pixoo_bridge::pixoo::PixooCommand;
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
+use std::str::FromStr;
 use std::sync::Arc;
 use tracing::error;
+use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::state::AppState;
 
@@ -20,22 +22,141 @@ pub fn mount_tool_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>>
         .route("/tools/soundmeter/{action}", post(soundmeter))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct TimerRequest {
+    #[validate(range(min = 0, max = 59))]
     minute: u32,
+    #[validate(range(min = 0, max = 59))]
     second: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 struct ScoreboardRequest {
+    #[validate(range(min = 0, max = 999))]
     blue_score: u16,
+    #[validate(range(min = 0, max = 999))]
     red_score: u16,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum StopwatchAction {
+    Start,
+    Stop,
+    Reset,
+}
+
+impl StopwatchAction {
+    fn status(&self) -> u8 {
+        match self {
+            Self::Start => 1,
+            Self::Stop => 0,
+            Self::Reset => 2,
+        }
+    }
+
+    fn allowed_values() -> &'static [&'static str] {
+        &["start", "stop", "reset"]
+    }
+}
+
+impl FromStr for StopwatchAction {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "start" => Ok(Self::Start),
+            "stop" => Ok(Self::Stop),
+            "reset" => Ok(Self::Reset),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum SoundmeterAction {
+    Start,
+    Stop,
+}
+
+impl SoundmeterAction {
+    fn status(&self) -> u8 {
+        match self {
+            Self::Start => 1,
+            Self::Stop => 0,
+        }
+    }
+
+    fn allowed_values() -> &'static [&'static str] {
+        &["start", "stop"]
+    }
+}
+
+impl FromStr for SoundmeterAction {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "start" => Ok(Self::Start),
+            "stop" => Ok(Self::Stop),
+            _ => Err(()),
+        }
+    }
+}
+
+fn validation_error_message(error: &ValidationError) -> String {
+    if let Some(message) = &error.message {
+        message.to_string()
+    } else {
+        error.code.to_string()
+    }
+}
+
+fn validation_error_response(details: Map<String, Value>) -> Response {
+    let body = json!({
+        "error": "validation failed",
+        "details": Value::Object(details),
+    });
+
+    (StatusCode::BAD_REQUEST, Json(body)).into_response()
+}
+
+fn validation_errors_response(errors: ValidationErrors) -> Response {
+    let mut details = Map::new();
+
+    for (field, field_errors) in errors.field_errors() {
+        let messages: Vec<Value> = field_errors
+            .iter()
+            .map(|error| Value::String(validation_error_message(error)))
+            .collect();
+        details.insert(field.to_string(), Value::Array(messages));
+    }
+
+    validation_error_response(details)
+}
+
+fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
+    let mut details = Map::new();
+    details.insert(
+        "action".to_string(),
+        json!({
+            "provided": action,
+            "allowed": allowed,
+        }),
+    );
+
+    validation_error_response(details)
 }
 
 async fn timer_start(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<TimerRequest>,
 ) -> Response {
+    if let Err(errors) = payload.validate() {
+        return validation_errors_response(errors);
+    }
+
     let mut args = Map::new();
     args.insert("Minute".to_string(), Value::from(payload.minute));
     args.insert("Second".to_string(), Value::from(payload.second));
@@ -52,24 +173,13 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
 }
 
 async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
-    let status = match action.as_str() {
-        "start" => 1,
-        "stop" => 0,
-        "reset" => 2,
-        _ => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({
-                    "error": "invalid stopwatch action",
-                    "allowed": ["start", "stop", "reset"],
-                })),
-            )
-                .into_response()
-        }
+    let action = match action.parse::<StopwatchAction>() {
+        Ok(value) => value,
+        Err(_) => return action_validation_error(&action, StopwatchAction::allowed_values()),
     };
 
     let mut args = Map::new();
-    args.insert("Status".to_string(), Value::from(status));
+    args.insert("Status".to_string(), Value::from(action.status()));
 
     dispatch_command(&state, PixooCommand::ToolsStopwatch, args).await
 }
@@ -78,12 +188,8 @@ async fn scoreboard(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ScoreboardRequest>,
 ) -> Response {
-    if payload.blue_score > 999 || payload.red_score > 999 {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "scores must be 0..=999" })),
-        )
-            .into_response();
+    if let Err(errors) = payload.validate() {
+        return validation_errors_response(errors);
     }
 
     let mut args = Map::new();
@@ -94,23 +200,13 @@ async fn scoreboard(
 }
 
 async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
-    let status = match action.as_str() {
-        "start" => 1,
-        "stop" => 0,
-        _ => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({
-                    "error": "invalid soundmeter action",
-                    "allowed": ["start", "stop"],
-                })),
-            )
-                .into_response()
-        }
+    let action = match action.parse::<SoundmeterAction>() {
+        Ok(value) => value,
+        Err(_) => return action_validation_error(&action, SoundmeterAction::allowed_values()),
     };
 
     let mut args = Map::new();
-    args.insert("NoiseStatus".to_string(), Value::from(status));
+    args.insert("NoiseStatus".to_string(), Value::from(action.status()));
 
     dispatch_command(&state, PixooCommand::ToolsSoundMeter, args).await
 }
@@ -153,7 +249,7 @@ mod tests {
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
     use pixoo_bridge::pixoo::PixooClient;
-    use serde_json::json;
+    use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;
 
@@ -188,6 +284,12 @@ mod tests {
         (status, String::from_utf8_lossy(&body_bytes).to_string())
     }
 
+    fn assert_validation_failed(body: &str) -> Value {
+        let parsed: Value = serde_json::from_str(body).unwrap();
+        assert_eq!(parsed["error"], "validation failed");
+        parsed
+    }
+
     fn tool_state_with_client(base_url: &str) -> Arc<AppState> {
         let client = PixooClient::new(base_url).expect("client");
         Arc::new(AppState {
@@ -215,6 +317,28 @@ mod tests {
 
         assert_eq!(status, StatusCode::OK);
         assert!(body.is_empty());
+    }
+
+    #[tokio::test]
+    async fn timer_start_rejects_invalid_minute() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_tool_app(tool_state_with_client(&server.base_url()));
+        let (status, body) = send_json_request(
+            &app,
+            Method::POST,
+            "/tools/timer/start",
+            Some(json!({"minute": 60, "second": 0})),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let body_json = assert_validation_failed(&body);
+        assert!(body_json["details"]["minute"].is_array());
     }
 
     #[tokio::test]
@@ -259,7 +383,12 @@ mod tests {
             send_json_request(&app, Method::POST, "/tools/stopwatch/fly", None).await;
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.contains("invalid stopwatch action"));
+        let body_json = assert_validation_failed(&body);
+        assert_eq!(body_json["details"]["action"]["provided"], "fly");
+        let allowed = body_json["details"]["action"]["allowed"]
+            .as_array()
+            .unwrap();
+        assert_eq!(allowed.len(), 3);
     }
 
     #[tokio::test]
@@ -280,7 +409,8 @@ mod tests {
         .await;
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.contains("scores must be 0..=999"));
+        let body_json = assert_validation_failed(&body);
+        assert!(body_json["details"]["blue_score"].is_array());
     }
 
     #[tokio::test]
@@ -353,6 +483,27 @@ mod tests {
             send_json_request(&app, Method::POST, "/tools/soundmeter/stop", None).await;
 
         assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn soundmeter_invalid_action() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_tool_app(tool_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/tools/soundmeter/fly", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let body_json = assert_validation_failed(&body);
+        assert_eq!(body_json["details"]["action"]["provided"], "fly");
+        let allowed = body_json["details"]["action"]["allowed"]
+            .as_array()
+            .unwrap();
+        assert_eq!(allowed.len(), 2);
     }
 
     #[tokio::test]
