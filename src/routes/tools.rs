@@ -1,4 +1,4 @@
-use axum::extract::{Extension, Json, Path};
+use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
@@ -11,7 +11,7 @@ use tracing::error;
 
 use crate::state::AppState;
 
-pub fn mount_tool_routes(router: Router) -> Router {
+pub fn mount_tool_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
         .route("/tools/timer/start", post(timer_start))
         .route("/tools/timer/stop", post(timer_stop))
@@ -33,7 +33,7 @@ struct ScoreboardRequest {
 }
 
 async fn timer_start(
-    Extension(state): Extension<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(payload): Json<TimerRequest>,
 ) -> Response {
     let mut args = Map::new();
@@ -44,7 +44,7 @@ async fn timer_start(
     dispatch_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
-async fn timer_stop(Extension(state): Extension<Arc<AppState>>) -> Response {
+async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     let mut args = Map::new();
     args.insert("Status".to_string(), Value::from(0));
 
@@ -52,8 +52,8 @@ async fn timer_stop(Extension(state): Extension<Arc<AppState>>) -> Response {
 }
 
 async fn stopwatch(
+    State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
-    Extension(state): Extension<Arc<AppState>>,
 ) -> Response {
     let status = match action.as_str() {
         "start" => 1,
@@ -78,7 +78,7 @@ async fn stopwatch(
 }
 
 async fn scoreboard(
-    Extension(state): Extension<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(payload): Json<ScoreboardRequest>,
 ) -> Response {
     if payload.blue_score > 999 || payload.red_score > 999 {
@@ -97,8 +97,8 @@ async fn scoreboard(
 }
 
 async fn soundmeter(
+    State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
-    Extension(state): Extension<Arc<AppState>>,
 ) -> Response {
     let status = match action.as_str() {
         "start" => 1,
@@ -155,7 +155,6 @@ mod tests {
     use crate::routes::mount_tool_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
-    use axum::extract::Extension;
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
@@ -165,7 +164,7 @@ mod tests {
     use tower::ServiceExt;
 
     fn build_tool_app(state: Arc<AppState>) -> Router {
-        mount_tool_routes(Router::new()).layer(Extension(state))
+        mount_tool_routes(Router::new()).with_state(state)
     }
 
     async fn send_json_request(

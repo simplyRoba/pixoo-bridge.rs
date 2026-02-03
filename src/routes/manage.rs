@@ -1,4 +1,4 @@
-use axum::extract::{Extension, Json};
+use axum::extract::{Json, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
@@ -13,14 +13,14 @@ use tracing::{debug, error};
 
 use crate::state::AppState;
 
-pub fn mount_manage_routes(router: Router) -> Router {
+pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
         .route("/manage/settings", get(manage_settings))
         .route("/manage/time", get(manage_time))
         .route("/manage/weather", get(manage_weather))
 }
 
-async fn manage_settings(Extension(state): Extension<Arc<AppState>>) -> Response {
+async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_manage_command(&state, PixooCommand::ManageGetSettings).await {
         Ok(response) => response,
         Err(resp) => return resp,
@@ -35,7 +35,7 @@ async fn manage_settings(Extension(state): Extension<Arc<AppState>>) -> Response
     }
 }
 
-async fn manage_time(Extension(state): Extension<Arc<AppState>>) -> Response {
+async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_manage_command(&state, PixooCommand::ManageGetTime).await {
         Ok(response) => response,
         Err(resp) => return resp,
@@ -50,7 +50,7 @@ async fn manage_time(Extension(state): Extension<Arc<AppState>>) -> Response {
     }
 }
 
-async fn manage_weather(Extension(state): Extension<Arc<AppState>>) -> Response {
+async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_manage_command(&state, PixooCommand::ManageGetWeather).await {
         Ok(response) => response,
         Err(resp) => return resp,
@@ -230,7 +230,6 @@ mod tests {
     use crate::routes::mount_manage_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
-    use axum::extract::Extension;
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use chrono::{TimeZone, Utc};
@@ -241,7 +240,7 @@ mod tests {
     use tower::ServiceExt;
 
     fn build_manage_app(state: Arc<AppState>) -> Router {
-        mount_manage_routes(Router::new()).layer(Extension(state))
+        mount_manage_routes(Router::new()).with_state(state)
     }
 
     async fn send_get(app: &Router, uri: &str) -> (StatusCode, String) {
