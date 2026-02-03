@@ -51,10 +51,7 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     dispatch_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
-async fn stopwatch(
-    State(state): State<Arc<AppState>>,
-    Path(action): Path<String>,
-) -> Response {
+async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
     let status = match action.as_str() {
         "start" => 1,
         "stop" => 0,
@@ -96,10 +93,7 @@ async fn scoreboard(
     dispatch_command(&state, PixooCommand::ToolsScoreboard, args).await
 }
 
-async fn soundmeter(
-    State(state): State<Arc<AppState>>,
-    Path(action): Path<String>,
-) -> Response {
+async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
     let status = match action.as_str() {
         "start" => 1,
         "stop" => 0,
