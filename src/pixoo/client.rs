@@ -2,7 +2,7 @@ use crate::pixoo::command::PixooCommand;
 use crate::pixoo::error::PixooError;
 use reqwest::header::CONTENT_TYPE;
 use serde_json::{Map, Value};
-use std::time::Duration;
+use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{debug, error};
 
@@ -33,7 +33,7 @@ impl PixooClient {
                 url.to_string()
             })?;
         let http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
+            .timeout(client_timeout())
             .build()?;
 
         Ok(Self {
@@ -216,6 +216,14 @@ fn log_pixoo_error(context: &str, err: &PixooError, retriable: bool) {
         payload = ?err.payload(),
         "Pixoo interaction failed"
     );
+}
+
+fn client_timeout() -> Duration {
+    env::var("PIXOO_CLIENT_TIMEOUT_MS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map(Duration::from_millis)
+        .unwrap_or_else(|| Duration::from_secs(10))
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
+use pixoo_bridge::core::http_error_mapping::map_pixoo_error;
 use pixoo_bridge::pixoo::PixooCommand;
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
@@ -230,12 +231,9 @@ async fn dispatch_command(
     match client.send_command(command.clone(), args).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
-            error!(command = %command, error = ?err, "Pixoo tool command failed");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "error": "Pixoo tool command failed" })),
-            )
-                .into_response()
+            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
+            error!(command = %command, error = ?err, status = %status, "Pixoo tool command failed");
+            (status, body).into_response()
         }
     }
 }
@@ -431,7 +429,10 @@ mod tests {
         .await;
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-        assert!(body.contains("Pixoo tool command failed"));
+        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error_kind"], "device-error");
+        assert_eq!(json_body["error_status"], 503);
+        assert_eq!(json_body["error_code"], 1);
     }
 
     #[tokio::test]

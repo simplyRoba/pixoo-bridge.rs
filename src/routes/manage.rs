@@ -4,6 +4,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::Router;
 use chrono::{NaiveDateTime, TimeZone, Utc};
+use pixoo_bridge::core::http_error_mapping::map_pixoo_error;
 use pixoo_bridge::pixoo::client::PixooResponse;
 use pixoo_bridge::pixoo::PixooCommand;
 use serde::Serialize;
@@ -79,8 +80,9 @@ async fn dispatch_manage_command(
     match client.send_command(command.clone(), Map::new()).await {
         Ok(response) => Ok(response),
         Err(err) => {
-            error!(command = %command, error = ?err, "Pixoo manage command failed");
-            Err(service_unavailable())
+            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
+            error!(command = %command, error = ?err, status = %status, "Pixoo manage command failed");
+            Err((status, body).into_response())
         }
     }
 }
@@ -353,7 +355,10 @@ mod tests {
         let (status, body) = send_get(&app, "/manage/time").await;
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-        assert!(body.contains("Pixoo command failed"));
+        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error_kind"], "device-error");
+        assert_eq!(json_body["error_status"], 503);
+        assert_eq!(json_body["error_code"], 1);
     }
 
     #[tokio::test]
@@ -404,6 +409,9 @@ mod tests {
         let (status, body) = send_get(&app, "/manage/weather").await;
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-        assert!(body.contains("Pixoo command failed"));
+        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error_kind"], "device-error");
+        assert_eq!(json_body["error_status"], 503);
+        assert_eq!(json_body["error_code"], 1);
     }
 }

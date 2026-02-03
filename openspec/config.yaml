@@ -27,4 +27,4 @@ rules:
     - "Always write enough tests to cover new/modified functionality and edge cases before implementation."
     - "Prioritize unit tests over integration tests. But when necessary do not hesitate to write integration tests to cover end-to-end behavior."
     - "Include a final task to run `cargo fmt`, `cargo clippy`, and `cargo test` before archiving so implementation matches the artifacts."
-    - "After implementing features, revisit README.md so it always reflects current capabilities and usage for the enduser. no implementation details."
+    - "After implementing features, revisit README.md so it always reflects current important information for the enduser. no implementation details. not every change needs a README update."

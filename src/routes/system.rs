@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use pixoo_bridge::core::http_error_mapping::map_pixoo_error;
 use pixoo_bridge::pixoo::PixooCommand;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
@@ -18,9 +19,13 @@ pub fn mount_system_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         .route("/reboot", post(reboot))
 }
 
-async fn health(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+async fn health(State(state): State<Arc<AppState>>) -> Response {
     if !state.health_forward {
-        return (StatusCode::OK, Json(json!({ "status": "ok" })));
+        return (
+            StatusCode::OK,
+            Json(json!({ "status": "ok" })),
+        )
+        .into_response();
     }
 
     let client = match state.pixoo_client.clone() {
@@ -36,14 +41,16 @@ async fn health(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match client.health_check().await {
         Ok(()) => {
             debug!("Pixoo health check succeeded");
-            (StatusCode::OK, Json(json!({ "status": "ok" })))
+            return (
+                StatusCode::OK,
+                Json(json!({ "status": "ok" })),
+            )
+            .into_response();
         }
         Err(err) => {
-            error!(error = ?err, status = %StatusCode::SERVICE_UNAVAILABLE, "Pixoo health check failed");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "status": "unhealthy" })),
-            )
+            let (status, body) = map_pixoo_error(&err, "Pixoo health check");
+            error!(error = ?err, status = %status, "Pixoo health check failed");
+            return (status, body).into_response();
         }
     }
 }
@@ -66,12 +73,9 @@ async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(err) => {
-            error!(error = ?err, "Pixoo reboot command failed");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "error": "Pixoo reboot failed" })),
-            )
-                .into_response()
+            let (status, body) = map_pixoo_error(&err, "Pixoo reboot command");
+            error!(error = ?err, status = %status, "Pixoo reboot command failed");
+            (status, body).into_response()
         }
     }
 }

@@ -71,4 +71,32 @@ impl PixooError {
             _ => None,
         }
     }
+
+    pub fn category(&self) -> PixooErrorCategory {
+        match self {
+            PixooError::Http(err) => {
+                if err.is_timeout() {
+                    PixooErrorCategory::Timeout
+                } else if err.is_connect() {
+                    PixooErrorCategory::Unreachable
+                } else {
+                    PixooErrorCategory::DeviceError
+                }
+            }
+            PixooError::HttpStatus(_) => PixooErrorCategory::DeviceError,
+            PixooError::DeviceError { .. } => PixooErrorCategory::DeviceError,
+            PixooError::InvalidResponse(_) => PixooErrorCategory::DeviceError,
+            PixooError::MissingErrorCode => PixooErrorCategory::DeviceError,
+            PixooError::InvalidErrorCode(_) => PixooErrorCategory::DeviceError,
+            _ => PixooErrorCategory::Unknown,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PixooErrorCategory {
+    Unreachable,
+    Timeout,
+    DeviceError,
+    Unknown,
 }
