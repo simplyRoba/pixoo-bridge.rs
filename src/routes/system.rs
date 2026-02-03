@@ -1,5 +1,5 @@
 use axum::{
-    extract::Extension,
+    extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -12,13 +12,13 @@ use tracing::{debug, error};
 
 use crate::state::AppState;
 
-pub fn mount_system_routes(router: Router) -> Router {
+pub fn mount_system_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
         .route("/health", get(health))
         .route("/reboot", post(reboot))
 }
 
-async fn health(Extension(state): Extension<Arc<AppState>>) -> impl IntoResponse {
+async fn health(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     if !state.health_forward {
         return (StatusCode::OK, Json(json!({ "status": "ok" })));
     }
@@ -48,7 +48,7 @@ async fn health(Extension(state): Extension<Arc<AppState>>) -> impl IntoResponse
     }
 }
 
-async fn reboot(Extension(state): Extension<Arc<AppState>>) -> impl IntoResponse {
+async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let client = match state.pixoo_client.clone() {
         Some(client) => client,
         None => {
@@ -80,7 +80,6 @@ async fn reboot(Extension(state): Extension<Arc<AppState>>) -> impl IntoResponse
 mod tests {
     use super::*;
     use axum::body::{to_bytes, Body};
-    use axum::extract::Extension;
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
@@ -124,7 +123,7 @@ mod tests {
     }
 
     fn build_system_app(state: Arc<AppState>) -> Router {
-        mount_system_routes(Router::new()).layer(Extension(state))
+        mount_system_routes(Router::new()).with_state(state)
     }
 
     fn system_state(client: Option<PixooClient>, health_forward: bool) -> Arc<AppState> {

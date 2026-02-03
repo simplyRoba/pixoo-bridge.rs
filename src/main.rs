@@ -3,7 +3,6 @@ mod state;
 
 use axum::{
     body::Body,
-    extract::Extension,
     http::Request,
     middleware::{from_fn, Next},
     response::Response,
@@ -70,12 +69,12 @@ async fn root() -> &'static str {
 }
 
 fn build_app(state: Arc<AppState>) -> Router {
-    let app = Router::new().route("/", get(root));
+    let app: Router<Arc<AppState>> = Router::new().route("/", get(root));
     let app = mount_tool_routes(app);
     let app = mount_manage_routes(app);
     let app = mount_system_routes(app);
 
-    app.layer(from_fn(access_log)).layer(Extension(state))
+    app.layer(from_fn(access_log)).with_state(state)
 }
 
 async fn access_log(req: Request<Body>, next: Next) -> Response {
