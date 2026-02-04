@@ -25,20 +25,20 @@ Request logging now runs across the entire router so every HTTP call emits its m
 
 ## API
 
-| Method | Endpoint | Description | Responses |
-| --- | --- | --- | --- |
-| `GET` | `/health` | Return the bridge health probe result. | `200 { "status": "ok" }` when healthy, `502/503/504` with structured `error_status`/`error_kind`/`error_code?` when Pixoo misbehaves |
-| `POST` | `/reboot` | Request a Pixoo reboot. | `204 No Content` on success, `502/503/504` with structured payload when Pixoo rejects or is unreachable |
-| `POST` | `/tools/timer/start` | Start the timer by supplying `{ "minute": <number>, "second": <number> }`. | `200` on success, `400` for invalid payloads, `502/503/504` with structured payload when Pixoo rejects the command |
-| `POST` | `/tools/timer/stop` | Stop the timer. | `200` on success, `502/503/504` with structured payload when Pixoo rejects or is unavailable |
-| `POST` | `/tools/stopwatch/{action}` | Control the stopwatch by sending `action`=`start`, `stop`, or `reset`. | `200` on success, `400` for invalid verbs, `502/503/504` with structured payload when Pixoo rejects the request |
-| `POST` | `/tools/scoreboard` | Set scores by supplying `{ "blue_score": 0..999, "red_score": 0..999 }`. | `200` on success, `400` for out-of-range scores, `502/503/504` with structured payload when Pixoo rejects the update |
-| `POST` | `/tools/soundmeter/{action}` | Control the soundmeter with `action`=`start` or `stop`. | `200` on success, `400` for invalid verbs, `502/503/504` with structured payload when Pixoo rejects the request |
-| `GET` | `/manage/settings` | Return derived display settings (visibility, brightness, rotation, mirror, temperature unit, and clock ID) from `Channel/GetAllConf`. | `200` with typed JSON, `502/503/504` with structured payload when Pixoo is unreachable or reports a failure |
-| `GET` | `/manage/time` | Provide normalized UTC/local timestamps derived from `Device/GetDeviceTime`. | `200` with ISO-8601 strings, `502/503/504` with structured payload on failure |
-| `GET` | `/manage/weather` | Report normalized weather data (current/min/max temperatures, pressure, humidity, wind speed, and tracked weather string) without mutating Pixoo's original values. | `200` with typed JSON, `502/503/504` with structured payload when Pixoo rejects the command |
+| Method | Endpoint | Description | Success | Client Errors |
+| --- | --- | --- | --- | --- |
+| `GET` | `/health` | Bridge health probe (cascades to device if enabled). | `200` | — |
+| `POST` | `/reboot` | Request a Pixoo reboot. | `204` | — |
+| `POST` | `/tools/timer/start` | Start timer. Body: `{ "minute": 0-59, "second": 0-59 }` | `200` | `400` invalid payload |
+| `POST` | `/tools/timer/stop` | Stop the timer. | `200` | — |
+| `POST` | `/tools/stopwatch/{action}` | Control stopwatch. Action: `start`, `stop`, `reset` | `200` | `400` invalid action |
+| `POST` | `/tools/scoreboard` | Set scores. Body: `{ "blue_score": 0-999, "red_score": 0-999 }` | `200` | `400` out-of-range |
+| `POST` | `/tools/soundmeter/{action}` | Control soundmeter. Action: `start`, `stop` | `200` | `400` invalid action |
+| `GET` | `/manage/settings` | Display settings (visibility, brightness, rotation, mirror, temp unit, clock ID). | `200` | — |
+| `GET` | `/manage/time` | Device time as ISO-8601 UTC/local timestamps. | `200` | — |
+| `GET` | `/manage/weather` | Weather data (temps, pressure, humidity, wind). | `200` | — |
 
-Error responses use 502 (unreachable), 504 (timeout), or 503 (device error) with a JSON body: `{ "error_status", "message", "error_kind", "error_code?" }`.
+All endpoints may return `502` (unreachable), `503` (device error), or `504` (timeout) with a JSON body: `{ "error_status", "message", "error_kind", "error_code?" }`.
 
 ## Contributing
 
