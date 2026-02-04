@@ -122,7 +122,7 @@ fn validation_error_response(details: Map<String, Value>) -> Response {
     (StatusCode::BAD_REQUEST, Json(body)).into_response()
 }
 
-fn validation_errors_response(errors: ValidationErrors) -> Response {
+fn validation_errors_response(errors: &ValidationErrors) -> Response {
     let mut details = Map::new();
 
     for (field, field_errors) in errors.field_errors() {
@@ -154,7 +154,7 @@ async fn timer_start(
     Json(payload): Json<TimerRequest>,
 ) -> Response {
     if let Err(errors) = payload.validate() {
-        return validation_errors_response(errors);
+        return validation_errors_response(&errors);
     }
 
     let mut args = Map::new();
@@ -173,13 +173,12 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
 }
 
 async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
-    let action = match action.parse::<StopwatchAction>() {
-        Ok(value) => value,
-        Err(_) => return action_validation_error(&action, StopwatchAction::allowed_values()),
+    let Ok(parsed) = action.parse::<StopwatchAction>() else {
+        return action_validation_error(&action, StopwatchAction::allowed_values());
     };
 
     let mut args = Map::new();
-    args.insert("Status".to_string(), Value::from(action.status()));
+    args.insert("Status".to_string(), Value::from(parsed.status()));
 
     dispatch_command(&state, PixooCommand::ToolsStopwatch, args).await
 }
@@ -189,7 +188,7 @@ async fn scoreboard(
     Json(payload): Json<ScoreboardRequest>,
 ) -> Response {
     if let Err(errors) = payload.validate() {
-        return validation_errors_response(errors);
+        return validation_errors_response(&errors);
     }
 
     let mut args = Map::new();
@@ -200,13 +199,12 @@ async fn scoreboard(
 }
 
 async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
-    let action = match action.parse::<SoundmeterAction>() {
-        Ok(value) => value,
-        Err(_) => return action_validation_error(&action, SoundmeterAction::allowed_values()),
+    let Ok(parsed) = action.parse::<SoundmeterAction>() else {
+        return action_validation_error(&action, SoundmeterAction::allowed_values());
     };
 
     let mut args = Map::new();
-    args.insert("NoiseStatus".to_string(), Value::from(action.status()));
+    args.insert("NoiseStatus".to_string(), Value::from(parsed.status()));
 
     dispatch_command(&state, PixooCommand::ToolsSoundMeter, args).await
 }
@@ -216,15 +214,12 @@ async fn dispatch_command(
     command: PixooCommand,
     args: Map<String, Value>,
 ) -> Response {
-    let client = match state.pixoo_client.clone() {
-        Some(client) => client,
-        None => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "error": "Pixoo client unavailable" })),
-            )
-                .into_response()
-        }
+    let Some(client) = state.pixoo_client.clone() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({ "error": "Pixoo client unavailable" })),
+        )
+            .into_response();
     };
 
     match client.send_command(command.clone(), args).await {

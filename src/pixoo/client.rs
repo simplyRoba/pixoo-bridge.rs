@@ -18,6 +18,12 @@ pub struct PixooClient {
 }
 
 impl PixooClient {
+    /// Creates a new Pixoo client for the given base URL.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PixooError::InvalidBaseUrl`] if the URL cannot be parsed.
+    /// Returns [`PixooError::Http`] if the HTTP client fails to initialize.
     pub fn new(base_url: impl Into<String>) -> Result<Self, PixooError> {
         let base_url = base_url.into();
         let post_url = reqwest::Url::parse(&base_url)
@@ -53,6 +59,15 @@ impl PixooClient {
         args
     }
 
+    /// Sends a command to the Pixoo device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PixooError::Http`] if the request fails due to network issues.
+    /// Returns [`PixooError::HttpStatus`] if the device returns a non-2xx status.
+    /// Returns [`PixooError::DeviceError`] if the device returns a non-zero error code.
+    /// Returns [`PixooError::InvalidResponse`] if the response cannot be parsed.
+    /// Returns [`PixooError::MissingErrorCode`] if the response lacks an `error_code` field.
     pub async fn send_command(
         &self,
         command: PixooCommand,
@@ -62,6 +77,12 @@ impl PixooClient {
         self.execute_with_retry(&payload).await
     }
 
+    /// Checks if the Pixoo device is reachable.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PixooError::Http`] if the request fails due to network issues.
+    /// Returns [`PixooError::HttpStatus`] if the device returns a non-2xx status.
     pub async fn health_check(&self) -> Result<(), PixooError> {
         self.execute_health_with_retry().await
     }
@@ -91,7 +112,7 @@ impl PixooClient {
                     }
 
                     attempt += 1;
-                    let delay = self.backoff * attempt as u32;
+                    let delay = self.backoff * u32::try_from(attempt).unwrap_or(u32::MAX);
                     sleep(delay).await;
                 }
             }
@@ -120,7 +141,7 @@ impl PixooClient {
                     }
 
                     attempt += 1;
-                    let delay = self.backoff * attempt as u32;
+                    let delay = self.backoff * u32::try_from(attempt).unwrap_or(u32::MAX);
                     sleep(delay).await;
                 }
             }
@@ -197,7 +218,7 @@ fn parse_error_code(value: &Value) -> Result<i64, PixooError> {
     match value {
         Value::Number(number) => number
             .as_i64()
-            .or_else(|| number.as_u64().map(|value| value as i64))
+            .or_else(|| number.as_u64().and_then(|v| i64::try_from(v).ok()))
             .ok_or_else(|| PixooError::InvalidErrorCode(value.clone())),
         Value::String(text) => text
             .parse::<i64>()
@@ -222,8 +243,7 @@ fn client_timeout() -> Duration {
     env::var("PIXOO_CLIENT_TIMEOUT_MS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
-        .map(Duration::from_millis)
-        .unwrap_or_else(|| Duration::from_secs(10))
+        .map_or_else(|| Duration::from_secs(10), Duration::from_millis)
 }
 
 #[cfg(test)]
@@ -410,6 +430,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::type_complexity)]
     async fn backoff_increments_between_retries() {
         // Track timestamps when each request arrives to verify backoff delays.
         let timestamps = Arc::new(std::sync::Mutex::new(Vec::<std::time::Instant>::new()));
