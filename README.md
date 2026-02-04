@@ -38,9 +38,7 @@ Request logging now runs across the entire router so every HTTP call emits its m
 | `GET` | `/manage/time` | Provide normalized UTC/local timestamps derived from `Device/GetDeviceTime`. | `200` with ISO-8601 strings, `502/503/504` with structured payload on failure |
 | `GET` | `/manage/weather` | Report normalized weather data (current/min/max temperatures, pressure, humidity, wind speed, and tracked weather string) without mutating Pixoo's original values. | `200` with typed JSON, `502/503/504` with structured payload when Pixoo rejects the command |
 
-Responses when Pixoo interactions fail now follow the `core/http-error-mapping` capability: the bridge returns a status (502 for unreachable devices, 504 for timeouts, 503 for device-reported problems) plus a JSON body like `{ "error_status": 503, "message": "Pixoo ...", "error_kind": "device-error", "error_code": 42 }` so callers can parse the precise failure reason.
-
-The HTTP handlers for system maintenance now live in a dedicated `routes/system` module so `/health` and `/reboot` share the same middleware and routing surface while keeping `main.rs` lean.
+Error responses use 502 (unreachable), 504 (timeout), or 503 (device error) with a JSON body: `{ "error_status", "message", "error_kind", "error_code?" }`.
 
 ## Contributing
 

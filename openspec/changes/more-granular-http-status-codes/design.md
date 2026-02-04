@@ -15,7 +15,7 @@ The bridge currently treats every Pixoo error path as an HTTP 503, which masks t
 
 ## Decisions
 
-- _Introduce a dedicated HTTP error classification module (`core::http_error_mapping`)._ Centralizing the mapping keeps the bridge consistent across handlers; duplicating the mapping per handler would risk divergence when we tweak retry limits or add new error kinds.
+- _Introduce HTTP error classification in the Pixoo error module (`pixoo::error`)._ Centralizing the mapping keeps the bridge consistent across handlers; duplicating the mapping per handler would risk divergence when we tweak retry limits or add new error kinds. Co-locating with `PixooError` avoids an extra module and keeps error handling cohesive.
 - _Extend the Pixoo client error type to expose categories (unreachable, timeout, device error)._ The client already knows when it hit each failure; surfacing that classification lets the mapper translate outcomes to 502, 504, or 503 without re-running diagnostics.
 - _Share a helper that emits structured payloads (status code, message, debug hints)._ This keeps the HTTP layer simple—each handler can call `map_pixoo_error` and return its result rather than embedding status logic inline.
 
@@ -27,7 +27,7 @@ The bridge currently treats every Pixoo error path as an HTTP 503, which masks t
 ## Migration Plan
 
 - Update the Pixoo client error enum and helpers so every endpoint can observe whether a request timed out, never connected, or the device responded with an error.
-- Implement `core::http_error_mapping` that maps classifications to HTTP responses and structured bodies; consume it from `/health`, `/manage/*`, `/reboot`, and any other Pixoo-exposed handlers.
+- Implement `map_pixoo_error` in `pixoo::error` that maps classifications to HTTP responses and structured bodies; consume it from `/health`, `/manage/*`, `/reboot`, and any other Pixoo-exposed handlers.
 - Run `cargo fmt`, `cargo clippy`, and `cargo test`, then publish release notes that mention the new status semantics and the capability `core/http-error-mapping`.
 
 ## Open Questions

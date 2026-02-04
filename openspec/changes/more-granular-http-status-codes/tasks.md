@@ -1,7 +1,7 @@
 ## 1. Error classification core work
 
 - [x] 1.1 Extend the Pixoo client error type to surface reachable/timeout/device failure metadata that the HTTP layer can inspect.
-- [x] 1.2 Implement `core::http_error_mapping` that converts those error categories into HTTP 502/503/504 plus a structured JSON body.
+- [x] 1.2 Implement `map_pixoo_error` in `pixoo::error` that converts those error categories into HTTP 502/503/504 plus a structured JSON body.
 
 ## 2. Endpoint integration and routing
 
