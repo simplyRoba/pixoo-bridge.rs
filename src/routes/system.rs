@@ -1,7 +1,7 @@
 use axum::{
     extract::State,
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -21,11 +21,7 @@ pub fn mount_system_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
 
 async fn health(State(state): State<Arc<AppState>>) -> Response {
     if !state.health_forward {
-        return (
-            StatusCode::OK,
-            Json(json!({ "status": "ok" })),
-        )
-        .into_response();
+        return (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response();
     }
 
     let client = match state.pixoo_client.clone() {
@@ -34,23 +30,20 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
             return (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({ "status": "unhealthy" })),
-            );
+            )
+                .into_response();
         }
     };
 
     match client.health_check().await {
         Ok(()) => {
             debug!("Pixoo health check succeeded");
-            return (
-                StatusCode::OK,
-                Json(json!({ "status": "ok" })),
-            )
-            .into_response();
+            (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response()
         }
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, "Pixoo health check");
             error!(error = ?err, status = %status, "Pixoo health check failed");
-            return (status, body).into_response();
+            (status, body).into_response()
         }
     }
 }

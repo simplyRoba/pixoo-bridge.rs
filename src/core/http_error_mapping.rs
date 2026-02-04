@@ -49,13 +49,13 @@ pub fn map_pixoo_error(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pixoo::{PixooClient, PixooCommand};
     use httpmock::Method::POST;
     use httpmock::MockServer;
     use serde_json::{Map, Value};
     use std::env;
     use std::time::Duration;
     use tokio::net::TcpListener;
-    use crate::pixoo::{PixooClient, PixooCommand};
 
     async fn free_address() -> String {
         let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
