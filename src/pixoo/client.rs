@@ -91,7 +91,7 @@ impl PixooClient {
                     }
 
                     attempt += 1;
-                    let delay = self.backoff * attempt as u32;
+                    let delay = self.backoff * u32::try_from(attempt).unwrap_or(u32::MAX);
                     sleep(delay).await;
                 }
             }
@@ -120,7 +120,7 @@ impl PixooClient {
                     }
 
                     attempt += 1;
-                    let delay = self.backoff * attempt as u32;
+                    let delay = self.backoff * u32::try_from(attempt).unwrap_or(u32::MAX);
                     sleep(delay).await;
                 }
             }
@@ -197,7 +197,7 @@ fn parse_error_code(value: &Value) -> Result<i64, PixooError> {
     match value {
         Value::Number(number) => number
             .as_i64()
-            .or_else(|| number.as_u64().map(|value| value as i64))
+            .or_else(|| number.as_u64().and_then(|v| i64::try_from(v).ok()))
             .ok_or_else(|| PixooError::InvalidErrorCode(value.clone())),
         Value::String(text) => text
             .parse::<i64>()
@@ -222,8 +222,7 @@ fn client_timeout() -> Duration {
     env::var("PIXOO_CLIENT_TIMEOUT_MS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
-        .map(Duration::from_millis)
-        .unwrap_or_else(|| Duration::from_secs(10))
+        .map_or_else(|| Duration::from_secs(10), Duration::from_millis)
 }
 
 #[cfg(test)]
@@ -410,6 +409,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::type_complexity)]
     async fn backoff_increments_between_retries() {
         // Track timestamps when each request arrives to verify backoff delays.
         let timestamps = Arc::new(std::sync::Mutex::new(Vec::<std::time::Instant>::new()));

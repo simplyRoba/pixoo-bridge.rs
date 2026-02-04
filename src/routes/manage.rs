@@ -69,9 +69,8 @@ async fn dispatch_manage_command(
     state: &AppState,
     command: PixooCommand,
 ) -> Result<PixooResponse, Response> {
-    let client = match state.pixoo_client.clone() {
-        Some(client) => client,
-        None => return Err(service_unavailable()),
+    let Some(client) = state.pixoo_client.clone() else {
+        return Err(service_unavailable());
     };
 
     debug!(%command, "issuing manage command");
@@ -111,7 +110,7 @@ fn map_time(response: &PixooResponse) -> Result<ManageTime, String> {
     let utc_time = Utc
         .timestamp_opt(utc_secs, 0)
         .single()
-        .ok_or_else(|| format!("UTCTime {} out of range", utc_secs))?;
+        .ok_or_else(|| format!("UTCTime {utc_secs} out of range"))?;
     let utc_iso = utc_time.format("%Y-%m-%dT%H:%M:%S").to_string();
 
     let local_value = parse_string(response, "LocalTime")?;

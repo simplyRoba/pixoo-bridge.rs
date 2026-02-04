@@ -23,15 +23,12 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
         return (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response();
     }
 
-    let client = match state.pixoo_client.clone() {
-        Some(client) => client,
-        None => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "status": "unhealthy" })),
-            )
-                .into_response();
-        }
+    let Some(client) = state.pixoo_client.clone() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({ "status": "unhealthy" })),
+        )
+            .into_response();
     };
 
     match client.health_check().await {
@@ -48,15 +45,12 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
 }
 
 async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let client = match state.pixoo_client.clone() {
-        Some(client) => client,
-        None => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({ "error": "Pixoo client unavailable" })),
-            )
-                .into_response();
-        }
+    let Some(client) = state.pixoo_client.clone() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({ "error": "Pixoo client unavailable" })),
+        )
+            .into_response();
     };
 
     match client

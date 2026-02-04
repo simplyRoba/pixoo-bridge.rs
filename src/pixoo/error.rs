@@ -85,12 +85,12 @@ impl PixooError {
                     PixooErrorCategory::DeviceError
                 }
             }
-            PixooError::HttpStatus(_) => PixooErrorCategory::DeviceError,
-            PixooError::DeviceError { .. } => PixooErrorCategory::DeviceError,
-            PixooError::InvalidResponse(_) => PixooErrorCategory::DeviceError,
-            PixooError::MissingErrorCode => PixooErrorCategory::DeviceError,
-            PixooError::InvalidErrorCode(_) => PixooErrorCategory::DeviceError,
-            _ => PixooErrorCategory::Unknown,
+            PixooError::HttpStatus(_)
+            | PixooError::DeviceError { .. }
+            | PixooError::InvalidResponse(_)
+            | PixooError::MissingErrorCode
+            | PixooError::InvalidErrorCode(_) => PixooErrorCategory::DeviceError,
+            PixooError::InvalidBaseUrl(_) => PixooErrorCategory::Unknown,
         }
     }
 }
@@ -235,7 +235,7 @@ mod tests {
         let addr = listener.local_addr().unwrap();
         let _handle = tokio::spawn(async move {
             if let Ok((socket, _)) = listener.accept().await {
-                let _ = tokio::time::sleep(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
                 drop(socket);
             }
         });

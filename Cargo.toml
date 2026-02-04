@@ -7,6 +7,15 @@ authors = ["pixoo-bridge maintainers"]
 license = "AGPL-3.0"
 repository = "https://github.com/axel-linux/pixoo-bridge.rs"
 
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# Documentation lints - too noisy for internal tool
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+# Style preferences
+must_use_candidate = "allow"
+module_name_repetitions = "allow"
+
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
 axum = "0.8"
