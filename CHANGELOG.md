@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.7.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.6.0...v0.7.0) (2026-02-04)
+
+
+### Features
+
+* add manage command for setting weather, time and time offset ([#60](https://github.com/simplyRoba/pixoo-bridge.rs/issues/60)) ([e4a8579](https://github.com/simplyRoba/pixoo-bridge.rs/commit/e4a8579de48f5ceadeb76fa79828cd0f45a5a049))
+* add request validation ([#55](https://github.com/simplyRoba/pixoo-bridge.rs/issues/55)) ([3ef4686](https://github.com/simplyRoba/pixoo-bridge.rs/commit/3ef4686adc80b905c1cfd1d363bb33db50768625))
+* **api:** add GET endpoints for managing settings, time, and weather ([#52](https://github.com/simplyRoba/pixoo-bridge.rs/issues/52)) ([1ae4bd0](https://github.com/simplyRoba/pixoo-bridge.rs/commit/1ae4bd0bb730759e27d32ae8a20ecff6a7452cbe))
+* enable clippy pedantic lints project-wide ([#59](https://github.com/simplyRoba/pixoo-bridge.rs/issues/59)) ([abbab90](https://github.com/simplyRoba/pixoo-bridge.rs/commit/abbab90b67f9d5bf2ae67e1eebf620ba7e44e29b))
+* implement error mapping for pixoo errors ([#56](https://github.com/simplyRoba/pixoo-bridge.rs/issues/56)) ([ae2285d](https://github.com/simplyRoba/pixoo-bridge.rs/commit/ae2285d3f48cdaf523e2a0b21be0a9ec197a17d3))
+* **logging:** add request logging middleware for HTTP requests ([507c4a5](https://github.com/simplyRoba/pixoo-bridge.rs/commit/507c4a553c302dbdbe5fd4330b997bd3c09db79b))
+
+
+### Bug Fixes
+
+* **deps:** bump bytes from 1.11.0 to 1.11.1 ([#54](https://github.com/simplyRoba/pixoo-bridge.rs/issues/54)) ([9b89031](https://github.com/simplyRoba/pixoo-bridge.rs/commit/9b89031186b142204fb85324c7a20ee60df844ae))
+* **deps:** bump httpmock from 0.8.2 to 0.8.3 ([45580b5](https://github.com/simplyRoba/pixoo-bridge.rs/commit/45580b5e1ca90bd763d371862e8207a028c5fbd4))
+* **deps:** bump validator from 0.16.1 to 0.20.0 ([4a112f3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/4a112f35853b248673502068c0d6e85ec5ea4199))
+* **tests:** update mock server responses to return error_code 1 ([7dfb9fc](https://github.com/simplyRoba/pixoo-bridge.rs/commit/7dfb9fcba990420ff0e570e90ebe4c78f6f8a312))
+* use proper openspec format for clippy-pedantic-standard artifacts ([92f0c7a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/92f0c7a228c85ce7cd92451a84425c12e835d1b8))
+
 ## [0.6.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.5.5...v0.6.0) (2026-02-01)
 
 
