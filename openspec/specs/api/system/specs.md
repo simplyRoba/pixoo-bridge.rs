@@ -3,7 +3,7 @@
 ## Purpose
 Bring the `/health` and `/reboot` endpoints together under one domain so operators see system-level maintenance hooks in a single capability while reusing the shared routing and middleware pipeline built for Pixoo’s unreliable UDP API.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Bridge health endpoint
 The bridge SHALL expose an HTTP GET `/health` endpoint for container health checks through the `api/system` routing surface so that system probes and reboot operations share common diagnostics and auth middleware.

@@ -37,6 +37,9 @@ Request logging now runs across the entire router so every HTTP call emits its m
 | `GET` | `/manage/settings` | Display settings (visibility, brightness, rotation, mirror, temp unit, clock ID). | `200` | — |
 | `GET` | `/manage/time` | Device time as ISO-8601 UTC/local timestamps. | `200` | — |
 | `GET` | `/manage/weather` | Weather data (temps, pressure, humidity, wind). | `200` | — |
+| `POST` | `/manage/weather/location` | Set the device’s longitude/latitude so weather calculations stay accurate; body `{ "longitude": -180.0-180.0, "latitude": -90.0-90.0 }`. | `200` | `400` invalid coordinates |
+| `POST` | `/manage/time` | Update the device’s UTC clock with the bridge’s current time (no body). | `200` | `500` system clock unavailable |
+| `POST` | `/manage/time/offset/{offset}` | Apply a timezone offset (GMT±N, `offset` between `-12` and `14`) via Pixoo’s `Sys/TimeZone` command. | `200` | `400` invalid offset |
 
 All endpoints may return `502` (unreachable), `503` (device error), or `504` (timeout) with a JSON body: `{ "error_status", "message", "error_kind", "error_code?" }`.
 

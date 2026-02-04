@@ -19,7 +19,7 @@ rules:
     - "Leverage Rust’s type system to enforce correctness and keep HTTP interactions explicit."
   specs:
     - "Describe deltas in ADDED/MODIFIED/REMOVED sections and never rewrite the full spec—refer to existing requirements when modifying."
-    - "Use RFC 2119 keywords (SHALL/MUST/SHOULD) and Given/When/Then scenarios to keep requirements testable."
+    - "Use RFC 2119 keywords (SHALL/MUST/SHOULD) and GIVEN/WHEN/THEN/AND scenarios to keep requirements testable."
     - "Capabilities in specs need to pe put under a domain folder (like `core`, `ui`, `api` ..). The schema is specs/{domain}/{capability}/specs.md. A change can have more than one capability in more than  one domain."
     - "Be aware that at this phase the specs are only created in the change proposal. NOT in the final specs yet."
   tasks:
@@ -27,4 +27,4 @@ rules:
     - "Always write enough tests to cover new/modified functionality and edge cases before implementation."
     - "Prioritize unit tests over integration tests. But when necessary do not hesitate to write integration tests to cover end-to-end behavior."
     - "Include a final task to run `cargo fmt`, `cargo clippy`, and `cargo test` before archiving so implementation matches the artifacts."
-    - "After implementing features, revisit README.md so it always reflects current important information for the enduser. no implementation details. not every change needs a README update."
+    - "After implementing features, revisit README.md so it always reflects current important information for the end user. no implementation details. not every change needs a README update."

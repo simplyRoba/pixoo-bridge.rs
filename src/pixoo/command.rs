@@ -10,6 +10,9 @@ pub enum PixooCommand {
     ManageGetSettings,
     ManageGetTime,
     ManageGetWeather,
+    ManageSetLocation,
+    ManageSetTimezone,
+    ManageSetUtc,
 }
 
 impl PixooCommand {
@@ -23,6 +26,9 @@ impl PixooCommand {
             PixooCommand::ManageGetSettings => "Channel/GetAllConf",
             PixooCommand::ManageGetTime => "Device/GetDeviceTime",
             PixooCommand::ManageGetWeather => "Device/GetWeatherInfo",
+            PixooCommand::ManageSetLocation => "Sys/LogAndLat",
+            PixooCommand::ManageSetTimezone => "Sys/TimeZone",
+            PixooCommand::ManageSetUtc => "Device/SetUTC",
         }
     }
 }
@@ -59,5 +65,8 @@ mod tests {
             PixooCommand::ManageGetWeather.as_str(),
             "Device/GetWeatherInfo"
         );
+        assert_eq!(PixooCommand::ManageSetLocation.as_str(), "Sys/LogAndLat");
+        assert_eq!(PixooCommand::ManageSetTimezone.as_str(), "Sys/TimeZone");
+        assert_eq!(PixooCommand::ManageSetUtc.as_str(), "Device/SetUTC");
     }
 }
