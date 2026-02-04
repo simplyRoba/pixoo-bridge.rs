@@ -42,6 +42,10 @@ All code SHALL follow these patterns to pass clippy pedantic lints:
 - Use explicit enum variants instead of wildcards in exhaustive matches
 - Consolidate identical match arms
 
+#### Scenario: Code follows pedantic patterns
+- **WHEN** new code is added to the project
+- **THEN** it follows the established patterns and passes clippy pedantic lints.
+
 ### Requirement: Error documentation
 Public functions returning `Result` SHALL include an `# Errors` section documenting when each error variant is returned.
 

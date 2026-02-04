@@ -1,23 +1,26 @@
 # Proposal: Clippy Pedantic as Project Standard
 
-## Problem Statement
+## Why
 
 The codebase lacks consistent enforcement of Rust idioms and best practices. Code style varies across modules, and potential issues that clippy's pedantic lints would catch go unnoticed.
 
-## Proposed Solution
+## What Changes
 
-Enable clippy pedantic lints project-wide via `Cargo.toml` configuration, making it the standard for all code in the repository. This ensures consistent code quality and catches common issues early.
-
-## Scope
-
-- Add `[lints.clippy]` configuration to `Cargo.toml`
-- Fix all existing pedantic lint violations
+- Add `[lints.clippy]` configuration to `Cargo.toml` with pedantic enabled
+- Fix all existing pedantic lint violations across the codebase
 - Add `# Errors` documentation to public functions returning `Result`
-- Selectively allow only style-preference lints
+- Selectively allow only style-preference lints (`must_use_candidate`, `module_name_repetitions`)
 
-## Success Criteria
+## Capabilities
 
-- `cargo clippy --all-targets -- -D warnings` passes with pedantic enabled
-- All tests continue to pass
-- Code follows consistent Rust idioms
-- Public API has proper error documentation
+### Modified Capabilities
+- `core/foundation`: Add lint configuration and code standards requirements
+
+## Impact
+
+- `Cargo.toml`: Add `[lints.clippy]` section
+- `src/pixoo/client.rs`: Fix casts, add error docs
+- `src/pixoo/error.rs`: Fix match arms, wildcard patterns
+- `src/routes/system.rs`: Fix let-else patterns
+- `src/routes/manage.rs`: Fix let-else patterns
+- `src/routes/tools.rs`: Fix let-else patterns, pass-by-reference

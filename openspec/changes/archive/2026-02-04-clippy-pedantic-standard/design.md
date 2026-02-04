@@ -1,28 +1,45 @@
 # Design: Clippy Pedantic as Project Standard
 
-## Configuration
+## Context
 
-Add clippy pedantic lints to `Cargo.toml`:
+The project uses Rust with axum for the HTTP bridge. Clippy provides linting but pedantic lints are not enabled, allowing inconsistent code patterns.
+
+## Goals / Non-Goals
+
+**Goals:**
+- Enforce consistent Rust idioms via clippy pedantic
+- Ensure all public API functions have error documentation
+- Pass `cargo clippy --all-targets -- -D warnings`
+
+**Non-Goals:**
+- Enforce documentation lints that are too verbose (`must_use_candidate`)
+- Rename types to avoid module repetition (`module_name_repetitions`)
+
+## Decisions
+
+### Decision 1: Configure via Cargo.toml
+
+Use `[lints.clippy]` in `Cargo.toml` rather than `#![warn(clippy::pedantic)]` in code. This centralizes configuration and allows selective overrides.
 
 ```toml
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-# Style preferences
 must_use_candidate = "allow"
 module_name_repetitions = "allow"
 ```
 
-## Allowed Exceptions
+### Decision 2: Use safe integer conversions
 
-- `must_use_candidate`: Too many false positives for builder-style APIs
-- `module_name_repetitions`: Acceptable for clarity (e.g., `PixooError` in `pixoo` module)
+Replace `as` casts with `try_from().unwrap_or()` for safety:
+```rust
+let delay = self.backoff * u32::try_from(attempt).unwrap_or(u32::MAX);
+```
 
-## Code Changes Required
+### Decision 3: Prefer let-else for early returns
 
-1. **Safe integer casts**: Replace `as` casts with `try_from().unwrap_or()` or `try_from().ok()`
-2. **Let-else patterns**: Use `let ... else` instead of `match` for early returns
-3. **Pass by reference**: Change owned parameters to references where appropriate
-4. **Match arm consolidation**: Merge identical match arms
-5. **Explicit variants**: Replace wildcard patterns with explicit enum variants
-6. **Idiomatic combinators**: Use `map_or_else` instead of `map().unwrap_or_else()`
-7. **Error documentation**: Add `# Errors` section to public functions returning `Result`
+Use `let ... else` pattern instead of `match` for Option unwrapping with early return:
+```rust
+let Some(client) = state.pixoo_client.clone() else {
+    return error_response();
+};
+```
