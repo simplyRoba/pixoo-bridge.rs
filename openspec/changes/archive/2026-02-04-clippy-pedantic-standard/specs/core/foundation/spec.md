@@ -11,7 +11,7 @@ The project SHALL enforce clippy pedantic lints via `Cargo.toml` configuration s
 - **THEN** it contains the following clippy pedantic lint configuration:
   ```toml
   [lints.clippy]
-  pedantic = { level = "warn", priority = -1 }
+  pedantic = { level = "deny", priority = -1 }
   must_use_candidate = "allow"
   module_name_repetitions = "allow"
   ```
