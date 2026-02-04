@@ -18,6 +18,12 @@ pub struct PixooClient {
 }
 
 impl PixooClient {
+    /// Creates a new Pixoo client for the given base URL.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PixooError::InvalidBaseUrl`] if the URL cannot be parsed.
+    /// Returns [`PixooError::Http`] if the HTTP client fails to initialize.
     pub fn new(base_url: impl Into<String>) -> Result<Self, PixooError> {
         let base_url = base_url.into();
         let post_url = reqwest::Url::parse(&base_url)
@@ -53,6 +59,15 @@ impl PixooClient {
         args
     }
 
+    /// Sends a command to the Pixoo device.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PixooError::Http`] if the request fails due to network issues.
+    /// Returns [`PixooError::HttpStatus`] if the device returns a non-2xx status.
+    /// Returns [`PixooError::DeviceError`] if the device returns a non-zero error code.
+    /// Returns [`PixooError::InvalidResponse`] if the response cannot be parsed.
+    /// Returns [`PixooError::MissingErrorCode`] if the response lacks an `error_code` field.
     pub async fn send_command(
         &self,
         command: PixooCommand,
@@ -62,6 +77,12 @@ impl PixooClient {
         self.execute_with_retry(&payload).await
     }
 
+    /// Checks if the Pixoo device is reachable.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PixooError::Http`] if the request fails due to network issues.
+    /// Returns [`PixooError::HttpStatus`] if the device returns a non-2xx status.
     pub async fn health_check(&self) -> Result<(), PixooError> {
         self.execute_health_with_retry().await
     }

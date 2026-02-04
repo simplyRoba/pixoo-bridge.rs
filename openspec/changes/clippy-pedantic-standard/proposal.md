@@ -12,10 +12,12 @@ Enable clippy pedantic lints project-wide via `Cargo.toml` configuration, making
 
 - Add `[lints.clippy]` configuration to `Cargo.toml`
 - Fix all existing pedantic lint violations
-- Selectively allow lints that are too noisy for this project
+- Add `# Errors` documentation to public functions returning `Result`
+- Selectively allow only style-preference lints
 
 ## Success Criteria
 
 - `cargo clippy --all-targets -- -D warnings` passes with pedantic enabled
 - All tests continue to pass
 - Code follows consistent Rust idioms
+- Public API has proper error documentation

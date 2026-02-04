@@ -3,7 +3,7 @@
 ## Completed
 
 - [x] Add `[lints.clippy]` section to `Cargo.toml` with pedantic enabled
-- [x] Configure allowed exceptions for noisy lints
+- [x] Configure allowed exceptions for style-preference lints
 - [x] Fix `as` casts in `src/pixoo/client.rs` (use `try_from`)
 - [x] Fix let-else patterns in `src/routes/system.rs`
 - [x] Fix let-else patterns in `src/routes/manage.rs`
@@ -13,5 +13,8 @@
 - [x] Fix wildcard pattern in `src/pixoo/error.rs`
 - [x] Fix `map_or_else` usage in `client_timeout()`
 - [x] Add `#[allow(clippy::type_complexity)]` for test with complex state type
+- [x] Add `# Errors` docs to `PixooClient::new`
+- [x] Add `# Errors` docs to `PixooClient::send_command`
+- [x] Add `# Errors` docs to `PixooClient::health_check`
 - [x] Verify all tests pass
 - [x] Verify `cargo clippy --all-targets -- -D warnings` passes

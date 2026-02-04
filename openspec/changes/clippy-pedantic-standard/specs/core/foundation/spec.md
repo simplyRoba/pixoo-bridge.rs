@@ -9,8 +9,6 @@ The project enforces clippy pedantic lints via `Cargo.toml`:
 ```toml
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-missing_errors_doc = "allow"
-missing_panics_doc = "allow"
 must_use_candidate = "allow"
 module_name_repetitions = "allow"
 ```
@@ -25,3 +23,16 @@ Required patterns:
 - Pass by reference when ownership is not needed
 - Use explicit enum variants instead of wildcards in exhaustive matches
 - Consolidate identical match arms
+
+### Documentation Standards
+
+Public functions returning `Result` must include an `# Errors` section documenting when each error variant is returned:
+
+```rust
+/// Description of the function.
+///
+/// # Errors
+///
+/// Returns [`ErrorType::Variant`] if condition occurs.
+pub fn example() -> Result<T, ErrorType> {
+```
