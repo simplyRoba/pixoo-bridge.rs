@@ -10,10 +10,10 @@ Pixoo device failures currently collapse to HTTP 503, so callers cannot distingu
 ## Capabilities
 
 ### New Capabilities
-- `core/http-error-mapping`: Describe how Pixoo client error conditions translate into HTTP responses, which bridge components rely on that mapping, and how operators observe the difference via HTTP status codes and error bodies.
+- `api/common`: Add requirements describing how Pixoo client error conditions translate into HTTP responses (502/503/504) with structured payloads, extending the existing common API behavior.
 
 ### Modified Capabilities
-- *none*: No existing capability requirements change in this proposal.
+- *none*
 
 ## Impact
 
