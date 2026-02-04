@@ -6,7 +6,6 @@ use axum::{
     http::Request,
     middleware::{from_fn, Next},
     response::Response,
-    routing::get,
     Router,
 };
 use reqwest::Url;
@@ -64,12 +63,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn root() -> &'static str {
-    "Hello World from Pixoo Bridge!"
-}
-
 fn build_app(state: Arc<AppState>) -> Router {
-    let app: Router<Arc<AppState>> = Router::new().route("/", get(root));
+    let app: Router<Arc<AppState>> = Router::new();
     let app = mount_tool_routes(app);
     let app = mount_manage_routes(app);
     let app = mount_system_routes(app);
