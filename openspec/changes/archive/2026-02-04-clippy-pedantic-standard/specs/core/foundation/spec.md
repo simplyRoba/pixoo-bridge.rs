@@ -6,6 +6,16 @@
 
 The project SHALL enforce clippy pedantic lints via `Cargo.toml` configuration so code follows consistent Rust idioms and best practices.
 
+#### Scenario: Clippy configuration is defined
+- **WHEN** examining the project's Cargo.toml
+- **THEN** it contains the following clippy pedantic lint configuration:
+  ```toml
+  [lints.clippy]
+  pedantic = { level = "warn", priority = -1 }
+  must_use_candidate = "allow"
+  module_name_repetitions = "allow"
+  ```
+
 #### Scenario: Clippy passes with pedantic lints
 - **WHEN** a contributor runs `cargo clippy --all-targets -- -D warnings`
 - **THEN** the build completes without warnings, enforcing pedantic lint standards.
