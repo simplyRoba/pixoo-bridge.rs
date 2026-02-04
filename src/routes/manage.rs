@@ -1,23 +1,27 @@
-use axum::extract::{Json, State};
+use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use pixoo_bridge::pixoo::client::PixooResponse;
 use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
+use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::state::AppState;
 
 pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
         .route("/manage/settings", get(manage_settings))
-        .route("/manage/time", get(manage_time))
+        .route("/manage/time", get(manage_time).post(manage_set_time))
         .route("/manage/weather", get(manage_weather))
+        .route("/manage/weather/location", post(manage_set_location))
+        .route("/manage/time/offset/{offset}", post(manage_set_timezone))
 }
 
 async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
@@ -65,6 +69,70 @@ async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
+async fn manage_set_location(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<LocationRequest>,
+) -> Response {
+    if let Err(errors) = payload.validate() {
+        return validation_errors_response(&errors);
+    }
+
+    debug!(
+        longitude = payload.longitude,
+        latitude = payload.latitude,
+        "setting weather location"
+    );
+    let mut args = Map::new();
+    args.insert(
+        "Longitude".to_string(),
+        Value::String(payload.longitude.to_string()),
+    );
+    args.insert(
+        "Latitude".to_string(),
+        Value::String(payload.latitude.to_string()),
+    );
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetLocation, args).await
+}
+
+async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
+    let utc_secs = match current_utc_seconds() {
+        Ok(secs) => secs,
+        Err(err) => {
+            error!(error = %err, "failed to read system UTC");
+            return internal_server_error("failed to compute UTC timestamp");
+        }
+    };
+
+    debug!(utc = utc_secs, "setting device UTC clock");
+    let mut args = Map::new();
+    args.insert("Utc".to_string(), Value::from(utc_secs));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetUtc, args).await
+}
+
+async fn manage_set_timezone(
+    State(state): State<Arc<AppState>>,
+    Path(offset): Path<String>,
+) -> Response {
+    let offset_value = match parse_timezone_offset(&offset) {
+        Ok(value) => value,
+        Err(message) => return offset_validation_error(&message),
+    };
+
+    let timezone_value = if offset_value >= 0 {
+        format!("GMT+{offset_value}")
+    } else {
+        format!("GMT{offset_value}")
+    };
+
+    debug!(offset = offset_value, timezone = %timezone_value, "setting timezone offset");
+    let mut args = Map::new();
+    args.insert("TimeZoneValue".to_string(), Value::String(timezone_value));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetTimezone, args).await
+}
+
 async fn dispatch_manage_command(
     state: &AppState,
     command: PixooCommand,
@@ -91,6 +159,96 @@ fn service_unavailable() -> Response {
         Json(json!({ "error": "Pixoo command failed" })),
     )
         .into_response()
+}
+
+fn internal_server_error(message: &str) -> Response {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(json!({ "error": message })),
+    )
+        .into_response()
+}
+
+fn validation_error_message(error: &ValidationError) -> String {
+    if let Some(message) = &error.message {
+        message.to_string()
+    } else {
+        error.code.to_string()
+    }
+}
+
+fn validation_error_response(details: Map<String, Value>) -> Response {
+    let body = json!({
+        "error": "validation failed",
+        "details": Value::Object(details),
+    });
+
+    (StatusCode::BAD_REQUEST, Json(body)).into_response()
+}
+
+fn validation_errors_response(errors: &ValidationErrors) -> Response {
+    let mut details = Map::new();
+
+    for (field, field_errors) in errors.field_errors() {
+        let messages: Vec<Value> = field_errors
+            .iter()
+            .map(|error| Value::String(validation_error_message(error)))
+            .collect();
+        details.insert(field.to_string(), Value::Array(messages));
+    }
+
+    validation_error_response(details)
+}
+
+fn offset_validation_error(message: &str) -> Response {
+    let mut details = Map::new();
+    details.insert("offset".to_string(), Value::String(message.to_string()));
+    validation_error_response(details)
+}
+
+fn parse_timezone_offset(value: &str) -> Result<i8, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err("offset must be provided".to_string());
+    }
+
+    let parsed = trimmed
+        .parse::<i32>()
+        .map_err(|_| "offset must be an integer".to_string())?;
+
+    if !(-12..=14).contains(&parsed) {
+        return Err("offset must be between -12 and 14".to_string());
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    Ok(parsed as i8)
+}
+
+fn current_utc_seconds() -> Result<i64, String> {
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|err| err.to_string())?;
+    let secs = i64::try_from(duration.as_secs()).map_err(|err| err.to_string())?;
+    Ok(secs)
+}
+
+async fn dispatch_manage_post_command(
+    state: &AppState,
+    command: PixooCommand,
+    args: Map<String, Value>,
+) -> Response {
+    let Some(client) = state.pixoo_client.clone() else {
+        return service_unavailable();
+    };
+
+    match client.send_command(command.clone(), args).await {
+        Ok(_) => StatusCode::OK.into_response(),
+        Err(err) => {
+            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
+            error!(command = %command, error = ?err, status = %status, "Pixoo manage command failed");
+            (status, body).into_response()
+        }
+    }
 }
 
 fn map_settings(response: &PixooResponse) -> Result<ManageSettings, String> {
@@ -225,6 +383,14 @@ struct ManageWeather {
     wind_speed: f64,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+struct LocationRequest {
+    #[validate(range(min = -180.0, max = 180.0))]
+    longitude: f64,
+    #[validate(range(min = -90.0, max = 90.0))]
+    latitude: f64,
+}
+
 #[cfg(test)]
 mod tests {
     use crate::routes::mount_manage_routes;
@@ -235,7 +401,7 @@ mod tests {
     use chrono::{TimeZone, Utc};
     use httpmock::{Method as MockMethod, MockServer};
     use pixoo_bridge::pixoo::PixooClient;
-    use serde_json::json;
+    use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;
 
@@ -243,18 +409,42 @@ mod tests {
         mount_manage_routes(Router::new()).with_state(state)
     }
 
-    async fn send_get(app: &Router, uri: &str) -> (StatusCode, String) {
-        let req = Request::builder()
-            .method(Method::GET)
-            .uri(uri)
-            .body(Body::empty())
+    async fn send_json_request(
+        app: &Router,
+        method: Method,
+        uri: &str,
+        body: Option<serde_json::Value>,
+    ) -> (StatusCode, String) {
+        let builder = Request::builder().method(method).uri(uri);
+        let builder = if body.is_some() {
+            builder.header("content-type", "application/json")
+        } else {
+            builder
+        };
+        let req = builder
+            .body(match body {
+                Some(value) => Body::from(value.to_string()),
+                None => Body::empty(),
+            })
             .unwrap();
         let response = app.clone().oneshot(req).await.unwrap();
         let status = response.status();
-        let body = to_bytes(response.into_body(), usize::MAX)
+        let body_bytes = to_bytes(response.into_body(), usize::MAX)
             .await
             .unwrap_or_default();
-        (status, String::from_utf8_lossy(&body).to_string())
+        (status, String::from_utf8_lossy(&body_bytes).to_string())
+    }
+
+    async fn send_get(app: &Router, uri: &str) -> (StatusCode, String) {
+        send_json_request(app, Method::GET, uri, None).await
+    }
+
+    async fn send_post(
+        app: &Router,
+        uri: &str,
+        body: Option<serde_json::Value>,
+    ) -> (StatusCode, String) {
+        send_json_request(app, Method::POST, uri, body).await
     }
 
     fn manage_state_with_client(base_url: &str) -> Arc<AppState> {
@@ -289,7 +479,7 @@ mod tests {
         let (status, body) = send_get(&app, "/manage/settings").await;
 
         assert_eq!(status, StatusCode::OK);
-        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["displayOn"], true);
         assert_eq!(json_body["brightness"], 80);
         assert_eq!(json_body["timeMode"], "TWENTY_FOUR");
@@ -330,7 +520,7 @@ mod tests {
         let (status, body) = send_get(&app, "/manage/time").await;
 
         assert_eq!(status, StatusCode::OK);
-        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let json_body: Value = serde_json::from_str(&body).unwrap();
         let utc_expected = Utc
             .timestamp_opt(1_700_000_000, 0)
             .single()
@@ -353,7 +543,7 @@ mod tests {
         let (status, body) = send_get(&app, "/manage/time").await;
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error_kind"], "device-error");
         assert_eq!(json_body["error_status"], 503);
         assert_eq!(json_body["error_code"], 1);
@@ -384,7 +574,7 @@ mod tests {
         let (status, body) = send_get(&app, "/manage/weather").await;
 
         assert_eq!(status, StatusCode::OK);
-        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["weatherString"], "Cloudy");
         assert_eq!(json_body["currentTemperature"], 26.5);
         assert_eq!(json_body["minimalTemperature"], 24.0);
@@ -407,9 +597,114 @@ mod tests {
         let (status, body) = send_get(&app, "/manage/weather").await;
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-        let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error_kind"], "device-error");
         assert_eq!(json_body["error_status"], 503);
         assert_eq!(json_body["error_code"], 1);
+    }
+
+    #[tokio::test]
+    async fn location_sets_coordinates() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Sys/LogAndLat\"")
+                .body_includes("\"Longitude\":\"30.29\"")
+                .body_includes("\"Latitude\":\"20.58\"");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(
+            &app,
+            "/manage/weather/location",
+            Some(json!({ "longitude": 30.29, "latitude": 20.58 })),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.is_empty());
+
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn location_rejects_invalid_coordinate() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(
+            &app,
+            "/manage/weather/location",
+            Some(json!({ "longitude": 190.0, "latitude": 20.58 })),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+    }
+
+    #[tokio::test]
+    async fn timezone_sets_offset() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Sys/TimeZone\"")
+                .body_includes("\"TimeZoneValue\":\"GMT-5\"");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_post(&app, "/manage/time/offset/-5", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn timezone_invalid_offset_out_of_range() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(&app, "/manage/time/offset/20", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(
+            json_body["details"]["offset"],
+            "offset must be between -12 and 14"
+        );
+    }
+
+    #[tokio::test]
+    async fn timezone_invalid_offset_non_numeric() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(&app, "/manage/time/offset/abc", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["details"]["offset"], "offset must be an integer");
+    }
+
+    #[tokio::test]
+    async fn manage_time_sets_current_utc() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetUTC\"")
+                .body_includes("\"Utc\":");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_post(&app, "/manage/time", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
     }
 }
