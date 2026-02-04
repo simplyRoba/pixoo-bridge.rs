@@ -5,8 +5,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use pixoo_bridge::core::http_error_mapping::map_pixoo_error;
-use pixoo_bridge::pixoo::PixooCommand;
+use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 use tracing::{debug, error};
