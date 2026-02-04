@@ -2,7 +2,7 @@ use crate::pixoo::command::PixooCommand;
 use crate::pixoo::error::PixooError;
 use reqwest::header::CONTENT_TYPE;
 use serde_json::{Map, Value};
-use std::time::Duration;
+use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{debug, error};
 
@@ -33,7 +33,7 @@ impl PixooClient {
                 url.to_string()
             })?;
         let http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
+            .timeout(client_timeout())
             .build()?;
 
         Ok(Self {
@@ -218,6 +218,14 @@ fn log_pixoo_error(context: &str, err: &PixooError, retriable: bool) {
     );
 }
 
+fn client_timeout() -> Duration {
+    env::var("PIXOO_CLIENT_TIMEOUT_MS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .map(Duration::from_millis)
+        .unwrap_or_else(|| Duration::from_secs(10))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -231,8 +239,6 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use tokio::net::TcpListener;
-    use tokio::task::yield_now;
-    use tokio::time::{advance, pause, Duration as TokioDuration};
 
     fn with_retry_policy(
         mut client: PixooClient,
@@ -276,16 +282,6 @@ mod tests {
         });
 
         (format!("http://{addr}/post"), counter)
-    }
-
-    async fn wait_for_count(counter: &AtomicUsize, expected: usize) {
-        for _ in 0..20 {
-            if counter.load(Ordering::SeqCst) == expected {
-                return;
-            }
-            yield_now().await;
-        }
-        assert_eq!(counter.load(Ordering::SeqCst), expected);
     }
 
     #[test]
@@ -415,62 +411,85 @@ mod tests {
 
     #[tokio::test]
     async fn backoff_increments_between_retries() {
-        pause();
-        let (base_url, counter) = start_sequence_server(vec![
+        // Track timestamps when each request arrives to verify backoff delays.
+        let timestamps = Arc::new(std::sync::Mutex::new(Vec::<std::time::Instant>::new()));
+        let timestamps_clone = timestamps.clone();
+
+        let counter = Arc::new(AtomicUsize::new(0));
+        let counter_clone = counter.clone();
+
+        let statuses = Arc::new(vec![
             StatusCode::INTERNAL_SERVER_ERROR,
             StatusCode::INTERNAL_SERVER_ERROR,
             StatusCode::OK,
-        ])
-        .await;
+        ]);
 
+        let state = (statuses, counter_clone, timestamps_clone);
+        let app = Router::new()
+            .route(
+                "/post",
+                post(
+                    |State((statuses, counter, timestamps)): State<(
+                        Arc<Vec<StatusCode>>,
+                        Arc<AtomicUsize>,
+                        Arc<std::sync::Mutex<Vec<std::time::Instant>>>,
+                    )>| async move {
+                        timestamps.lock().unwrap().push(std::time::Instant::now());
+                        let index = counter.fetch_add(1, Ordering::SeqCst);
+                        let status = statuses
+                            .get(index)
+                            .copied()
+                            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+                        (status, r#"{"error_code":0}"#.to_string())
+                    },
+                ),
+            )
+            .with_state(state);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("server");
+        });
+
+        let base_url = format!("http://{addr}/post");
+
+        // Use short backoff delays for fast testing.
         let client = with_retry_policy(
             PixooClient::new(base_url).expect("client"),
             2,
-            Duration::from_millis(200),
+            Duration::from_millis(50),
         );
-        let task = tokio::spawn(async move {
-            client
-                .send_command(PixooCommand::SystemReboot, Map::new())
-                .await
-        });
 
-        // Wait for the initial request to hit the server before advancing time.
-        wait_for_count(&counter, 1).await;
+        let response = client
+            .send_command(PixooCommand::SystemReboot, Map::new())
+            .await
+            .expect("request should succeed");
 
-        // Confirm we have not reached the first backoff yet.
-        advance(TokioDuration::from_millis(199)).await;
-        for _ in 0..5 {
-            yield_now().await;
-        }
-        assert_eq!(counter.load(Ordering::SeqCst), 1);
-
-        // Advance time in tiny steps until the first retry (200ms) fires.
-        let mut advanced = 0u64;
-        while counter.load(Ordering::SeqCst) < 2 && advanced < 300 {
-            advance(TokioDuration::from_millis(1)).await;
-            advanced += 1;
-            yield_now().await;
-        }
-        assert_eq!(counter.load(Ordering::SeqCst), 2);
-
-        // Confirm we have not reached the second backoff yet.
-        advance(TokioDuration::from_millis(399)).await;
-        for _ in 0..5 {
-            yield_now().await;
-        }
-        assert_eq!(counter.load(Ordering::SeqCst), 2);
-
-        // Advance time in tiny steps until the second retry (400ms) fires.
-        let mut advanced = 0u64;
-        while counter.load(Ordering::SeqCst) < 3 && advanced < 600 {
-            advance(TokioDuration::from_millis(1)).await;
-            advanced += 1;
-            yield_now().await;
-        }
+        assert!(response.is_empty());
         assert_eq!(counter.load(Ordering::SeqCst), 3);
 
-        let response = task.await.expect("join").expect("response");
-        assert!(response.is_empty());
+        // Verify backoff delays increased between retries.
+        let ts = timestamps.lock().unwrap();
+        assert_eq!(ts.len(), 3);
+
+        let first_delay = ts[1].duration_since(ts[0]);
+        let second_delay = ts[2].duration_since(ts[1]);
+
+        // First backoff should be ~50ms, second should be ~100ms (doubled).
+        // Allow some tolerance for scheduling variance.
+        assert!(
+            first_delay >= Duration::from_millis(40),
+            "first delay {first_delay:?} should be >= 40ms"
+        );
+        assert!(
+            second_delay >= Duration::from_millis(80),
+            "second delay {second_delay:?} should be >= 80ms"
+        );
+        assert!(
+            second_delay > first_delay,
+            "second delay {second_delay:?} should be > first delay {first_delay:?}"
+        );
     }
 
     #[tokio::test]

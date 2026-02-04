@@ -4,4 +4,6 @@ pub mod error;
 
 pub use client::PixooClient;
 pub use command::PixooCommand;
-pub use error::PixooError;
+pub use error::{
+    map_pixoo_error, PixooError, PixooErrorCategory, PixooHttpErrorKind, PixooHttpErrorResponse,
+};
