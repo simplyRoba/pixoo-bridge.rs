@@ -240,7 +240,7 @@ fn log_pixoo_error(context: &str, err: &PixooError, retriable: bool) {
 }
 
 fn client_timeout() -> Duration {
-    env::var("PIXOO_CLIENT_TIMEOUT_MS")
+    env::var("PIXOO_TIMEOUT_MS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
         .map_or_else(|| Duration::from_secs(10), Duration::from_millis)

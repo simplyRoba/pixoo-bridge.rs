@@ -85,7 +85,7 @@ Flexible environment-based config with sensible defaults. The `read_bool_env` fu
 ```rust
 // src/pixoo/client.rs:242-247
 fn client_timeout() -> Duration {
-    env::var("PIXOO_CLIENT_TIMEOUT_MS")
+    env::var("PIXOO_TIMEOUT_MS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
         ...

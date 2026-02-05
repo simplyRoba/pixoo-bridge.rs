@@ -240,7 +240,7 @@ mod tests {
             }
         });
 
-        let _guard = EnvVarGuard::set("PIXOO_CLIENT_TIMEOUT_MS", Some("50"));
+        let _guard = EnvVarGuard::set("PIXOO_TIMEOUT_MS", Some("50"));
         let client = PixooClient::new(format!("http://{addr}")).expect("client");
         let err = client
             .send_command(PixooCommand::ToolsTimer, Map::<String, Value>::new())

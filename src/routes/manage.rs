@@ -105,7 +105,6 @@ async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
     };
 
     debug!(utc = utc_secs, "setting device UTC clock");
-    
     let mut args = Map::new();
     args.insert("Utc".to_string(), Value::from(utc_secs));
 
@@ -172,8 +171,6 @@ async fn dispatch_manage_command(
     let Some(client) = state.pixoo_client.clone() else {
         return Err(service_unavailable());
     };
-
-
     match client.send_command(command.clone(), Map::new()).await {
         Ok(response) => Ok(response),
         Err(err) => {

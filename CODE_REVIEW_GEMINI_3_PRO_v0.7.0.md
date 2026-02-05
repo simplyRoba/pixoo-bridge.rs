@@ -49,7 +49,7 @@ The application allows the `PixooClient` to be optional (`Option<PixooClient>` i
 
 ### 2. Runtime Environment Variable Access
 
-The `client_timeout` function in `src/pixoo/client.rs` reads the `PIXOO_CLIENT_TIMEOUT_MS` environment variable every time it's called. While currently only called during construction, this pattern of deep access to global state makes the code harder to reason about and test compared to passing configuration explicitly.
+The `client_timeout` function in `src/pixoo/client.rs` reads the `PIXOO_TIMEOUT_MS` environment variable every time it's called. While currently only called during construction, this pattern of deep access to global state makes the code harder to reason about and test compared to passing configuration explicitly.
 
 ### 3. Repetitive Boilerplate
 
