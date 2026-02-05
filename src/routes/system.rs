@@ -33,7 +33,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
 
     match client.health_check().await {
         Ok(()) => {
-            debug!("Pixoo health check succeeded");
+            debug!("Forwarded health check to Pixoo succeeded");
             (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response()
         }
         Err(err) => {

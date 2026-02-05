@@ -82,11 +82,6 @@ async fn manage_set_location(
         return validation_errors_response(&errors);
     }
 
-    debug!(
-        longitude = payload.longitude,
-        latitude = payload.latitude,
-        "setting weather location"
-    );
     let mut args = Map::new();
     args.insert(
         "Longitude".to_string(),
@@ -110,6 +105,7 @@ async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
     };
 
     debug!(utc = utc_secs, "setting device UTC clock");
+    
     let mut args = Map::new();
     args.insert("Utc".to_string(), Value::from(utc_secs));
 
@@ -131,7 +127,6 @@ async fn manage_set_timezone(
         format!("GMT{offset_value}")
     };
 
-    debug!(offset = offset_value, timezone = %timezone_value, "setting timezone offset");
     let mut args = Map::new();
     args.insert("TimeZoneValue".to_string(), Value::String(timezone_value));
 
@@ -148,7 +143,6 @@ async fn manage_set_time_mode(
         _ => return validation_error_simple("mode", "mode must be '12h' or '24h'"),
     };
 
-    debug!(mode = mode, "setting time mode");
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
@@ -165,7 +159,6 @@ async fn manage_set_temperature_unit(
         _ => return validation_error_simple("unit", "unit must be 'celsius' or 'fahrenheit'"),
     };
 
-    debug!(unit = unit, "setting temperature unit");
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
@@ -180,7 +173,6 @@ async fn dispatch_manage_command(
         return Err(service_unavailable());
     };
 
-    debug!(%command, "issuing manage command");
 
     match client.send_command(command.clone(), Map::new()).await {
         Ok(response) => Ok(response),
