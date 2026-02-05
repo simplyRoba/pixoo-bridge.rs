@@ -20,6 +20,6 @@
 
 ## 4. Documentation & Cleanup
 
-- [x] 4.1 Update `README.md` to document the new `PUT` endpoints
+- [x] 4.1 Update `README.md` to document the new `POST` endpoints
 - [x] 4.2 Run `cargo fmt` and `cargo clippy`
 - [x] 4.3 Run `cargo test` to ensure no regressions
