@@ -1,7 +1,7 @@
 use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{get, post};
 use axum::Router;
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use pixoo_bridge::pixoo::client::PixooResponse;
@@ -22,10 +22,10 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         .route("/manage/weather", get(manage_weather))
         .route("/manage/weather/location", post(manage_set_location))
         .route("/manage/time/offset/{offset}", post(manage_set_timezone))
-        .route("/manage/time/mode/{mode}", put(manage_set_time_mode))
+        .route("/manage/time/mode/{mode}", post(manage_set_time_mode))
         .route(
             "/manage/weather/temperature-unit/{unit}",
-            put(manage_set_temperature_unit),
+            post(manage_set_temperature_unit),
         )
 }
 
@@ -763,7 +763,8 @@ mod tests {
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
-        let (status, _) = send_json_request(&app, Method::PUT, "/manage/time/mode/12h", None).await;
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/time/mode/12h", None).await;
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
@@ -781,7 +782,8 @@ mod tests {
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
-        let (status, _) = send_json_request(&app, Method::PUT, "/manage/time/mode/24h", None).await;
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/time/mode/24h", None).await;
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
@@ -792,7 +794,7 @@ mod tests {
         let server = MockServer::start_async().await;
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, body) =
-            send_json_request(&app, Method::PUT, "/manage/time/mode/invalid", None).await;
+            send_json_request(&app, Method::POST, "/manage/time/mode/invalid", None).await;
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
@@ -814,7 +816,7 @@ mod tests {
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, _) = send_json_request(
             &app,
-            Method::PUT,
+            Method::POST,
             "/manage/weather/temperature-unit/celsius",
             None,
         )
@@ -838,7 +840,7 @@ mod tests {
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, _) = send_json_request(
             &app,
-            Method::PUT,
+            Method::POST,
             "/manage/weather/temperature-unit/fahrenheit",
             None,
         )
@@ -854,7 +856,7 @@ mod tests {
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, body) = send_json_request(
             &app,
-            Method::PUT,
+            Method::POST,
             "/manage/weather/temperature-unit/kelvin",
             None,
         )

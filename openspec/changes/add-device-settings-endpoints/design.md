@@ -17,8 +17,8 @@ The bridge exposes read-only settings for time mode and temperature unit but lac
 ## Decisions
 
 ### 1. Endpoint Structure: RESTful vs RPC
-**Decision:** use REST-like resource paths `PUT /manage/time/mode/{mode}` and `PUT /manage/weather/temperature-unit/{unit}`.
-**Rationale:** This aligns with the existing `/manage/` hierarchy. Using path parameters allows strictly typed matching (e.g. only matching `/12h` or `/24h`) at the routing layer if the framework supports it, or simple parsing within the handler. It avoids the need for a JSON body for simple scalar toggles.
+**Decision:** use REST-like resource paths `POST /manage/time/mode/{mode}` and `POST /manage/weather/temperature-unit/{unit}`.
+**Rationale:** This aligns with the existing `/manage/` hierarchy. Using path parameters allows strictly typed matching (e.g. only matching `/12h` or `/24h`) at the routing layer if the framework supports it, or simple parsing within the handler. It avoids the need for a JSON body for simple scalar toggles. `POST` is used as these are state-changing operations that map to imperative commands on the device.
 
 ### 2. Command Dispatch
 **Decision:** Reuse the existing `post_command` or equivalent generic mechanism in `pixoo-client`.

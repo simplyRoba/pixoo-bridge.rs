@@ -4,10 +4,10 @@ Users currently can view device settings like time format (12h/24h) and temperat
 
 ## What Changes
 
-- Add `PUT /manage/time/mode/{mode}` endpoint.
+- Add `POST /manage/time/mode/{mode}` endpoint.
   - Accepts `12h` or `24h` as path parameter.
   - Maps to Pixoo command `Device/SetTime24Flag` (sending `0` for 12h, `1` for 24h).
-- Add `PUT /manage/weather/temperature-unit/{unit}` endpoint.
+- Add `POST /manage/weather/temperature-unit/{unit}` endpoint.
   - Accepts `celsius` or `fahrenheit` as path parameter.
   - Maps to Pixoo command `Device/SetDisTempMode` (sending `0` for Celsius, `1` for Fahrenheit).
 - Ensure both endpoints return the standard `{ "error_code": 0 }` JSON response on success or appropriate error codes on failure.
@@ -18,7 +18,7 @@ Users currently can view device settings like time format (12h/24h) and temperat
 - None
 
 ### Modified Capabilities
-- `api/manage`: Add requirements for `PUT /manage/time/mode/{mode}` and `PUT /manage/weather/temperature-unit/{unit}` to control device display settings.
+- `api/manage`: Add requirements for `POST /manage/time/mode/{mode}` and `POST /manage/weather/temperature-unit/{unit}` to control device display settings.
 
 ## Impact
 
