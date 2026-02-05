@@ -13,6 +13,8 @@ pub enum PixooCommand {
     ManageSetLocation,
     ManageSetTimezone,
     ManageSetUtc,
+    ManageSetTimeMode,
+    ManageSetTemperatureUnit,
 }
 
 impl PixooCommand {
@@ -29,6 +31,8 @@ impl PixooCommand {
             PixooCommand::ManageSetLocation => "Sys/LogAndLat",
             PixooCommand::ManageSetTimezone => "Sys/TimeZone",
             PixooCommand::ManageSetUtc => "Device/SetUTC",
+            PixooCommand::ManageSetTimeMode => "Device/SetTime24Flag",
+            PixooCommand::ManageSetTemperatureUnit => "Device/SetDisTempMode",
         }
     }
 }
@@ -68,5 +72,13 @@ mod tests {
         assert_eq!(PixooCommand::ManageSetLocation.as_str(), "Sys/LogAndLat");
         assert_eq!(PixooCommand::ManageSetTimezone.as_str(), "Sys/TimeZone");
         assert_eq!(PixooCommand::ManageSetUtc.as_str(), "Device/SetUTC");
+        assert_eq!(
+            PixooCommand::ManageSetTimeMode.as_str(),
+            "Device/SetTime24Flag"
+        );
+        assert_eq!(
+            PixooCommand::ManageSetTemperatureUnit.as_str(),
+            "Device/SetDisTempMode"
+        );
     }
 }

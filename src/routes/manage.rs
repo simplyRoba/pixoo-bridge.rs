@@ -22,6 +22,11 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         .route("/manage/weather", get(manage_weather))
         .route("/manage/weather/location", post(manage_set_location))
         .route("/manage/time/offset/{offset}", post(manage_set_timezone))
+        .route("/manage/time/mode/{mode}", post(manage_set_time_mode))
+        .route(
+            "/manage/weather/temperature-unit/{unit}",
+            post(manage_set_temperature_unit),
+        )
 }
 
 async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
@@ -133,6 +138,40 @@ async fn manage_set_timezone(
     dispatch_manage_post_command(&state, PixooCommand::ManageSetTimezone, args).await
 }
 
+async fn manage_set_time_mode(
+    State(state): State<Arc<AppState>>,
+    Path(mode): Path<String>,
+) -> Response {
+    let mode_value = match mode.as_str() {
+        "12h" => 0,
+        "24h" => 1,
+        _ => return validation_error_simple("mode", "mode must be '12h' or '24h'"),
+    };
+
+    debug!(mode = mode, "setting time mode");
+    let mut args = Map::new();
+    args.insert("Mode".to_string(), Value::from(mode_value));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetTimeMode, args).await
+}
+
+async fn manage_set_temperature_unit(
+    State(state): State<Arc<AppState>>,
+    Path(unit): Path<String>,
+) -> Response {
+    let mode_value = match unit.as_str() {
+        "celsius" => 0,
+        "fahrenheit" => 1,
+        _ => return validation_error_simple("unit", "unit must be 'celsius' or 'fahrenheit'"),
+    };
+
+    debug!(unit = unit, "setting temperature unit");
+    let mut args = Map::new();
+    args.insert("Mode".to_string(), Value::from(mode_value));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetTemperatureUnit, args).await
+}
+
 async fn dispatch_manage_command(
     state: &AppState,
     command: PixooCommand,
@@ -201,8 +240,12 @@ fn validation_errors_response(errors: &ValidationErrors) -> Response {
 }
 
 fn offset_validation_error(message: &str) -> Response {
+    validation_error_simple("offset", message)
+}
+
+fn validation_error_simple(field: &str, message: &str) -> Response {
     let mut details = Map::new();
-    details.insert("offset".to_string(), Value::String(message.to_string()));
+    details.insert(field.to_string(), Value::String(message.to_string()));
     validation_error_response(details)
 }
 
@@ -706,5 +749,125 @@ mod tests {
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
+    }
+
+    #[tokio::test]
+    async fn time_mode_sets_12h() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetTime24Flag\"")
+                .body_includes("\"Mode\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/time/mode/12h", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn time_mode_sets_24h() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetTime24Flag\"")
+                .body_includes("\"Mode\":1");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/time/mode/24h", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn time_mode_rejects_invalid() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/manage/time/mode/invalid", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["details"]["mode"], "mode must be '12h' or '24h'");
+    }
+
+    #[tokio::test]
+    async fn temp_unit_sets_celsius() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetDisTempMode\"")
+                .body_includes("\"Mode\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/weather/temperature-unit/celsius",
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn temp_unit_sets_fahrenheit() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetDisTempMode\"")
+                .body_includes("\"Mode\":1");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/weather/temperature-unit/fahrenheit",
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn temp_unit_rejects_invalid() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/weather/temperature-unit/kelvin",
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(
+            json_body["details"]["unit"],
+            "unit must be 'celsius' or 'fahrenheit'"
+        );
     }
 }
