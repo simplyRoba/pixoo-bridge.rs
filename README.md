@@ -19,7 +19,7 @@ This project is under heavy development and does not provide user-facing functio
 | `PIXOO_BRIDGE_PORT` | no | `4000` | HTTP listener port override that keeps container/network mappings aligned with runtime behavior. |
 | `PIXOO_CLIENT_TIMEOUT_MS` | no | `10000` | Request timeout (milliseconds) for upstream Pixoo calls; reducing this value forces quicker failures during automated checks. |
 
-On startup the container logs the resolved configuration (health forwarding flag, sanitized Pixoo base URL, and listener address). The bridge binds to port `4000` by default and honors `PIXOO_BRIDGE_PORT` when provided; make sure your container/service maps that port as needed. Unexpected Pixoo errors are logged with context; set `PIXOO_BRIDGE_LOG_LEVEL=debug` to also see notable successes like health checks or retries that eventually succeed.
+On startup the container logs the resolved configuration (health forwarding flag, Pixoo base URL, and listener address). The bridge binds to port `4000` by default and honors `PIXOO_BRIDGE_PORT` when provided; make sure your container/service maps that port as needed. Unexpected Pixoo errors are logged with context; set `PIXOO_BRIDGE_LOG_LEVEL=debug` to also see notable successes like health checks or retries that eventually succeed.
 
 Request logging now runs across the entire router so every HTTP call emits its method, path, status, and duration to the logs at `DEBUG` level. Keep the default `info` level for normal operation, and flip `PIXOO_BRIDGE_LOG_LEVEL=debug` when you need the access log entries.
 

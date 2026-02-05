@@ -43,11 +43,11 @@ The bridge SHALL honor `PIXOO_BRIDGE_LOG_LEVEL` by mapping it to the logging fra
 - **THEN** the bridge logs a warning about the invalid setting and continues with `info` as the active level
 
 ### Requirement: Pixoo base URL configuration
-The bridge SHALL read `PIXOO_BASE_URL` to derive the Pixoo device’s base URL when provided, sanitize it to the scheme and host for operator-facing logs, and include that sanitized host plus the configured protocol in the startup info entry so deployment tooling can confirm where the bridge is directing commands.
+The bridge SHALL read `PIXOO_BASE_URL` to derive the Pixoo device’s base URL when provided and include that configured URL in the startup info entry so deployment tooling can confirm where the bridge is directing commands.
 
 #### Scenario: Base URL supplied
 - **WHEN** `PIXOO_BASE_URL` is set (e.g., `http://10.0.0.5`)
-- **THEN** the bridge uses that host to reach the Pixoo device and logs a sanitized `pixoo_base_url` field containing the scheme and host only
+- **THEN** the bridge uses that host to reach the Pixoo device and logs a `pixoo_base_url` field containing the configured URL
 
 #### Scenario: Base URL omitted
 - **WHEN** `PIXOO_BASE_URL` is unset

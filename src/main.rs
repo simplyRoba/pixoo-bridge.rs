@@ -8,7 +8,6 @@ use axum::{
     response::Response,
     Router,
 };
-use reqwest::Url;
 use std::{env, net::SocketAddr, sync::Arc, time::Instant};
 use tracing::{debug, info, warn};
 use tracing_subscriber::filter::LevelFilter;
@@ -36,7 +35,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pixoo_client = base_url
         .as_deref()
         .and_then(|base| PixooClient::new(base).ok());
-    let sanitized_base_url = base_url.as_deref().and_then(sanitize_pixoo_url);
     let state = Arc::new(AppState {
         health_forward,
         pixoo_client,
@@ -47,13 +45,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener_port = resolve_listener_port();
     let addr = SocketAddr::from(([0, 0, 0, 0], listener_port));
     info!(
-        log_level = ?max_level,
-        health_forward,
-        pixoo_client = has_pixoo_client,
-        sanitized_pixoo_base_url = ?sanitized_base_url,
-        listener_port,
         version = APP_VERSION,
         address = %addr,
+        listener_port,
+        log_level = ?max_level,
+        pixoo_base_url = ?base_url,
+        pixoo_client = has_pixoo_client,
+        health_forward,
         "Pixoo bridge configuration loaded"
     );
 
@@ -123,12 +121,6 @@ fn resolve_listener_port() -> u16 {
         }
         Err(_) => DEFAULT_LISTENER_PORT,
     }
-}
-
-fn sanitize_pixoo_url(value: &str) -> Option<String> {
-    let url = Url::parse(value).ok()?;
-    let host = url.host_str()?;
-    Some(format!("{}://{}", url.scheme(), host))
 }
 
 #[cfg(test)]
