@@ -5,13 +5,13 @@
 
 ## 2. API Implementation
 
-- [x] 2.1 Implement `PUT /manage/time/mode/{mode}` handler in `src/api/manage.rs`
+- [x] 2.1 Implement `PUT /manage/time/mode/{mode}` handler in `src/routes/manage.rs`
   - [x] Parse `{mode}` (allow only "12h" / "24h")
   - [x] Invoke generic command `Device/SetTime24Flag` with `Mode: 0` (12h) or `1` (24h)
-- [x] 2.2 Implement `PUT /manage/weather/temperature-unit/{unit}` handler in `src/api/manage.rs`
+- [x] 2.2 Implement `PUT /manage/weather/temperature-unit/{unit}` handler in `src/routes/manage.rs`
   - [x] Parse `{unit}` (allow only "celsius" / "fahrenheit")
   - [x] Invoke generic command `Device/SetDisTempMode` with `Mode: 0` (C) or `1` (F)
-- [x] 2.3 Wire up new routes in `src/api/server.rs` or module router
+- [x] 2.3 Wire up new routes in `src/routes/manage.rs` or module router
 
 ## 3. Testing
 
