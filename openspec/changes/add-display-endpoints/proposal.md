@@ -14,7 +14,7 @@ The Pixoo bridge currently lacks a dedicated API surface for controlling display
 ## Capabilities
 
 ### New Capabilities
-- `api/display`: Display control endpoints for managing Pixoo display settings
+- `api/manage`: Extended manage endpoints with display control functionality
 
 ### Modified Capabilities
 - None
