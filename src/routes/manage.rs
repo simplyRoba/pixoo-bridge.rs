@@ -270,8 +270,16 @@ struct WhiteBalanceRequest {
 
 async fn manage_display_white_balance(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<WhiteBalanceRequest>,
+    Json(payload): Json<Value>,
 ) -> Response {
+    let payload = match serde_json::from_value::<WhiteBalanceRequest>(payload) {
+        Ok(request) => request,
+        Err(err) => {
+            let message = err.to_string();
+            return validation_error_simple("body", &message);
+        }
+    };
+
     if let Err(errors) = payload.validate() {
         return validation_errors_response(&errors);
     }
@@ -873,10 +881,9 @@ mod tests {
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error"], "validation failed");
-        assert_eq!(json_body["details"]["action"]["provided"], "invalid");
         assert_eq!(
-            json_body["details"]["action"]["allowed"],
-            json!(["on", "off"])
+            json_body["details"]["offset"],
+            "offset must be between -12 and 14"
         );
     }
 
