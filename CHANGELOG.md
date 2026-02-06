@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.7.0...v0.8.0) (2026-02-06)
+
+
+### Features
+
+* add endpoints for modifying device settings (time format and temperature unit) ([#62](https://github.com/simplyRoba/pixoo-bridge.rs/issues/62)) ([f8b73a5](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f8b73a529845b1e40a471043a5dec79965ba1785))
+* add environment variables for telemetry and tracking in devcontainer ([5ebda3d](https://github.com/simplyRoba/pixoo-bridge.rs/commit/5ebda3d7cca956c07772cd7a4266b15c301c1f0f))
+* add manage endpoint for display control e.g. brightness and orientation ([#63](https://github.com/simplyRoba/pixoo-bridge.rs/issues/63)) ([0349702](https://github.com/simplyRoba/pixoo-bridge.rs/commit/034970266050642e8d8fca44eb062bbab62eb3d6))
+
+
+### Bug Fixes
+
+* rename PIXOO_CLIENT_TIMEOUT_MS to PIXOO_TIMEOUT_MS for consistency ([a776a3f](https://github.com/simplyRoba/pixoo-bridge.rs/commit/a776a3f7d26c32d0aaea6ad245c6ab21673fc841))
+
 ## [0.7.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.6.0...v0.7.0) (2026-02-04)
 
 
