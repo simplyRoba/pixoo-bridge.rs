@@ -49,10 +49,10 @@
 
 ## 7. Documentation
 
-- [ ] 7.1 Update API documentation to include new display endpoints
-- [ ] 7.2 Add examples for each display control endpoint
-- [ ] 7.3 Document error responses and status codes
-- [ ] 7.4 Update README if user-facing changes are significant
+- [x] 7.1 Update API documentation to include new display endpoints
+- [x] 7.2 Add examples for each display control endpoint
+- [x] 7.3 Document error responses and status codes
+- [x] 7.4 Update README if user-facing changes are significant
 
 ## 8. Quality Assurance
 
