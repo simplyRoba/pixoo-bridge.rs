@@ -6,20 +6,20 @@ Expose HTTP endpoints under `/manage/display/*` to control and manage the Pixoo 
 ## Requirements
 
 ### Requirement: Toggle display on/off
-The bridge SHALL expose `POST /manage/display/on/{action}` to control the display power state. The endpoint SHALL accept `on` or `off` as the `{action}` path parameter.
+The bridge SHALL expose `POST /manage/display/{action}` to control the display power state. The endpoint SHALL accept `on` or `off` as the `{action}` path parameter.
 - If `{action}` is `on`, the bridge SHALL send `POST /post` with `Command: "Channel/OnOffScreen"` and `OnOff: 1`.
 - If `{action}` is `off`, the bridge SHALL send `POST /post` with `Command: "Channel/OnOffScreen"` and `OnOff: 0`.
 
 #### Scenario: Turn display on
-- **WHEN** a client sends `POST /manage/display/on/on`
+- **WHEN** a client sends `POST /manage/display/on`
 - **THEN** the bridge posts `{ "Command": "Channel/OnOffScreen", "OnOff": 1 }` to Pixoo and returns HTTP 200 with `{ "error_code": 0 }`
 
 #### Scenario: Turn display off
-- **WHEN** a client sends `POST /manage/display/on/off`
+- **WHEN** a client sends `POST /manage/display/off`
 - **THEN** the bridge posts `{ "Command": "Channel/OnOffScreen", "OnOff": 0 }` to Pixoo and returns HTTP 200 with `{ "error_code": 0 }`
 
 #### Scenario: Invalid action
-- **WHEN** a client sends `POST /manage/display/on/invalid`
+- **WHEN** a client sends `POST /manage/display/invalid`
 - **THEN** the bridge returns HTTP 400 and does NOT send a command to Pixoo
 
 ### Requirement: Set display brightness

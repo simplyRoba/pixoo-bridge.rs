@@ -4,7 +4,7 @@ The Pixoo bridge currently lacks a dedicated API surface for controlling display
 
 ## What Changes
 
-- **ADDED**: New `/manage/display/on/{action}` endpoint to toggle display power state (on/off)
+- **ADDED**: New `/manage/display/{action}` endpoint to toggle display power state (on/off)
 - **ADDED**: New `/manage/display/brightness/{value}` endpoint to set display brightness (0-100)
 - **ADDED**: New `/manage/display/rotation/{angle}` endpoint to rotate the display (0, 90, 180, 270 degrees)
 - **ADDED**: New `/manage/display/mirror/{action}` endpoint to enable/disable mirror mode

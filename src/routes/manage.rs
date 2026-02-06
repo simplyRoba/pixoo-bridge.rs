@@ -28,7 +28,7 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
             "/manage/weather/temperature-unit/{unit}",
             post(manage_set_temperature_unit),
         )
-        .route("/manage/display/on/{action}", post(manage_display_on))
+        .route("/manage/display/{action}", post(manage_display_on))
         .route(
             "/manage/display/brightness/{value}",
             post(manage_display_brightness),
@@ -1043,7 +1043,7 @@ mod tests {
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, _) =
-            send_json_request(&app, Method::POST, "/manage/display/on/on", None).await;
+            send_json_request(&app, Method::POST, "/manage/display/on", None).await;
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
@@ -1054,7 +1054,7 @@ mod tests {
         let server = MockServer::start_async().await;
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, body) =
-            send_json_request(&app, Method::POST, "/manage/display/on/invalid", None).await;
+            send_json_request(&app, Method::POST, "/manage/display/invalid", None).await;
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();

@@ -25,7 +25,7 @@ The current implementation already has a `/manage` endpoint group that handles s
 **Choice**: Use RESTful path parameters for simple on/off and value-based controls, and JSON body for complex configurations.
 
 **Rationale**: 
-- Path parameters like `/manage/display/on/{action}`, `/manage/display/brightness/{value}`, and `/manage/display/brightness/overclock/{action}` are intuitive and easy to use
+- Path parameters like `/manage/display/{action}`, `/manage/display/brightness/{value}`, and `/manage/display/brightness/overclock/{action}` are intuitive and easy to use
 - JSON body for `/manage/display/white-balance` allows for structured data with multiple fields
 - This approach is consistent with existing endpoints in the `/manage` group
 

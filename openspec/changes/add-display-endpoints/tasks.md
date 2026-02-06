@@ -6,7 +6,7 @@
 
 ## 2. Implementation of Display Control Endpoints
 
-- [x] 2.1 Implement `/manage/display/on/{action}` endpoint for toggling display power
+- [x] 2.1 Implement `/manage/display/{action}` endpoint for toggling display power
 - [x] 2.2 Implement `/manage/display/brightness/{value}` endpoint for setting brightness
 - [x] 2.3 Implement `/manage/display/rotation/{angle}` endpoint for display rotation
 - [x] 2.4 Implement `/manage/display/mirror/{action}` endpoint for mirror mode control
@@ -25,7 +25,7 @@
 
 ## 4. Pixoo Command Mapping
 
-- [x] 4.1 Create mapping from `/manage/display/on` to `Channel/OnOffScreen` command
+- [x] 4.1 Create mapping from `/manage/display/{action}` to `Channel/OnOffScreen` command
 - [x] 4.2 Create mapping from `/manage/display/brightness` to `Channel/SetBrightness` command
 - [x] 4.3 Create mapping from `/manage/display/rotation` to `Device/SetScreenRotationAngle` command
 - [x] 4.4 Create mapping from `/manage/display/mirror` to `Device/SetMirrorMode` command
