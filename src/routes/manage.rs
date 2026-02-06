@@ -840,7 +840,7 @@ mod tests {
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error"], "validation failed");
-        assert!(json_body["details"]["red"]
+        assert!(json_body["details"]["longitude"]
             .as_array()
             .unwrap()
             .contains(&Value::String("range".to_string())));
@@ -1042,8 +1042,7 @@ mod tests {
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
-        let (status, _) =
-            send_json_request(&app, Method::POST, "/manage/display/on", None).await;
+        let (status, _) = send_json_request(&app, Method::POST, "/manage/display/on", None).await;
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
@@ -1266,5 +1265,99 @@ mod tests {
             .as_array()
             .unwrap()
             .contains(&Value::String("range".to_string())));
+    }
+
+    #[tokio::test]
+    async fn display_off_toggles_power() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Channel/OnOffScreen\"")
+                .body_includes("\"OnOff\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(&app, Method::POST, "/manage/display/off", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_brightness_rejects_non_numeric() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/manage/display/brightness/abc", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(
+            json_body["details"]["value"],
+            "value must be an integer between 0 and 100",
+        );
+    }
+
+    #[tokio::test]
+    async fn display_mirror_sets_mode_off() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetMirrorMode\"")
+                .body_includes("\"Mode\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/display/mirror/off", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_overclock_sets_mode_off() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetHighLightMode\"")
+                .body_includes("\"Mode\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/display/brightness/overclock/off",
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_white_balance_rejects_missing_values() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(
+            &app,
+            "/manage/display/white-balance",
+            Some(json!({ "red": 100 })),
+        )
+        .await;
+
+        eprintln!("missing white balance body: {}", body);
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(body.contains("missing"));
     }
 }
