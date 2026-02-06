@@ -15,6 +15,12 @@ pub enum PixooCommand {
     ManageSetUtc,
     ManageSetTimeMode,
     ManageSetTemperatureUnit,
+    ManageDisplayPower,
+    ManageDisplayBrightness,
+    ManageDisplayRotation,
+    ManageDisplayMirror,
+    ManageDisplayOverclock,
+    ManageDisplayWhiteBalance,
 }
 
 impl PixooCommand {
@@ -33,6 +39,12 @@ impl PixooCommand {
             PixooCommand::ManageSetUtc => "Device/SetUTC",
             PixooCommand::ManageSetTimeMode => "Device/SetTime24Flag",
             PixooCommand::ManageSetTemperatureUnit => "Device/SetDisTempMode",
+            PixooCommand::ManageDisplayPower => "Channel/OnOffScreen",
+            PixooCommand::ManageDisplayBrightness => "Channel/SetBrightness",
+            PixooCommand::ManageDisplayRotation => "Device/SetScreenRotationAngle",
+            PixooCommand::ManageDisplayMirror => "Device/SetMirrorMode",
+            PixooCommand::ManageDisplayOverclock => "Device/SetHighLightMode",
+            PixooCommand::ManageDisplayWhiteBalance => "Device/SetWhiteBalance",
         }
     }
 }
@@ -79,6 +91,30 @@ mod tests {
         assert_eq!(
             PixooCommand::ManageSetTemperatureUnit.as_str(),
             "Device/SetDisTempMode"
+        );
+        assert_eq!(
+            PixooCommand::ManageDisplayPower.as_str(),
+            "Channel/OnOffScreen"
+        );
+        assert_eq!(
+            PixooCommand::ManageDisplayBrightness.as_str(),
+            "Channel/SetBrightness"
+        );
+        assert_eq!(
+            PixooCommand::ManageDisplayRotation.as_str(),
+            "Device/SetScreenRotationAngle"
+        );
+        assert_eq!(
+            PixooCommand::ManageDisplayMirror.as_str(),
+            "Device/SetMirrorMode"
+        );
+        assert_eq!(
+            PixooCommand::ManageDisplayOverclock.as_str(),
+            "Device/SetHighLightMode"
+        );
+        assert_eq!(
+            PixooCommand::ManageDisplayWhiteBalance.as_str(),
+            "Device/SetWhiteBalance"
         );
     }
 }

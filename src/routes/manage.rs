@@ -8,6 +8,7 @@ use pixoo_bridge::pixoo::client::PixooResponse;
 use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
@@ -26,6 +27,27 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         .route(
             "/manage/weather/temperature-unit/{unit}",
             post(manage_set_temperature_unit),
+        )
+        .route("/manage/display/{action}", post(manage_display_on))
+        .route(
+            "/manage/display/brightness/{value}",
+            post(manage_display_brightness),
+        )
+        .route(
+            "/manage/display/rotation/{angle}",
+            post(manage_display_rotation),
+        )
+        .route(
+            "/manage/display/mirror/{action}",
+            post(manage_display_mirror),
+        )
+        .route(
+            "/manage/display/brightness/overclock/{action}",
+            post(manage_display_overclock),
+        )
+        .route(
+            "/manage/display/white-balance",
+            post(manage_display_white_balance),
         )
 }
 
@@ -164,6 +186,112 @@ async fn manage_set_temperature_unit(
     dispatch_manage_post_command(&state, PixooCommand::ManageSetTemperatureUnit, args).await
 }
 
+async fn manage_display_on(
+    State(state): State<Arc<AppState>>,
+    Path(action): Path<String>,
+) -> Response {
+    let Ok(parsed) = action.parse::<OnOffAction>() else {
+        return action_validation_error(&action, OnOffAction::allowed_values());
+    };
+
+    let mut args = Map::new();
+    args.insert("OnOff".to_string(), Value::from(parsed.flag_value()));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayPower, args).await
+}
+
+async fn manage_display_brightness(
+    State(state): State<Arc<AppState>>,
+    Path(value): Path<String>,
+) -> Response {
+    let brightness_value = match value.parse::<i32>() {
+        Ok(val) if (0..=100).contains(&val) => val,
+        _ => return validation_error_simple("value", "value must be an integer between 0 and 100"),
+    };
+
+    let mut args = Map::new();
+    args.insert("Brightness".to_string(), Value::from(brightness_value));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayBrightness, args).await
+}
+
+async fn manage_display_rotation(
+    State(state): State<Arc<AppState>>,
+    Path(angle): Path<String>,
+) -> Response {
+    let mode_value = match angle.parse::<i32>() {
+        Ok(val) if [0, 90, 180, 270].contains(&val) => val / 90,
+        _ => return validation_error_simple("angle", "angle must be 0, 90, 180, or 270"),
+    };
+
+    let mut args = Map::new();
+    args.insert("Mode".to_string(), Value::from(mode_value));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayRotation, args).await
+}
+
+async fn manage_display_mirror(
+    State(state): State<Arc<AppState>>,
+    Path(action): Path<String>,
+) -> Response {
+    let Ok(parsed) = action.parse::<OnOffAction>() else {
+        return action_validation_error(&action, OnOffAction::allowed_values());
+    };
+
+    let mut args = Map::new();
+    args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayMirror, args).await
+}
+
+async fn manage_display_overclock(
+    State(state): State<Arc<AppState>>,
+    Path(action): Path<String>,
+) -> Response {
+    let Ok(parsed) = action.parse::<OnOffAction>() else {
+        return action_validation_error(&action, OnOffAction::allowed_values());
+    };
+
+    let mut args = Map::new();
+    args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayOverclock, args).await
+}
+
+#[derive(Debug, Deserialize, Validate)]
+struct WhiteBalanceRequest {
+    #[validate(range(min = 0, max = 100))]
+    red: i32,
+    #[validate(range(min = 0, max = 100))]
+    green: i32,
+    #[validate(range(min = 0, max = 100))]
+    blue: i32,
+}
+
+async fn manage_display_white_balance(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<Value>,
+) -> Response {
+    let payload = match serde_json::from_value::<WhiteBalanceRequest>(payload) {
+        Ok(request) => request,
+        Err(err) => {
+            let message = err.to_string();
+            return validation_error_simple("body", &message);
+        }
+    };
+
+    if let Err(errors) = payload.validate() {
+        return validation_errors_response(&errors);
+    }
+
+    let mut args = Map::new();
+    args.insert("RValue".to_string(), Value::from(payload.red));
+    args.insert("GValue".to_string(), Value::from(payload.green));
+    args.insert("BValue".to_string(), Value::from(payload.blue));
+
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayWhiteBalance, args).await
+}
+
 async fn dispatch_manage_command(
     state: &AppState,
     command: PixooCommand,
@@ -235,6 +363,19 @@ fn offset_validation_error(message: &str) -> Response {
 fn validation_error_simple(field: &str, message: &str) -> Response {
     let mut details = Map::new();
     details.insert(field.to_string(), Value::String(message.to_string()));
+    validation_error_response(details)
+}
+
+fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
+    let mut details = Map::new();
+    details.insert(
+        "action".to_string(),
+        json!({
+            "provided": action,
+            "allowed": allowed,
+        }),
+    );
+
     validation_error_response(details)
 }
 
@@ -421,6 +562,38 @@ struct LocationRequest {
     longitude: f64,
     #[validate(range(min = -90.0, max = 90.0))]
     latitude: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum OnOffAction {
+    On,
+    Off,
+}
+
+impl OnOffAction {
+    fn flag_value(&self) -> i32 {
+        match self {
+            Self::On => 1,
+            Self::Off => 0,
+        }
+    }
+
+    fn allowed_values() -> &'static [&'static str] {
+        &["on", "off"]
+    }
+}
+
+impl FromStr for OnOffAction {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "on" => Ok(Self::On),
+            "off" => Ok(Self::Off),
+            _ => Err(()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -675,6 +848,10 @@ mod tests {
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error"], "validation failed");
+        assert!(json_body["details"]["longitude"]
+            .as_array()
+            .unwrap()
+            .contains(&Value::String("range".to_string())));
     }
 
     #[tokio::test]
@@ -858,5 +1035,336 @@ mod tests {
             json_body["details"]["unit"],
             "unit must be 'celsius' or 'fahrenheit'"
         );
+    }
+
+    #[tokio::test]
+    async fn display_on_toggles_power() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Channel/OnOffScreen\"")
+                .body_includes("\"OnOff\":1");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(&app, Method::POST, "/manage/display/on", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_on_rejects_invalid_action() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/manage/display/invalid", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["details"]["action"]["provided"], "invalid");
+        assert_eq!(
+            json_body["details"]["action"]["allowed"],
+            json!(["on", "off"])
+        );
+    }
+
+    #[tokio::test]
+    async fn display_brightness_sets_value() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Channel/SetBrightness\"")
+                .body_includes("\"Brightness\":75");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/display/brightness/75", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_brightness_rejects_out_of_range() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/manage/display/brightness/150", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(
+            json_body["details"]["value"],
+            "value must be an integer between 0 and 100"
+        );
+    }
+
+    #[tokio::test]
+    async fn display_rotation_sets_angle() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetScreenRotationAngle\"")
+                .body_includes("\"Mode\":1");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/display/rotation/90", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_rotation_rejects_invalid_angle() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/manage/display/rotation/45", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(
+            json_body["details"]["angle"],
+            "angle must be 0, 90, 180, or 270"
+        );
+    }
+
+    #[tokio::test]
+    async fn display_mirror_toggles_mode() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetMirrorMode\"")
+                .body_includes("\"Mode\":1");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/display/mirror/on", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_mirror_rejects_invalid_action() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/manage/display/mirror/invalid", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["details"]["action"]["provided"], "invalid");
+        assert_eq!(
+            json_body["details"]["action"]["allowed"],
+            json!(["on", "off"])
+        );
+    }
+
+    #[tokio::test]
+    async fn display_overclock_toggles_mode() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetHighLightMode\"")
+                .body_includes("\"Mode\":1");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/display/brightness/overclock/on",
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_overclock_rejects_invalid_action() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/display/brightness/overclock/invalid",
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["details"]["action"]["provided"], "invalid");
+        assert_eq!(
+            json_body["details"]["action"]["allowed"],
+            json!(["on", "off"])
+        );
+    }
+
+    #[tokio::test]
+    async fn display_white_balance_sets_values() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetWhiteBalance\"")
+                .body_includes("\"RValue\":90")
+                .body_includes("\"GValue\":100")
+                .body_includes("\"BValue\":100");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(
+            &app,
+            "/manage/display/white-balance",
+            Some(json!({ "red": 90, "green": 100, "blue": 100 })),
+        )
+        .await;
+
+        eprintln!("Status: {}", status);
+        eprintln!("Body: {}", body);
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_white_balance_rejects_out_of_range() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(
+            &app,
+            "/manage/display/white-balance",
+            Some(json!({ "red": 150, "green": 100, "blue": 100 })),
+        )
+        .await;
+
+        eprintln!("Body: {}", body);
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert!(json_body["details"]["red"]
+            .as_array()
+            .unwrap()
+            .contains(&Value::String("range".to_string())));
+    }
+
+    #[tokio::test]
+    async fn display_off_toggles_power() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Channel/OnOffScreen\"")
+                .body_includes("\"OnOff\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(&app, Method::POST, "/manage/display/off", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_brightness_rejects_non_numeric() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) =
+            send_json_request(&app, Method::POST, "/manage/display/brightness/abc", None).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(
+            json_body["details"]["value"],
+            "value must be an integer between 0 and 100",
+        );
+    }
+
+    #[tokio::test]
+    async fn display_mirror_sets_mode_off() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetMirrorMode\"")
+                .body_includes("\"Mode\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) =
+            send_json_request(&app, Method::POST, "/manage/display/mirror/off", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_overclock_sets_mode_off() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Device/SetHighLightMode\"")
+                .body_includes("\"Mode\":0");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/display/brightness/overclock/off",
+            None,
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn display_white_balance_rejects_missing_values() {
+        let server = MockServer::start_async().await;
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, body) = send_post(
+            &app,
+            "/manage/display/white-balance",
+            Some(json!({ "red": 100 })),
+        )
+        .await;
+
+        eprintln!("missing white balance body: {}", body);
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(body.contains("missing"));
     }
 }
