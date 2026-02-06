@@ -15,11 +15,11 @@ pub enum PixooCommand {
     ManageSetUtc,
     ManageSetTimeMode,
     ManageSetTemperatureUnit,
-    ManageDisplayOn,
+    ManageDisplayPower,
     ManageDisplayBrightness,
     ManageDisplayRotation,
     ManageDisplayMirror,
-    ManageDisplayHighlight,
+    ManageDisplayOverclock,
     ManageDisplayWhiteBalance,
 }
 
@@ -39,11 +39,11 @@ impl PixooCommand {
             PixooCommand::ManageSetUtc => "Device/SetUTC",
             PixooCommand::ManageSetTimeMode => "Device/SetTime24Flag",
             PixooCommand::ManageSetTemperatureUnit => "Device/SetDisTempMode",
-            PixooCommand::ManageDisplayOn => "Channel/OnOffScreen",
+            PixooCommand::ManageDisplayPower => "Channel/OnOffScreen",
             PixooCommand::ManageDisplayBrightness => "Channel/SetBrightness",
             PixooCommand::ManageDisplayRotation => "Device/SetScreenRotationAngle",
             PixooCommand::ManageDisplayMirror => "Device/SetMirrorMode",
-            PixooCommand::ManageDisplayHighlight => "Device/SetHighLightMode",
+            PixooCommand::ManageDisplayOverclock => "Device/SetHighLightMode",
             PixooCommand::ManageDisplayWhiteBalance => "Device/SetWhiteBalance",
         }
     }
@@ -93,7 +93,7 @@ mod tests {
             "Device/SetDisTempMode"
         );
         assert_eq!(
-            PixooCommand::ManageDisplayOn.as_str(),
+            PixooCommand::ManageDisplayPower.as_str(),
             "Channel/OnOffScreen"
         );
         assert_eq!(
@@ -109,7 +109,7 @@ mod tests {
             "Device/SetMirrorMode"
         );
         assert_eq!(
-            PixooCommand::ManageDisplayHighlight.as_str(),
+            PixooCommand::ManageDisplayOverclock.as_str(),
             "Device/SetHighLightMode"
         );
         assert_eq!(

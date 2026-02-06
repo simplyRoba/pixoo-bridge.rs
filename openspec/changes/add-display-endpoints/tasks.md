@@ -10,7 +10,7 @@
 - [x] 2.2 Implement `/manage/display/brightness/{value}` endpoint for setting brightness
 - [x] 2.3 Implement `/manage/display/rotation/{angle}` endpoint for display rotation
 - [x] 2.4 Implement `/manage/display/mirror/{action}` endpoint for mirror mode control
-- [x] 2.5 Implement `/manage/display/highlight/{action}` endpoint for highlight mode control
+- [x] 2.5 Implement `/manage/display/brightness/overclock/{action}` endpoint for overclock mode control
 - [x] 2.6 Implement `/manage/display/white-balance` endpoint for white balance adjustment
 
 ## 3. Input Validation and Error Handling
@@ -19,7 +19,7 @@
 - [x] 3.2 Add validation for brightness value (0-100 range)
 - [x] 3.3 Add validation for rotation angle (0, 90, 180, 270 degrees)
 - [x] 3.4 Add validation for mirror mode action parameter
-- [x] 3.5 Add validation for highlight mode action parameter
+- [x] 3.5 Add validation for overclock mode action parameter
 - [x] 3.6 Add validation for white balance RGB values (0-100 range)
 - [x] 3.7 Implement consistent error responses with HTTP 400 for invalid inputs
 
@@ -29,7 +29,7 @@
 - [x] 4.2 Create mapping from `/manage/display/brightness` to `Channel/SetBrightness` command
 - [x] 4.3 Create mapping from `/manage/display/rotation` to `Device/SetScreenRotationAngle` command
 - [x] 4.4 Create mapping from `/manage/display/mirror` to `Device/SetMirrorMode` command
-- [x] 4.5 Create mapping from `/manage/display/highlight` to `Device/SetHighLightMode` command
+- [x] 4.5 Create mapping from `/manage/display/brightness/overclock` to `Device/SetHighLightMode` command
 - [x] 4.6 Create mapping from `/manage/display/white-balance` to `Device/SetWhiteBalance` command
 
 ## 5. Integration with Pixoo Client

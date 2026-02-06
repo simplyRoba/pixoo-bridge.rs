@@ -1,7 +1,7 @@
-# api/display Capability
+# api/manage Capability
 
 ## Purpose
-Expose HTTP endpoints under `/manage/display/*` to control and manage the Pixoo display device settings. These endpoints provide a user-friendly interface for toggling the display on/off, adjusting brightness, rotation, mirroring, highlight mode, and white balance.
+Expose HTTP endpoints under `/manage/display/*` to control and manage the Pixoo display device settings. These endpoints provide a user-friendly interface for toggling the display on/off, adjusting brightness, rotation, mirroring, overclock mode, and white balance.
 
 ## Requirements
 
@@ -65,21 +65,21 @@ The bridge SHALL expose `POST /manage/display/mirror/{action}` to enable or disa
 - **WHEN** a client sends `POST /manage/display/mirror/invalid`
 - **THEN** the bridge returns HTTP 400 and does NOT send a command to Pixoo
 
-### Requirement: Toggle highlight mode
-The bridge SHALL expose `POST /manage/display/highlight/{action}` to enable or disable highlight mode. The endpoint SHALL accept `on` or `off` as the `{action}` path parameter.
+### Requirement: Toggle overclock mode
+The bridge SHALL expose `POST /manage/display/brightness/overclock/{action}` to enable or disable overclock mode. The endpoint SHALL accept `on` or `off` as the `{action}` path parameter.
 - If `{action}` is `on`, the bridge SHALL send `POST /post` with `Command: "Device/SetHighLightMode"` and `Mode: 1`.
 - If `{action}` is `off`, the bridge SHALL send `POST /post` with `Command: "Device/SetHighLightMode"` and `Mode: 0`.
 
-#### Scenario: Enable highlight mode
-- **WHEN** a client sends `POST /manage/display/highlight/on`
+#### Scenario: Enable overclock mode
+- **WHEN** a client sends `POST /manage/display/brightness/overclock/on`
 - **THEN** the bridge posts `{ "Command": "Device/SetHighLightMode", "Mode": 1 }` to Pixoo and returns HTTP 200 with `{ "error_code": 0 }`
 
-#### Scenario: Disable highlight mode
-- **WHEN** a client sends `POST /manage/display/highlight/off`
+#### Scenario: Disable overclock mode
+- **WHEN** a client sends `POST /manage/display/brightness/overclock/off`
 - **THEN** the bridge posts `{ "Command": "Device/SetHighLightMode", "Mode": 0 }` to Pixoo and returns HTTP 200 with `{ "error_code": 0 }`
 
-#### Scenario: Invalid highlight action
-- **WHEN** a client sends `POST /manage/display/highlight/invalid`
+#### Scenario: Invalid overclock action
+- **WHEN** a client sends `POST /manage/display/brightness/overclock/invalid`
 - **THEN** the bridge returns HTTP 400 and does NOT send a command to Pixoo
 
 ### Requirement: Set white balance

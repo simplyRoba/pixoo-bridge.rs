@@ -42,8 +42,8 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
             post(manage_display_mirror),
         )
         .route(
-            "/manage/display/highlight/{action}",
-            post(manage_display_highlight),
+            "/manage/display/brightness/overclock/{action}",
+            post(manage_display_overclock),
         )
         .route(
             "/manage/display/white-balance",
@@ -190,14 +190,14 @@ async fn manage_display_on(
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
 ) -> Response {
-    let Ok(parsed) = action.parse::<DisplayOnAction>() else {
-        return action_validation_error(&action, DisplayOnAction::allowed_values());
+    let Ok(parsed) = action.parse::<OnOffAction>() else {
+        return action_validation_error(&action, OnOffAction::allowed_values());
     };
 
     let mut args = Map::new();
-    args.insert("OnOff".to_string(), Value::from(parsed.on_off_value()));
+    args.insert("OnOff".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayOn, args).await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayPower, args).await
 }
 
 async fn manage_display_brightness(
@@ -234,28 +234,28 @@ async fn manage_display_mirror(
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
 ) -> Response {
-    let Ok(parsed) = action.parse::<DisplayMirrorAction>() else {
-        return action_validation_error(&action, DisplayMirrorAction::allowed_values());
+    let Ok(parsed) = action.parse::<OnOffAction>() else {
+        return action_validation_error(&action, OnOffAction::allowed_values());
     };
 
     let mut args = Map::new();
-    args.insert("Mode".to_string(), Value::from(parsed.mode_value()));
+    args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
 
     dispatch_manage_post_command(&state, PixooCommand::ManageDisplayMirror, args).await
 }
 
-async fn manage_display_highlight(
+async fn manage_display_overclock(
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
 ) -> Response {
-    let Ok(parsed) = action.parse::<DisplayHighlightAction>() else {
-        return action_validation_error(&action, DisplayHighlightAction::allowed_values());
+    let Ok(parsed) = action.parse::<OnOffAction>() else {
+        return action_validation_error(&action, OnOffAction::allowed_values());
     };
 
     let mut args = Map::new();
-    args.insert("Mode".to_string(), Value::from(parsed.mode_value()));
+    args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayHighlight, args).await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayOverclock, args).await
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -558,13 +558,13 @@ struct LocationRequest {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
-enum DisplayOnAction {
+enum OnOffAction {
     On,
     Off,
 }
 
-impl DisplayOnAction {
-    fn on_off_value(&self) -> i32 {
+impl OnOffAction {
+    fn flag_value(&self) -> i32 {
         match self {
             Self::On => 1,
             Self::Off => 0,
@@ -576,71 +576,7 @@ impl DisplayOnAction {
     }
 }
 
-impl FromStr for DisplayOnAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "on" => Ok(Self::On),
-            "off" => Ok(Self::Off),
-            _ => Err(()),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum DisplayMirrorAction {
-    On,
-    Off,
-}
-
-impl DisplayMirrorAction {
-    fn mode_value(&self) -> i32 {
-        match self {
-            Self::On => 1,
-            Self::Off => 0,
-        }
-    }
-
-    fn allowed_values() -> &'static [&'static str] {
-        &["on", "off"]
-    }
-}
-
-impl FromStr for DisplayMirrorAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "on" => Ok(Self::On),
-            "off" => Ok(Self::Off),
-            _ => Err(()),
-        }
-    }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum DisplayHighlightAction {
-    On,
-    Off,
-}
-
-impl DisplayHighlightAction {
-    fn mode_value(&self) -> i32 {
-        match self {
-            Self::On => 1,
-            Self::Off => 0,
-        }
-    }
-
-    fn allowed_values() -> &'static [&'static str] {
-        &["on", "off"]
-    }
-}
-
-impl FromStr for DisplayHighlightAction {
+impl FromStr for OnOffAction {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -1237,7 +1173,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn display_highlight_toggles_mode() {
+    async fn display_overclock_toggles_mode() {
         let server = MockServer::start_async().await;
         let mock = server.mock(|when, then| {
             when.method(MockMethod::POST)
@@ -1248,21 +1184,26 @@ mod tests {
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
-        let (status, _) =
-            send_json_request(&app, Method::POST, "/manage/display/highlight/on", None).await;
+        let (status, _) = send_json_request(
+            &app,
+            Method::POST,
+            "/manage/display/brightness/overclock/on",
+            None,
+        )
+        .await;
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
     }
 
     #[tokio::test]
-    async fn display_highlight_rejects_invalid_action() {
+    async fn display_overclock_rejects_invalid_action() {
         let server = MockServer::start_async().await;
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, body) = send_json_request(
             &app,
             Method::POST,
-            "/manage/display/highlight/invalid",
+            "/manage/display/brightness/overclock/invalid",
             None,
         )
         .await;

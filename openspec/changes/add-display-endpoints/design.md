@@ -1,6 +1,6 @@
 ## Context
 
-The Pixoo bridge is a Rust-based HTTP bridge that communicates with Pixoo display devices. This design document outlines the implementation approach for adding display control endpoints under the `/manage/display/*` path prefix. These endpoints will provide a user-friendly interface for managing display settings including power state, brightness, rotation, mirroring, highlight mode, and white balance.
+The Pixoo bridge is a Rust-based HTTP bridge that communicates with Pixoo display devices. This design document outlines the implementation approach for adding display control endpoints under the `/manage/display/*` path prefix. These endpoints will provide a user-friendly interface for managing display settings including power state, brightness, rotation, mirroring, overclock mode, and white balance.
 
 The current implementation already has a `/manage` endpoint group that handles some display-related settings. The new `/manage/display/*` endpoints will extend this group with a dedicated, focused API surface specifically for display control.
 
@@ -25,9 +25,11 @@ The current implementation already has a `/manage` endpoint group that handles s
 **Choice**: Use RESTful path parameters for simple on/off and value-based controls, and JSON body for complex configurations.
 
 **Rationale**: 
-- Path parameters like `/manage/display/on/{action}` and `/manage/display/brightness/{value}` are intuitive and easy to use
+- Path parameters like `/manage/display/on/{action}`, `/manage/display/brightness/{value}`, and `/manage/display/brightness/overclock/{action}` are intuitive and easy to use
 - JSON body for `/manage/display/white-balance` allows for structured data with multiple fields
 - This approach is consistent with existing endpoints in the `/manage` group
+
+**Note**: Reuse a single `OnOffAction` helper across power, mirror, and overclock handlers to keep shared validation in one place.
 
 **Alternatives Considered**:
 - Query parameters: Less clean for required values, harder to document
@@ -54,6 +56,7 @@ The current implementation already has a `/manage` endpoint group that handles s
 - Makes it easier to change Pixoo command formats in the future
 - Centralizes the knowledge of Pixoo's command structure
 - Follows the existing pattern used in `/manage` endpoints
+- Keeps command names descriptive (`ManageDisplayPower`, `ManageDisplayMirror`, `ManageDisplayOverclock`) so they match the new handlers
 
 **Alternatives Considered**:
 - Direct mapping in each handler: Would duplicate Pixoo command knowledge
