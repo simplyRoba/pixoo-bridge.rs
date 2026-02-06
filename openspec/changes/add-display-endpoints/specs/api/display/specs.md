@@ -1,7 +1,7 @@
 # api/display Capability
 
 ## Purpose
-Expose HTTP endpoints under `/manage/manage/display/*` to control and manage the Pixoo display device settings. These endpoints provide a user-friendly interface for toggling the display on/off, adjusting brightness, rotation, mirroring, highlight mode, and white balance.
+Expose HTTP endpoints under `/manage/display/*` to control and manage the Pixoo display device settings. These endpoints provide a user-friendly interface for toggling the display on/off, adjusting brightness, rotation, mirroring, highlight mode, and white balance.
 
 ## Requirements
 
