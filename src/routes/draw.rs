@@ -66,6 +66,15 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
         }
     };
 
+    let pic_id = match get_next_pic_id(&client).await {
+        Ok(value) => value,
+        Err(resp) => return resp,
+    };
+
+    send_draw_gif(&client, pic_id, 1, 0, pic_data).await
+}
+
+async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
     let response = match client
         .send_command(PixooCommand::DrawGetGifId, Map::new())
         .await
@@ -74,26 +83,19 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, "Pixoo draw id command");
             error!(error = ?err, status = %status, "Pixoo draw id command failed");
-            return (status, body).into_response();
+            return Err((status, body).into_response());
         }
     };
 
-    let pic_id = match parse_pic_id(&response) {
-        Ok(value) => value,
-        Err(err) => {
-            error!(error = %err, response = ?response, "missing PicID in draw response");
-            return service_unavailable();
+    let value = match response.get("PicID") {
+        Some(value) => value,
+        None => {
+            error!(response = ?response, "missing PicID in draw response");
+            return Err(service_unavailable());
         }
     };
 
-    send_draw_gif(&client, pic_id, 1, 0, pic_data).await
-}
-
-fn parse_pic_id(response: &PixooResponse) -> Result<i64, String> {
-    let value = response
-        .get("PicID")
-        .ok_or_else(|| "missing PicID".to_string())?;
-    match value {
+    let parsed = match value {
         Value::Number(number) => number
             .as_i64()
             .or_else(|| number.as_u64().and_then(|v| i64::try_from(v).ok()))
@@ -102,6 +104,14 @@ fn parse_pic_id(response: &PixooResponse) -> Result<i64, String> {
             .parse::<i64>()
             .map_err(|_| "PicID is not an integer".to_string()),
         _ => Err("PicID is not an integer".to_string()),
+    };
+
+    match parsed {
+        Ok(value) => Ok(value),
+        Err(err) => {
+            error!(error = %err, response = ?response, "invalid PicID in draw response");
+            Err(service_unavailable())
+        }
     }
 }
 
