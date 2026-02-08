@@ -175,7 +175,7 @@ async fn reboot(...) -> impl IntoResponse { StatusCode::NO_CONTENT.into_response
 
 Some tool commands return 200 OK with empty body, reboot returns 204. While semantically correct (reboot genuinely has no content), it's inconsistent with the tools returning 200.
 
-### 9. [ ] Dockerfile Copies Both Binaries
+### 9. [x] Dockerfile Copies Both Binaries
 
 ```dockerfile
 COPY release-artifacts/linux-amd64/pixoo-bridge /usr/local/bin/pixoo-bridge-amd64
