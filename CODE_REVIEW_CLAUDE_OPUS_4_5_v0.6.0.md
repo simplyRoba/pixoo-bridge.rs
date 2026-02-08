@@ -135,7 +135,7 @@ match value {
 
 This uses `unsafe` because `set_var`/`remove_var` are unsound in multi-threaded contexts since Rust 1.66. While the mutex protects against races within the test suite, it's a code smell. Consider using a crate like `temp-env` or dependency injection for testability.
 
-### 6. [ ] Error Messages Could Be More Specific
+### 6. [x] Error Messages Could Be More Specific (won't fix)
 
 ```rust
 // src/routes/manage.rs:88-94
@@ -148,7 +148,9 @@ fn service_unavailable() -> Response {
 
 This generic message is used for both "no client configured" and "response parsing failed". The caller loses context about what actually went wrong.
 
-### 7. [ ] Magic Numbers
+**Resolution:** Won't fix. Details are logged server-side; generic client message avoids exposing internals.
+
+### 7. [x] Magic Numbers (won't fix)
 
 ```rust
 // src/routes/tools.rs:50-56
@@ -162,6 +164,8 @@ fn status(&self) -> u8 {
 ```
 
 These status codes map to the Pixoo protocol but aren't documented. A comment explaining what these values mean to the device would help.
+
+**Resolution:** Won't fix. The enum variant names (`Start`, `Stop`, `Reset`) document the meaning; comments would duplicate the mapping.
 
 ### 8. [x] Inconsistent Return Types
 
