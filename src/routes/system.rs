@@ -62,20 +62,8 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
-    use std::env;
     use std::sync::Arc;
     use tower::ServiceExt;
-
-    fn read_bool_env(key: &str, default: bool) -> bool {
-        match env::var(key) {
-            Ok(value) => match value.trim().to_ascii_lowercase().as_str() {
-                "1" | "true" | "yes" | "on" => true,
-                "0" | "false" | "no" | "off" => false,
-                _ => default,
-            },
-            Err(_) => default,
-        }
-    }
 
     fn build_system_app(state: Arc<AppState>) -> Router {
         mount_system_routes(Router::new()).with_state(state)
@@ -137,25 +125,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn health_forwarding_enabled_by_default() {
+    async fn health_forwarding_contacts_pixoo_when_enabled() {
         let server = MockServer::start_async().await;
-        server.mock(|when, then| {
+        let mock = server.mock(|when, then| {
             when.method(MockMethod::GET).path("/get");
             then.status(200);
         });
 
-        let health_forward =
-            temp_env::with_var("PIXOO_BRIDGE_HEALTH_FORWARD", None::<&str>, || {
-                read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true)
-            });
         let app = build_system_app(system_state(
             PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
-            health_forward,
+            true, // health_forward enabled
         ));
 
         let (status, _) = send_request(&app, Method::GET, "/health").await;
 
         assert_eq!(status, StatusCode::OK);
+        mock.assert(); // Verify Pixoo was contacted
     }
 
     #[tokio::test]
