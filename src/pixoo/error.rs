@@ -149,11 +149,10 @@ pub fn map_pixoo_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pixoo::{PixooClient, PixooCommand};
+    use crate::pixoo::{PixooClient, PixooClientConfig, PixooCommand};
     use httpmock::Method::POST;
     use httpmock::MockServer;
     use serde_json::{Map, Value};
-    use std::env;
     use std::time::Duration;
     use tokio::net::TcpListener;
 
@@ -164,35 +163,10 @@ mod tests {
         format!("http://{addr}")
     }
 
-    struct EnvVarGuard {
-        key: &'static str,
-        previous: Option<String>,
-    }
-
-    impl EnvVarGuard {
-        fn set(key: &'static str, value: Option<&str>) -> Self {
-            let previous = env::var(key).ok();
-            match value {
-                Some(val) => env::set_var(key, val),
-                None => env::remove_var(key),
-            }
-            EnvVarGuard { key, previous }
-        }
-    }
-
-    impl Drop for EnvVarGuard {
-        fn drop(&mut self) {
-            match &self.previous {
-                Some(value) => env::set_var(self.key, value),
-                None => env::remove_var(self.key),
-            }
-        }
-    }
-
     #[tokio::test]
     async fn unreachable_error_maps_to_bad_gateway() {
         let base_url = free_address().await;
-        let client = PixooClient::new(base_url).expect("client");
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
         let err = client
             .send_command(PixooCommand::ToolsTimer, Map::<String, Value>::new())
             .await
@@ -215,7 +189,7 @@ mod tests {
         });
 
         let base_url = server.base_url();
-        let client = PixooClient::new(base_url).expect("client");
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
         let err = client
             .send_command(PixooCommand::ToolsTimer, Map::<String, Value>::new())
             .await
@@ -240,8 +214,9 @@ mod tests {
             }
         });
 
-        let _guard = EnvVarGuard::set("PIXOO_TIMEOUT_MS", Some("50"));
-        let client = PixooClient::new(format!("http://{addr}")).expect("client");
+        let config =
+            PixooClientConfig::new(Duration::from_millis(50), 2, Duration::from_millis(200));
+        let client = PixooClient::new(format!("http://{addr}"), config).expect("client");
         let err = client
             .send_command(PixooCommand::ToolsTimer, Map::<String, Value>::new())
             .await

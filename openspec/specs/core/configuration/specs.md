@@ -42,8 +42,16 @@ The bridge SHALL honor `PIXOO_BRIDGE_LOG_LEVEL` by mapping it to the logging fra
 - **WHEN** `PIXOO_BRIDGE_LOG_LEVEL` contains an unsupported value
 - **THEN** the bridge logs a warning about the invalid setting and continues with `info` as the active level
 
+### Requirement: Startup configuration passed to Pixoo client
+The bridge SHALL load Pixoo client configuration during startup and construct the Pixoo client using those explicit values.
+
+#### Scenario: Startup configuration applied to client
+- **GIVEN** `PIXOO_BASE_URL` and timeout settings are configured
+- **WHEN** the bridge starts
+- **THEN** the Pixoo client is constructed with the configured values without requiring additional environment reads during client construction
+
 ### Requirement: Pixoo base URL configuration
-The bridge SHALL read `PIXOO_BASE_URL` to derive the Pixoo device’s base URL when provided and include that configured URL in the startup info entry so deployment tooling can confirm where the bridge is directing commands.
+The bridge SHALL require `PIXOO_BASE_URL` to be configured at startup and include the configured URL in the startup info log so deployment tooling can confirm where the bridge is directing commands.
 
 #### Scenario: Base URL supplied
 - **WHEN** `PIXOO_BASE_URL` is set (e.g., `http://10.0.0.5`)
@@ -51,4 +59,4 @@ The bridge SHALL read `PIXOO_BASE_URL` to derive the Pixoo device’s base URL w
 
 #### Scenario: Base URL omitted
 - **WHEN** `PIXOO_BASE_URL` is unset
-- **THEN** the bridge omits the `pixoo_base_url` field from the startup log while still allowing downstream configuration helpers to build the Pixoo client without a base URL override
+- **THEN** the process exits with a non-zero status and logs a clear configuration error

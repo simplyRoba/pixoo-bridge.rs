@@ -1,3 +1,4 @@
+mod config;
 mod draw;
 mod routes;
 mod state;
@@ -10,14 +11,12 @@ use axum::{
     Router,
 };
 use std::{env, net::SocketAddr, sync::Arc, time::Instant};
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 use tracing_subscriber::filter::LevelFilter;
 
-const DEFAULT_LISTENER_PORT: u16 = 4000;
-const MIN_LISTENER_PORT: u16 = 1024;
-const MAX_LISTENER_PORT: u16 = 65535;
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+use config::AppConfig;
 use pixoo_bridge::pixoo::PixooClient;
 use routes::{mount_draw_routes, mount_manage_routes, mount_system_routes, mount_tool_routes};
 use state::AppState;
@@ -31,28 +30,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         warn!(invalid_level = %raw, "Invalid PIXOO_BRIDGE_LOG_LEVEL, defaulting to info");
     }
 
-    let health_forward = read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true);
-    let base_url = env::var("PIXOO_BASE_URL").ok();
-    let pixoo_client = base_url
-        .as_deref()
-        .and_then(|base| PixooClient::new(base).ok());
+    let config = match AppConfig::load() {
+        Ok(config) => config,
+        Err(err) => {
+            error!(error = %err, "Configuration error");
+            return Err(err.into());
+        }
+    };
+    let pixoo_client = PixooClient::new(config.pixoo_base_url.clone(), config.pixoo_client)?;
     let state = Arc::new(AppState {
-        health_forward,
+        health_forward: config.health_forward,
         pixoo_client,
     });
-    let has_pixoo_client = state.pixoo_client.is_some();
     let app = build_app(state.clone());
 
-    let listener_port = resolve_listener_port();
-    let addr = SocketAddr::from(([0, 0, 0, 0], listener_port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.listener_port));
     info!(
         version = APP_VERSION,
         address = %addr,
-        listener_port,
+        listener_port = config.listener_port,
         log_level = ?max_level,
-        pixoo_base_url = ?base_url,
-        pixoo_client = has_pixoo_client,
-        health_forward,
+        pixoo_base_url = %config.pixoo_base_url,
+        pixoo_client = true,
+        health_forward = config.health_forward,
         "Pixoo bridge configuration loaded"
     );
 
@@ -83,45 +83,11 @@ async fn access_log(req: Request<Body>, next: Next) -> Response {
     response
 }
 
-fn read_bool_env(key: &str, default: bool) -> bool {
-    match env::var(key) {
-        Ok(value) => match value.trim().to_ascii_lowercase().as_str() {
-            "1" | "true" | "yes" | "on" => true,
-            "0" | "false" | "no" | "off" => false,
-            _ => default,
-        },
-        Err(_) => default,
-    }
-}
-
 fn resolve_log_level() -> (LevelFilter, Option<String>) {
     let raw = env::var("PIXOO_BRIDGE_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
     match raw.parse::<LevelFilter>() {
         Ok(level) => (level, None),
         Err(_) => (LevelFilter::INFO, Some(raw)),
-    }
-}
-
-fn resolve_listener_port() -> u16 {
-    match env::var("PIXOO_BRIDGE_PORT") {
-        Ok(raw) => {
-            let value = raw.trim();
-            match value.parse::<u16>() {
-                Ok(port) if (MIN_LISTENER_PORT..=MAX_LISTENER_PORT).contains(&port) => port,
-                _ => {
-                    warn!(
-                        provided = %value,
-                        min = MIN_LISTENER_PORT,
-                        max = MAX_LISTENER_PORT,
-                        default_port = DEFAULT_LISTENER_PORT,
-                        "Invalid PIXOO_BRIDGE_PORT; falling back to default port {}",
-                        DEFAULT_LISTENER_PORT
-                    );
-                    DEFAULT_LISTENER_PORT
-                }
-            }
-        }
-        Err(_) => DEFAULT_LISTENER_PORT,
     }
 }
 
@@ -132,7 +98,7 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::PixooClient;
+    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::util::ServiceExt;
 
@@ -167,10 +133,11 @@ mod tests {
             then.status(200).body(r#"{"error_code":0}"#);
         });
 
-        let client = PixooClient::new(server.base_url()).expect("client");
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
         let state = AppState {
             health_forward: false,
-            pixoo_client: Some(client),
+            pixoo_client: client,
         };
         let app = build_app(Arc::new(state));
 
@@ -196,10 +163,11 @@ mod tests {
             then.status(200);
         });
 
-        let client = PixooClient::new(server.base_url()).expect("client");
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
         let state = AppState {
             health_forward: true,
-            pixoo_client: Some(client),
+            pixoo_client: client,
         };
         let app = build_app(Arc::new(state));
 
@@ -241,27 +209,5 @@ mod tests {
         );
         assert_eq!(level, LevelFilter::INFO);
         assert_eq!(invalid, Some("not-a-level".to_string()));
-    }
-
-    #[test]
-    fn listener_port_defaults_to_4000_when_env_missing() {
-        let port = with_env_var("PIXOO_BRIDGE_PORT", None, resolve_listener_port);
-        assert_eq!(port, DEFAULT_LISTENER_PORT);
-    }
-
-    #[test]
-    fn listener_port_uses_custom_override_when_valid() {
-        let port = with_env_var("PIXOO_BRIDGE_PORT", Some("5050"), resolve_listener_port);
-        assert_eq!(port, 5050);
-    }
-
-    #[test]
-    fn listener_port_falls_back_on_invalid_values() {
-        let port = with_env_var(
-            "PIXOO_BRIDGE_PORT",
-            Some("not-a-port"),
-            resolve_listener_port,
-        );
-        assert_eq!(port, DEFAULT_LISTENER_PORT);
     }
 }

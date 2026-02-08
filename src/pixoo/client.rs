@@ -2,11 +2,38 @@ use crate::pixoo::command::PixooCommand;
 use crate::pixoo::error::PixooError;
 use reqwest::header::CONTENT_TYPE;
 use serde_json::{Map, Value};
-use std::{env, time::Duration};
+use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, error};
 
 pub type PixooResponse = Map<String, Value>;
+
+#[derive(Debug, Clone, Copy)]
+pub struct PixooClientConfig {
+    pub timeout: Duration,
+    pub retries: usize,
+    pub backoff: Duration,
+}
+
+impl PixooClientConfig {
+    pub fn new(timeout: Duration, retries: usize, backoff: Duration) -> Self {
+        Self {
+            timeout,
+            retries,
+            backoff,
+        }
+    }
+}
+
+impl Default for PixooClientConfig {
+    fn default() -> Self {
+        Self {
+            timeout: Duration::from_secs(10),
+            retries: 2,
+            backoff: Duration::from_millis(200),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct PixooClient {
@@ -24,7 +51,7 @@ impl PixooClient {
     ///
     /// Returns [`PixooError::InvalidBaseUrl`] if the URL cannot be parsed.
     /// Returns [`PixooError::Http`] if the HTTP client fails to initialize.
-    pub fn new(base_url: impl Into<String>) -> Result<Self, PixooError> {
+    pub fn new(base_url: impl Into<String>, config: PixooClientConfig) -> Result<Self, PixooError> {
         let base_url = base_url.into();
         let post_url = reqwest::Url::parse(&base_url)
             .map_err(|err| PixooError::InvalidBaseUrl(err.to_string()))
@@ -38,16 +65,14 @@ impl PixooClient {
                 url.set_path("/get");
                 url.to_string()
             })?;
-        let http = reqwest::Client::builder()
-            .timeout(client_timeout())
-            .build()?;
+        let http = reqwest::Client::builder().timeout(config.timeout).build()?;
 
         Ok(Self {
             post_url,
             get_url,
             http,
-            retries: 2,
-            backoff: Duration::from_millis(200),
+            retries: config.retries,
+            backoff: config.backoff,
         })
     }
 
@@ -245,13 +270,6 @@ fn log_pixoo_error(context: &str, err: &PixooError, retriable: bool) {
     );
 }
 
-fn client_timeout() -> Duration {
-    env::var("PIXOO_TIMEOUT_MS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .map_or_else(|| Duration::from_secs(10), Duration::from_millis)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,14 +284,18 @@ mod tests {
     use std::sync::Arc;
     use tokio::net::TcpListener;
 
-    fn with_retry_policy(
-        mut client: PixooClient,
-        retries: usize,
-        backoff: Duration,
-    ) -> PixooClient {
-        client.retries = retries;
-        client.backoff = backoff;
-        client
+    fn default_config() -> PixooClientConfig {
+        PixooClientConfig::default()
+    }
+
+    #[test]
+    fn constructs_client_with_explicit_config_values() {
+        let config =
+            PixooClientConfig::new(Duration::from_millis(250), 7, Duration::from_millis(90));
+        let client = PixooClient::new("http://127.0.0.1", config).expect("client");
+
+        assert_eq!(client.retries, 7);
+        assert_eq!(client.backoff, Duration::from_millis(90));
     }
 
     #[derive(Clone)]
@@ -388,11 +410,8 @@ mod tests {
             then.status(503).body(r#"{"error_code":0}"#);
         });
 
-        let client = with_retry_policy(
-            PixooClient::new(server.base_url()).expect("client"),
-            0,
-            Duration::from_millis(10),
-        );
+        let config = PixooClientConfig::new(Duration::from_secs(10), 0, Duration::from_millis(10));
+        let client = PixooClient::new(server.base_url(), config).expect("client");
         let err = client
             .send_command(PixooCommand::SystemReboot, Map::new())
             .await
@@ -411,7 +430,7 @@ mod tests {
         ])
         .await;
 
-        let client = PixooClient::new(base_url).expect("client");
+        let client = PixooClient::new(base_url, default_config()).expect("client");
         let response = client
             .send_command(PixooCommand::SystemReboot, Map::new())
             .await
@@ -425,7 +444,7 @@ mod tests {
     async fn does_not_retry_on_client_errors() {
         let (base_url, counter) = start_sequence_server(vec![StatusCode::BAD_REQUEST]).await;
 
-        let client = PixooClient::new(base_url).expect("client");
+        let client = PixooClient::new(base_url, default_config()).expect("client");
         let err = client
             .send_command(PixooCommand::SystemReboot, Map::new())
             .await
@@ -482,11 +501,8 @@ mod tests {
         let base_url = format!("http://{addr}/post");
 
         // Use short backoff delays for fast testing.
-        let client = with_retry_policy(
-            PixooClient::new(base_url).expect("client"),
-            2,
-            Duration::from_millis(50),
-        );
+        let config = PixooClientConfig::new(Duration::from_secs(10), 2, Duration::from_millis(50));
+        let client = PixooClient::new(base_url, config).expect("client");
 
         let response = client
             .send_command(PixooCommand::SystemReboot, Map::new())
@@ -531,7 +547,7 @@ mod tests {
                 .body(r#"{"error_code":0}"#);
         });
 
-        let client = PixooClient::new(server.base_url()).expect("client");
+        let client = PixooClient::new(server.base_url(), default_config()).expect("client");
         let response = client
             .send_command(PixooCommand::SystemReboot, Map::new())
             .await

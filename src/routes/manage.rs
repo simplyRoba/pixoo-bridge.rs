@@ -297,9 +297,7 @@ async fn dispatch_manage_command(
     state: &AppState,
     command: PixooCommand,
 ) -> Result<PixooResponse, Response> {
-    let Some(client) = state.pixoo_client.clone() else {
-        return Err(service_unavailable());
-    };
+    let client = &state.pixoo_client;
     match client.send_command(command.clone(), Map::new()).await {
         Ok(response) => Ok(response),
         Err(err) => {
@@ -411,10 +409,7 @@ async fn dispatch_manage_post_command(
     command: PixooCommand,
     args: Map<String, Value>,
 ) -> Response {
-    let Some(client) = state.pixoo_client.clone() else {
-        return service_unavailable();
-    };
-
+    let client = &state.pixoo_client;
     match client.send_command(command.clone(), args).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
@@ -606,7 +601,7 @@ mod tests {
     use axum::Router;
     use chrono::{TimeZone, Utc};
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::PixooClient;
+    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;
@@ -654,10 +649,10 @@ mod tests {
     }
 
     fn manage_state_with_client(base_url: &str) -> Arc<AppState> {
-        let client = PixooClient::new(base_url).expect("client");
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
         Arc::new(AppState {
             health_forward: false,
-            pixoo_client: Some(client),
+            pixoo_client: client,
         })
     }
 
@@ -693,18 +688,6 @@ mod tests {
         assert_eq!(json_body["mirrored"], false);
         assert_eq!(json_body["temperatureUnit"], "FAHRENHEIT");
         assert_eq!(json_body["currentClockId"], 5);
-    }
-
-    #[tokio::test]
-    async fn manage_settings_handles_missing_client() {
-        let state = Arc::new(AppState {
-            health_forward: false,
-            pixoo_client: None,
-        });
-        let app = build_manage_app(state);
-        let (status, body) = send_get(&app, "/manage/settings").await;
-        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
-        assert!(body.contains("Pixoo command failed"));
     }
 
     #[tokio::test]

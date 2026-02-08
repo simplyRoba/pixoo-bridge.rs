@@ -42,9 +42,7 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
         return validation_errors_response(&errors);
     }
 
-    let Some(client) = state.pixoo_client.clone() else {
-        return service_unavailable();
-    };
+    let client = &state.pixoo_client;
 
     let Ok(red) = u8::try_from(payload.red) else {
         return internal_server_error("invalid red value");
@@ -65,12 +63,12 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
         }
     };
 
-    let pic_id = match get_next_pic_id(&client).await {
+    let pic_id = match get_next_pic_id(client).await {
         Ok(value) => value,
         Err(resp) => return resp,
     };
 
-    send_draw_gif(&client, pic_id, 1, 0, pic_data).await
+    send_draw_gif(client, pic_id, 1, 0, pic_data).await
 }
 
 async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
@@ -203,7 +201,7 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::routing::post as axum_post;
     use axum::{Json, Router};
-    use pixoo_bridge::pixoo::PixooClient;
+    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::{Arc, Mutex};
     use tokio::net::TcpListener;
@@ -282,10 +280,10 @@ mod tests {
     #[tokio::test]
     async fn draw_fill_sends_expected_command_sequence() {
         let (base_url, requests) = start_pixoo_mock().await;
-        let client = PixooClient::new(base_url).expect("client");
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
         let state = Arc::new(AppState {
             health_forward: false,
-            pixoo_client: Some(client),
+            pixoo_client: client,
         });
         let app = build_draw_app(state);
 
@@ -316,9 +314,10 @@ mod tests {
 
     #[tokio::test]
     async fn draw_fill_rejects_invalid_payload() {
+        let (base_url, _requests) = start_pixoo_mock().await;
         let state = Arc::new(AppState {
             health_forward: false,
-            pixoo_client: None,
+            pixoo_client: PixooClient::new(base_url, PixooClientConfig::default()).expect("client"),
         });
         let app = build_draw_app(state);
         let (status, body) = send_json_request(

@@ -23,14 +23,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
         return (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response();
     }
 
-    let Some(client) = state.pixoo_client.clone() else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({ "status": "unhealthy" })),
-        )
-            .into_response();
-    };
-
+    let client = &state.pixoo_client;
     match client.health_check().await {
         Ok(()) => {
             debug!("Forwarded health check to Pixoo succeeded");
@@ -45,14 +38,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
 }
 
 async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let Some(client) = state.pixoo_client.clone() else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({ "error": "Pixoo client unavailable" })),
-        )
-            .into_response();
-    };
-
+    let client = &state.pixoo_client;
     match client
         .send_command(PixooCommand::SystemReboot, Map::<String, Value>::new())
         .await
@@ -73,7 +59,7 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::PixooClient;
+    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use std::env;
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::ServiceExt;
@@ -90,13 +76,13 @@ mod tests {
         let _guard = env_lock();
         let original = env::var(key).ok();
         match value {
-            Some(v) => env::set_var(key, v),
-            None => env::remove_var(key),
+            Some(v) => unsafe { env::set_var(key, v) },
+            None => unsafe { env::remove_var(key) },
         }
         let result = f();
         match original {
-            Some(v) => env::set_var(key, v),
-            None => env::remove_var(key),
+            Some(v) => unsafe { env::set_var(key, v) },
+            None => unsafe { env::remove_var(key) },
         }
         result
     }
@@ -116,7 +102,7 @@ mod tests {
         mount_system_routes(Router::new()).with_state(state)
     }
 
-    fn system_state(client: Option<PixooClient>, health_forward: bool) -> Arc<AppState> {
+    fn system_state(client: PixooClient, health_forward: bool) -> Arc<AppState> {
         Arc::new(AppState {
             health_forward,
             pixoo_client: client,
@@ -140,7 +126,11 @@ mod tests {
 
     #[tokio::test]
     async fn health_ok_when_forwarding_disabled() {
-        let app = build_system_app(system_state(None, false));
+        let server = MockServer::start_async().await;
+        let app = build_system_app(system_state(
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
+            false,
+        ));
 
         let (status, body) = send_request(&app, Method::GET, "/health").await;
 
@@ -157,7 +147,7 @@ mod tests {
         });
 
         let app = build_system_app(system_state(
-            Some(PixooClient::new(server.base_url()).expect("client")),
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
             true,
         ));
 
@@ -179,7 +169,7 @@ mod tests {
             read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true)
         });
         let app = build_system_app(system_state(
-            Some(PixooClient::new(server.base_url()).expect("client")),
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
             health_forward,
         ));
 
@@ -197,7 +187,7 @@ mod tests {
         });
 
         let app = build_system_app(system_state(
-            Some(PixooClient::new(server.base_url()).expect("client")),
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
             true,
         ));
 
@@ -215,7 +205,7 @@ mod tests {
         });
 
         let app = build_system_app(system_state(
-            Some(PixooClient::new(server.base_url()).expect("client")),
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
             false,
         ));
 
@@ -238,7 +228,7 @@ mod tests {
         });
 
         let app = build_system_app(system_state(
-            Some(PixooClient::new(server.base_url()).expect("client")),
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
             false,
         ));
 
