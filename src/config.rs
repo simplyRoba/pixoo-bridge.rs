@@ -12,7 +12,7 @@ const DEFAULT_PIXOO_TIMEOUT_MS: u64 = 10_000;
 /// This trait abstracts environment variable access, allowing configuration
 /// functions to be tested with mock values instead of manipulating global
 /// process state. In production, use [`EnvConfigSource`] which reads from
-/// `std::env`. In tests, implement this trait with a simple HashMap.
+/// `std::env`. In tests, implement this trait with a simple `HashMap`.
 pub trait ConfigSource {
     fn get(&self, key: &str) -> Option<String>;
 }
