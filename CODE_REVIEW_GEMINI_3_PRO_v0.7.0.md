@@ -77,7 +77,7 @@ Routes are mounted manually in `src/routes/mod.rs` and individual modules. As th
 
 ## What I Would Have Done Differently
 
-### 1. Typed Configuration with "Fail Fast"
+### 1. [x] Typed Configuration with "Fail Fast"
 
 I would define a `Config` struct that loads and validates all environment variables at startup.
 ```rust
@@ -93,7 +93,7 @@ impl Config {
 ```
 `main` would call `Config::from_env()` and panic/exit immediately if the Pixoo URL is missing. This eliminates the `Option<PixooClient>` in `AppState` and the associated 503 checks in every handler.
 
-### 2. Dependency Injection for Testing
+### 2. [x] Dependency Injection for Testing
 
 Instead of manipulating environment variables with `unsafe`, I would trait-ify the configuration source.
 ```rust
@@ -104,7 +104,7 @@ trait ConfigSource {
 ```
 Or simply pass the `Config` struct directly. This makes the code pure and testable without global side effects.
 
-### 3. Middleware for Client Availability
+### 3. [x] Middleware for Client Availability
 
 If the optional client requirement stays (e.g., for a "dry run" mode), I would move the check into a Tower middleware. The middleware would inspect the state and short-circuit with 503 if the client is missing, ensuring handlers only run when dependencies are satisfied.
 
@@ -112,13 +112,15 @@ If the optional client requirement stays (e.g., for a "dry run" mode), I would m
 
 I would add `utoipa` to generate an OpenAPI specification directly from the Rust structs and handlers. This ensures documentation never drifts from the implementation, which is critical for an API bridge consumed by other tools (like Home Assistant).
 
-### 5. Macro-Driven Observability
+### 5. [x] Macro-Driven Observability
 
 I would verify `#[tracing::instrument(skip(state))]` is applied to all route handlers. This automatically creates a span for the request, capturing arguments (like command payloads) and linking all subsequent logs to that specific operation.
 
-### 6. Semantic Types for API Responses
+### 6. [x] Semantic Types for API Responses (won't fix)
 
 While `ManageSettings` uses semantic types, the generic `PixooResponse` (Map<String, Value>) leaks into some boundaries. I would aim to deserialize device responses directly into strongly-typed Rust structs inside the `PixooClient` to catch schema changes or unexpected fields earlier.
+
+**Resolution:** Won't fix. Response mapping already handles errors; callers receive a mapping error when the device response is unexpected. Adding more structs provides no practical improvement.
 
 ---
 

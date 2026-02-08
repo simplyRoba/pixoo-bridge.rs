@@ -202,7 +202,7 @@ You can't correlate which user request caused which error.
 
 ## What I Would Have Done Differently
 
-### 1. Fail Fast on Missing Configuration
+### 1. [x] Fail Fast on Missing Configuration
 
 ```rust
 // Instead of Optional client
@@ -229,7 +229,7 @@ PixooClient::builder()
 
 This makes the client configurable at construction time rather than reading globals.
 
-### 3. Extract a Shared Test Utilities Module
+### 3. [x] Extract a Shared Test Utilities Module
 
 Create `src/test_utils.rs` (or a separate `tests/` directory) with:
 
@@ -272,7 +272,7 @@ async fn stopwatch(Path(action): Path<StopwatchAction>) -> Response {
 
 Axum can deserialize path parameters directly into enums.
 
-### 7. Add Tracing Spans
+### 7. [x] Add Tracing Spans
 
 ```rust
 #[tracing::instrument(skip(state))]
@@ -283,7 +283,7 @@ async fn timer_start(State(state): State<Arc<AppState>>, ...) -> Response {
 
 This would give structured logging with request context automatically.
 
-### 8. Consider Tower Middleware for Common Patterns
+### 8. [x] Consider Tower Middleware for Common Patterns
 
 The "check if client exists, return 503 if not" pattern could be a middleware layer rather than repeated in every handler.
 
