@@ -93,10 +93,7 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
     args.insert("PicSpeed".to_string(), Value::from(DEFAULT_PIC_SPEED_MS));
     args.insert("PicData".to_string(), Value::String(pic_data));
 
-    match client
-        .send_command(PixooCommand::DrawSendGif, args)
-        .await
-    {
+    match client.send_command(PixooCommand::DrawSendGif, args).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, "Pixoo draw send command");
