@@ -42,6 +42,12 @@ Request logging now runs across the entire router so every HTTP call emits its m
 | `POST` | `/manage/time/offset/{offset}` | Apply a timezone offset (GMT±N, `offset` between `-12` and `14`) via Pixoo’s `Sys/TimeZone` command. | `200` | `400` invalid offset |
 | `POST` | `/manage/time/mode/{mode}` | Set time display mode (`12h` or `24h`). | `200` | `400` invalid mode |
 | `POST` | `/manage/weather/temperature-unit/{unit}` | Set temperature unit (`celsius` or `fahrenheit`). | `200` | `400` invalid unit |
+| `POST` | `/manage/display/{action}` | Toggle the display power; action must be `on` or `off`. | `200` | `400` invalid action |
+| `POST` | `/manage/display/brightness/{value}` | Set brightness from 0–100. | `200` | `400` invalid value |
+| `POST` | `/manage/display/rotation/{angle}` | Rotate the screen; `angle` must be `0`, `90`, `180`, or `270`. | `200` | `400` invalid angle |
+| `POST` | `/manage/display/mirror/{action}` | Enable/disable mirror mode via `on`/`off`. | `200` | `400` invalid action |
+| `POST` | `/manage/display/brightness/overclock/{action}` | Enable or disable overclock mode (`on`/`off`). | `200` | `400` invalid action |
+| `POST` | `/manage/display/white-balance` | Adjust RGB white balance; body `{ "red": 0-100, "green": 0-100, "blue": 0-100 }`. | `200` | `400` invalid payload |
 
 All endpoints may return `502` (unreachable), `503` (device error), or `504` (timeout) with a JSON body: `{ "error_status", "message", "error_kind", "error_code?" }`.
 
