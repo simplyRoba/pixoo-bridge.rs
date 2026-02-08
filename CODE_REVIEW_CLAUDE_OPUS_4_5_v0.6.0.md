@@ -163,7 +163,7 @@ fn status(&self) -> u8 {
 
 These status codes map to the Pixoo protocol but aren't documented. A comment explaining what these values mean to the device would help.
 
-### 8. [ ] Inconsistent Return Types
+### 8. [x] Inconsistent Return Types
 
 ```rust
 // Returns StatusCode::OK with empty body

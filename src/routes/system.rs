@@ -45,7 +45,7 @@ async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
         .send_command(PixooCommand::SystemReboot, Map::<String, Value>::new())
         .await
     {
-        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, "Pixoo reboot command");
             error!(error = ?err, status = %status, "Pixoo reboot command failed");
@@ -162,7 +162,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn reboot_returns_no_content_when_pixoo_accepts() {
+    async fn reboot_returns_ok_when_pixoo_accepts() {
         let server = MockServer::start_async().await;
         server.mock(|when, then| {
             when.method(MockMethod::POST).path("/post");
@@ -181,7 +181,7 @@ mod tests {
             .unwrap();
         let response = app.clone().oneshot(req).await.expect("response");
 
-        assert_eq!(response.status(), StatusCode::NO_CONTENT);
+        assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[tokio::test]

@@ -28,7 +28,7 @@ The bridge SHALL expose an HTTP POST `/reboot` endpoint with no request body so 
 
 #### Scenario: Reboot command accepted
 - **WHEN** a client sends `POST /reboot` with an empty body
-- **THEN** the bridge issues `Device/SysReboot` to the Pixoo device, waits for the existing retry/backoff helper, and responds with HTTP 204 No Content once the command is accepted
+- **THEN** the bridge issues `Device/SysReboot` to the Pixoo device, waits for the existing retry/backoff helper, and responds with HTTP 200 OK once the command is accepted
 
 #### Scenario: Reboot command fails
 - **WHEN** Pixoo does not acknowledge `Device/SysReboot` after the configured retries or returns an error
