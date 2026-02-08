@@ -42,16 +42,16 @@ Dependencies flow inward. The `pixoo` module is a standalone library that knows 
 
 ## What's Bad
 
-### 1. Implicit Configuration & Startup State
+### 1. [x] Implicit Configuration & Startup State
 
 The application allows the `PixooClient` to be optional (`Option<PixooClient>` in `AppState`). If `PIXOO_BASE_URL` is missing, the app starts up successfully but returns `503 Service Unavailable` for nearly every request.
 *   **Why it's bad:** It violates the principle of "fail fast." A bridge without a bridge target is functionally useless. It should refuse to start without critical configuration.
 
-### 2. Runtime Environment Variable Access
+### 2. [x] Runtime Environment Variable Access
 
 The `client_timeout` function in `src/pixoo/client.rs` reads the `PIXOO_TIMEOUT_MS` environment variable every time it's called. While currently only called during construction, this pattern of deep access to global state makes the code harder to reason about and test compared to passing configuration explicitly.
 
-### 3. Repetitive Boilerplate
+### 3. [x] Repetitive Boilerplate
 
 A significant portion of the route handlers contains identical boilerplate:
 ```rust
@@ -61,15 +61,15 @@ let Some(client) = state.pixoo_client.clone() else {
 ```
 This repetition is noise that distracts from the business logic of each handler.
 
-### 4. Unsafe Code in Tests
+### 4. [ ] Unsafe Code in Tests
 
 The `with_env_var` helper in `src/main.rs` uses `unsafe` to modify environment variables. While guarded by a mutex to prevent race conditions within the test suite, modifying the environment of a running process is fundamentally unsound in Rust.
 
-### 5. Lack of Structured Observability
+### 5. [ ] Lack of Structured Observability
 
 While the application uses `tracing`, it lacks `#[instrument]` macros on handlers. This means log entries are not automatically correlated with specific request scopes, making it harder to trace the flow of a single request through the system in high-traffic scenarios.
 
-### 6. Inconsistent Route Mounting
+### 6. [ ] Inconsistent Route Mounting
 
 Routes are mounted manually in `src/routes/mod.rs` and individual modules. As the API grows, this manual registration is prone to errors (forgetting to mount a new route).
 

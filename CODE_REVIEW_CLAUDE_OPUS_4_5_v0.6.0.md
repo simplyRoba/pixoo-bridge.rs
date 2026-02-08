@@ -80,7 +80,7 @@ Flexible environment-based config with sensible defaults. The `read_bool_env` fu
 
 ## What's Bad
 
-### 1. Timeout Not Configurable at Construction Time
+### 1. [x] Timeout Not Configurable at Construction Time
 
 ```rust
 // src/pixoo/client.rs:242-247
@@ -94,7 +94,7 @@ fn client_timeout() -> Duration {
 
 This reads the environment variable **every time** a client is constructed. If you change the env var at runtime, existing clients won't reflect the change—but new clients will. This inconsistency is confusing. The timeout should be read once at startup and passed explicitly.
 
-### 2. Optional Client Pattern Creates Noise
+### 2. [x] Optional Client Pattern Creates Noise
 
 ```rust
 // This pattern repeats in every handler:
@@ -105,7 +105,7 @@ let Some(client) = state.pixoo_client.clone() else {
 
 The `Option<PixooClient>` in `AppState` means every handler must check for `None`. If `PIXOO_BASE_URL` is required for the bridge to function, it should fail at startup rather than returning 503 on every request.
 
-### 3. Cloning the Client on Every Request
+### 3. [x] Cloning the Client on Every Request
 
 ```rust
 // src/routes/tools.rs:217
@@ -114,7 +114,7 @@ let Some(client) = state.pixoo_client.clone() else { ... }
 
 `PixooClient` contains `reqwest::Client` which is designed to be cloned cheaply (it's an `Arc` internally), but the pattern is still wasteful. The client reference could be borrowed instead.
 
-### 4. Duplicate Code for Env Var Testing
+### 4. [ ] Duplicate Code for Env Var Testing
 
 The `with_env_var` helper is duplicated across test modules:
 
@@ -123,7 +123,7 @@ The `with_env_var` helper is duplicated across test modules:
 
 Also, `read_bool_env` is duplicated in `src/routes/system.rs:104-113` for tests.
 
-### 5. Unsafe Code in Tests
+### 5. [ ] Unsafe Code in Tests
 
 ```rust
 // src/main.rs:157-164
@@ -135,7 +135,7 @@ match value {
 
 This uses `unsafe` because `set_var`/`remove_var` are unsound in multi-threaded contexts since Rust 1.66. While the mutex protects against races within the test suite, it's a code smell. Consider using a crate like `temp-env` or dependency injection for testability.
 
-### 6. Error Messages Could Be More Specific
+### 6. [ ] Error Messages Could Be More Specific
 
 ```rust
 // src/routes/manage.rs:88-94
@@ -148,7 +148,7 @@ fn service_unavailable() -> Response {
 
 This generic message is used for both "no client configured" and "response parsing failed". The caller loses context about what actually went wrong.
 
-### 7. Magic Numbers
+### 7. [ ] Magic Numbers
 
 ```rust
 // src/routes/tools.rs:50-56
@@ -163,7 +163,7 @@ fn status(&self) -> u8 {
 
 These status codes map to the Pixoo protocol but aren't documented. A comment explaining what these values mean to the device would help.
 
-### 8. Inconsistent Return Types
+### 8. [ ] Inconsistent Return Types
 
 ```rust
 // Returns StatusCode::OK with empty body
@@ -175,7 +175,7 @@ async fn reboot(...) -> impl IntoResponse { StatusCode::NO_CONTENT.into_response
 
 Some tool commands return 200 OK with empty body, reboot returns 204. While semantically correct (reboot genuinely has no content), it's inconsistent with the tools returning 200.
 
-### 9. Dockerfile Copies Both Binaries
+### 9. [ ] Dockerfile Copies Both Binaries
 
 ```dockerfile
 COPY release-artifacts/linux-amd64/pixoo-bridge /usr/local/bin/pixoo-bridge-amd64
@@ -184,7 +184,7 @@ COPY release-artifacts/linux-arm64/pixoo-bridge /usr/local/bin/pixoo-bridge-arm6
 
 Both binaries are copied, then one is deleted. This doubles the build context transfer. The `COPY --from` multi-stage pattern or `ADD` with the correct platform would be cleaner.
 
-### 10. No Request ID/Correlation
+### 10. [ ] No Request ID/Correlation
 
 There's no request ID middleware. When debugging production issues with logs like:
 
