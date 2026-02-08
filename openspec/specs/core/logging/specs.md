@@ -27,6 +27,17 @@ The bridge SHALL log every unexpected Pixoo interaction that results in an error
 - **WHEN** the `/health` handler sees `PixooClient::health_check` return an error (e.g., HTTP 503)
 - **THEN** it logs an error entry describing the failure before returning `503 SERVICE_UNAVAILABLE` to the caller
 
+### Requirement: Pixoo command interactions are traceable via debug logs
+The bridge SHALL emit DEBUG logs for every Pixoo command, recording the command name and serialized payload before sending and logging the parsed response after a successful round trip so operators can correlate outbound requests with device responses even when no error occurs.
+
+#### Scenario: Pixoo command succeeds
+- **WHEN** the bridge forwards a validated command to Pixoo and receives a response with `error_code=0`
+- **THEN** it logs a DEBUG entry containing the command name, the arguments used, and the response payload that was parsed from Pixoo
+
+#### Scenario: Pixoo command is about to be retried
+- **WHEN** a Pixoo command is replayed because the first attempt failed with a retriable error
+- **THEN** a DEBUG log precedes the retry with the same command name and arguments so operators can see the retry volume
+
 ### Requirement: Access log records each request at DEBUG level
 The bridge SHALL emit an access log entry at DEBUG level for every inbound HTTP request that includes the HTTP method, request path, response status code, and duration so operators can trace traffic without per-endpoint instrumentation.
 

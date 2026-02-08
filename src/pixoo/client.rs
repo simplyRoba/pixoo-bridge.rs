@@ -74,7 +74,13 @@ impl PixooClient {
         args: Map<String, Value>,
     ) -> Result<PixooResponse, PixooError> {
         let payload = Self::build_payload(&command, args);
-        self.execute_with_retry(&payload).await
+        debug!(command = ?command, payload = ?payload, "sending Pixoo command");
+
+        let response = self.execute_with_retry(&payload).await;
+        if let Ok(ref body) = response {
+            debug!(command = ?command, response = ?body, "Pixoo command response");
+        }
+        response
     }
 
     /// Checks if the Pixoo device is reachable.
