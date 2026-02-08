@@ -21,6 +21,9 @@ pub enum PixooCommand {
     ManageDisplayMirror,
     ManageDisplayOverclock,
     ManageDisplayWhiteBalance,
+    DrawGetGifId,
+    DrawSendGif,
+    DrawResetGifId,
 }
 
 impl PixooCommand {
@@ -45,6 +48,9 @@ impl PixooCommand {
             PixooCommand::ManageDisplayMirror => "Device/SetMirrorMode",
             PixooCommand::ManageDisplayOverclock => "Device/SetHighLightMode",
             PixooCommand::ManageDisplayWhiteBalance => "Device/SetWhiteBalance",
+            PixooCommand::DrawGetGifId => "Draw/GetHttpGifId",
+            PixooCommand::DrawSendGif => "Draw/SendHttpGif",
+            PixooCommand::DrawResetGifId => "Draw/ResetHttpGifId",
         }
     }
 }
@@ -116,5 +122,8 @@ mod tests {
             PixooCommand::ManageDisplayWhiteBalance.as_str(),
             "Device/SetWhiteBalance"
         );
+        assert_eq!(PixooCommand::DrawGetGifId.as_str(), "Draw/GetHttpGifId");
+        assert_eq!(PixooCommand::DrawSendGif.as_str(), "Draw/SendHttpGif");
+        assert_eq!(PixooCommand::DrawResetGifId.as_str(), "Draw/ResetHttpGifId");
     }
 }
