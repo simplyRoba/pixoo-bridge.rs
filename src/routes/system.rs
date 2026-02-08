@@ -5,7 +5,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
+use crate::pixoo::{map_pixoo_error, PixooCommand};
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 use tracing::{debug, error};
@@ -61,7 +61,7 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use std::env;
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::ServiceExt;

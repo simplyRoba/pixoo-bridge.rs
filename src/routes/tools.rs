@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
-use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
+use crate::pixoo::{map_pixoo_error, PixooCommand};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use std::str::FromStr;
@@ -238,7 +238,7 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;

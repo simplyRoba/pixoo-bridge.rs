@@ -1,4 +1,4 @@
-use pixoo_bridge::pixoo::PixooClientConfig;
+use crate::pixoo::PixooClientConfig;
 use std::{env, error::Error, fmt, time::Duration};
 use tracing::warn;
 

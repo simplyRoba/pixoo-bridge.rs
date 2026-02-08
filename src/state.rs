@@ -1,4 +1,4 @@
-use pixoo_bridge::pixoo::PixooClient;
+use crate::pixoo::PixooClient;
 
 #[derive(Clone)]
 pub struct AppState {

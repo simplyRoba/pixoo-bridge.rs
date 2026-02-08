@@ -1,4 +1,7 @@
 mod config;
+mod pixels;
+mod pixoo;
+mod request_tracing;
 mod routes;
 mod state;
 
@@ -16,8 +19,8 @@ use tracing_subscriber::filter::LevelFilter;
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use config::AppConfig;
-use pixoo_bridge::pixoo::PixooClient;
-use pixoo_bridge::request_tracing::{self, RequestId};
+use pixoo::PixooClient;
+use request_tracing::RequestId;
 use routes::{mount_draw_routes, mount_manage_routes, mount_system_routes, mount_tool_routes};
 use state::AppState;
 
@@ -105,7 +108,7 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::util::ServiceExt;
 
