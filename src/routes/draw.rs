@@ -192,10 +192,10 @@ fn internal_server_error(message: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
+    use super::mount_draw_routes;
     use super::SINGLE_FRAME_PIC_SPEED_MS;
     use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
     use crate::pixoo::{PixooClient, PixooClientConfig};
-    use crate::routes::mount_draw_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
     use axum::extract::State as AxumState;

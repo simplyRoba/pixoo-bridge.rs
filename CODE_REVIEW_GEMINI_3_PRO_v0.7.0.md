@@ -69,7 +69,7 @@ The `with_env_var` helper in `src/main.rs` uses `unsafe` to modify environment v
 
 While the application uses `tracing`, it lacks `#[instrument]` macros on handlers. This means log entries are not automatically correlated with specific request scopes, making it harder to trace the flow of a single request through the system in high-traffic scenarios.
 
-### 6. [ ] Inconsistent Route Mounting
+### 6. [x] Inconsistent Route Mounting
 
 Routes are mounted manually in `src/routes/mod.rs` and individual modules. As the API grows, this manual registration is prone to errors (forgetting to mount a new route).
 

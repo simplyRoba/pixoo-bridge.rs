@@ -232,8 +232,8 @@ async fn dispatch_command(
 
 #[cfg(test)]
 mod tests {
+    use super::mount_tool_routes;
     use crate::pixoo::{PixooClient, PixooClientConfig};
-    use crate::routes::mount_tool_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
     use axum::http::{Method, Request, StatusCode};

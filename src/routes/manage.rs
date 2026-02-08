@@ -608,8 +608,8 @@ impl FromStr for OnOffAction {
 
 #[cfg(test)]
 mod tests {
+    use super::mount_manage_routes;
     use crate::pixoo::{PixooClient, PixooClientConfig};
-    use crate::routes::mount_manage_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
     use axum::http::{Method, Request, StatusCode};

@@ -56,8 +56,9 @@ async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::mount_system_routes;
     use crate::pixoo::{PixooClient, PixooClientConfig};
+    use crate::state::AppState;
     use axum::body::{to_bytes, Body};
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
