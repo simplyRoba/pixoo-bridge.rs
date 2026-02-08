@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.8.1...v0.9.0) (2026-02-08)
+
+
+### Features
+
+* add /draw/fill endpoint for RGB color display fill ([#66](https://github.com/simplyRoba/pixoo-bridge.rs/issues/66)) ([b11aff9](https://github.com/simplyRoba/pixoo-bridge.rs/commit/b11aff99f01714975a492576fe908811c7b5975d))
+* enforce required PIXOO_BASE_URL configuration at startup ([183d1da](https://github.com/simplyRoba/pixoo-bridge.rs/commit/183d1daf11df0e14d5fdfb2d88f26d5ef34af34c))
+
+
+### Bug Fixes
+
+* add new display management endpoints to API documentation ([e8914ed](https://github.com/simplyRoba/pixoo-bridge.rs/commit/e8914ed76bfdbfa38cd1d0b11ac038ad0377479e))
+* mark issues in code review as resolved ([0e9b043](https://github.com/simplyRoba/pixoo-bridge.rs/commit/0e9b043be5c10db00b43a384a1b37f01bb380bea))
+
 ## [0.8.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.8.0...v0.8.1) (2026-02-08)
 
 
