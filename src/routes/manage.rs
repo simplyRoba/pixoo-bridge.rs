@@ -1261,8 +1261,8 @@ mod tests {
         )
         .await;
 
-        eprintln!("Status: {}", status);
-        eprintln!("Body: {}", body);
+        eprintln!("Status: {status}");
+        eprintln!("Body: {body}");
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
@@ -1279,7 +1279,7 @@ mod tests {
         )
         .await;
 
-        eprintln!("Body: {}", body);
+        eprintln!("Body: {body}");
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
@@ -1378,7 +1378,7 @@ mod tests {
         )
         .await;
 
-        eprintln!("missing white balance body: {}", body);
+        eprintln!("missing white balance body: {body}");
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert!(body.contains("missing"));

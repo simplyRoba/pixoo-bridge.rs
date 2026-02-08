@@ -23,6 +23,7 @@ pub enum PixooCommand {
     ManageDisplayWhiteBalance,
     DrawGetGifId,
     DrawSendGif,
+    #[allow(dead_code)] // Required by spec but not yet used
     DrawResetGifId,
 }
 
