@@ -71,7 +71,7 @@ fn build_app(state: Arc<AppState>) -> Router {
     let app = mount_system_routes(app);
 
     app.layer(from_fn(access_log))
-        .layer(from_fn(request_tracing::middleware))
+        .layer(from_fn(request_tracing::propagate))
         .with_state(state)
 }
 
