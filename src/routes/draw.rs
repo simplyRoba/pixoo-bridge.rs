@@ -4,15 +4,14 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
 use pixoo_bridge::pixoo::client::PixooResponse;
-use pixoo_bridge::pixoo::{
-    encode_pic_data, map_pixoo_error, uniform_pixel_buffer, PixooClient, PixooCommand,
-};
+use pixoo_bridge::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 use tracing::error;
 use validator::{Validate, ValidationError, ValidationErrors};
 
+use crate::draw::{encode_pic_data, uniform_pixel_buffer};
 use crate::state::AppState;
 
 const SINGLE_FRAME_PIC_SPEED_MS: i64 = 9999;
@@ -106,12 +105,13 @@ fn parse_pic_id(response: &PixooResponse) -> Result<i64, String> {
     }
 }
 
-fn build_send_gif_args(
+async fn send_draw_gif(
+    client: &PixooClient,
     pic_id: i64,
     pic_num: i64,
     pic_offset: i64,
     pic_data: String,
-) -> Map<String, Value> {
+) -> Response {
     let mut args = Map::new();
     args.insert("PicID".to_string(), Value::from(pic_id));
     args.insert("PicNum".to_string(), Value::from(pic_num));
@@ -122,17 +122,6 @@ fn build_send_gif_args(
         Value::from(SINGLE_FRAME_PIC_SPEED_MS),
     );
     args.insert("PicData".to_string(), Value::String(pic_data));
-    args
-}
-
-async fn send_draw_gif(
-    client: &PixooClient,
-    pic_id: i64,
-    pic_num: i64,
-    pic_offset: i64,
-    pic_data: String,
-) -> Response {
-    let args = build_send_gif_args(pic_id, pic_num, pic_offset, pic_data);
 
     match client.send_command(PixooCommand::DrawSendGif, args).await {
         Ok(_) => StatusCode::OK.into_response(),
@@ -200,6 +189,7 @@ fn internal_server_error(message: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::SINGLE_FRAME_PIC_SPEED_MS;
+    use crate::draw::{encode_pic_data, uniform_pixel_buffer};
     use crate::routes::mount_draw_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -207,7 +197,7 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::routing::post as axum_post;
     use axum::{Json, Router};
-    use pixoo_bridge::pixoo::{encode_pic_data, uniform_pixel_buffer, PixooClient};
+    use pixoo_bridge::pixoo::PixooClient;
     use serde_json::{json, Value};
     use std::sync::{Arc, Mutex};
     use tokio::net::TcpListener;
