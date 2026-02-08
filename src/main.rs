@@ -18,7 +18,7 @@ use tracing_subscriber::filter::LevelFilter;
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-use config::AppConfig;
+use config::{AppConfig, ConfigSource, EnvConfigSource};
 use pixoo::PixooClient;
 use request_tracing::RequestId;
 use routes::{mount_draw_routes, mount_manage_routes, mount_system_routes, mount_tool_routes};
@@ -26,7 +26,7 @@ use state::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (max_level, invalid_level) = resolve_log_level();
+    let (max_level, invalid_level) = resolve_log_level(&EnvConfigSource);
     tracing_subscriber::fmt().with_max_level(max_level).init();
 
     if let Some(raw) = invalid_level {
@@ -93,8 +93,10 @@ async fn access_log(req: Request<Body>, next: Next) -> Response {
     response
 }
 
-fn resolve_log_level() -> (LevelFilter, Option<String>) {
-    let raw = env::var("PIXOO_BRIDGE_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
+fn resolve_log_level(source: &impl ConfigSource) -> (LevelFilter, Option<String>) {
+    let raw = source
+        .get("PIXOO_BRIDGE_LOG_LEVEL")
+        .unwrap_or_else(|| "info".to_string());
     match raw.parse::<LevelFilter>() {
         Ok(level) => (level, None),
         Err(_) => (LevelFilter::INFO, Some(raw)),
@@ -109,30 +111,27 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
-    use std::sync::{Arc, Mutex, OnceLock};
+    use std::collections::HashMap;
+    use std::sync::Arc;
     use tower::util::ServiceExt;
 
-    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-        static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
-        ENV_MUTEX
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock")
+    struct MockConfig(HashMap<&'static str, &'static str>);
+
+    impl MockConfig {
+        fn new() -> Self {
+            Self(HashMap::new())
+        }
+
+        fn with(mut self, key: &'static str, value: &'static str) -> Self {
+            self.0.insert(key, value);
+            self
+        }
     }
 
-    fn with_env_var<T>(key: &str, value: Option<&str>, f: impl FnOnce() -> T) -> T {
-        let _guard = env_lock();
-        let original = env::var(key).ok();
-        match value {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
+    impl ConfigSource for MockConfig {
+        fn get(&self, key: &str) -> Option<String> {
+            self.0.get(key).map(|s| (*s).to_string())
         }
-        let result = f();
-        match original {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
-        }
-        result
     }
 
     #[tokio::test]
@@ -226,26 +225,24 @@ mod tests {
 
     #[test]
     fn resolves_log_level_defaults_to_info() {
-        let (level, invalid) = with_env_var("PIXOO_BRIDGE_LOG_LEVEL", None, resolve_log_level);
+        let config = MockConfig::new();
+        let (level, invalid) = resolve_log_level(&config);
         assert_eq!(level, LevelFilter::INFO);
         assert!(invalid.is_none());
     }
 
     #[test]
     fn resolves_log_level_from_env() {
-        let (level, invalid) =
-            with_env_var("PIXOO_BRIDGE_LOG_LEVEL", Some("debug"), resolve_log_level);
+        let config = MockConfig::new().with("PIXOO_BRIDGE_LOG_LEVEL", "debug");
+        let (level, invalid) = resolve_log_level(&config);
         assert_eq!(level, LevelFilter::DEBUG);
         assert!(invalid.is_none());
     }
 
     #[test]
     fn resolves_log_level_invalid_falls_back_to_info() {
-        let (level, invalid) = with_env_var(
-            "PIXOO_BRIDGE_LOG_LEVEL",
-            Some("not-a-level"),
-            resolve_log_level,
-        );
+        let config = MockConfig::new().with("PIXOO_BRIDGE_LOG_LEVEL", "not-a-level");
+        let (level, invalid) = resolve_log_level(&config);
         assert_eq!(level, LevelFilter::INFO);
         assert_eq!(invalid, Some("not-a-level".to_string()));
     }

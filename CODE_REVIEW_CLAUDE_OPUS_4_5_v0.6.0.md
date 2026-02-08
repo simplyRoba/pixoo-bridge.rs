@@ -114,7 +114,7 @@ let Some(client) = state.pixoo_client.clone() else { ... }
 
 `PixooClient` contains `reqwest::Client` which is designed to be cloned cheaply (it's an `Arc` internally), but the pattern is still wasteful. The client reference could be borrowed instead.
 
-### 4. [ ] Duplicate Code for Env Var Testing
+### 4. [x] Duplicate Code for Env Var Testing
 
 The `with_env_var` helper is duplicated across test modules:
 
@@ -123,7 +123,7 @@ The `with_env_var` helper is duplicated across test modules:
 
 Also, `read_bool_env` is duplicated in `src/routes/system.rs:104-113` for tests.
 
-### 5. [ ] Unsafe Code in Tests
+### 5. [x] Unsafe Code in Tests
 
 ```rust
 // src/main.rs:157-164
@@ -184,7 +184,7 @@ COPY release-artifacts/linux-arm64/pixoo-bridge /usr/local/bin/pixoo-bridge-arm6
 
 Both binaries are copied, then one is deleted. This doubles the build context transfer. The `COPY --from` multi-stage pattern or `ADD` with the correct platform would be cleaner.
 
-### 10. [ ] No Request ID/Correlation
+### 10. [x] No Request ID/Correlation
 
 There's no request ID middleware. When debugging production issues with logs like:
 
