@@ -5,8 +5,7 @@ edition = "2021"
 description = "HTTP bridge for Pixoo LED matrix devices"
 readme = "README.md"
 authors = ["simplyroba"]
-license = "AGPL-3.0"
-license-file = "LICENSE"
+license = "AGPL-3.0-or-later"
 repository = "https://github.com/simplyRoba/pixoo-bridge.rs"
 
 [lints.clippy]
