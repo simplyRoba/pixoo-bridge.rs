@@ -65,7 +65,7 @@ This repetition is noise that distracts from the business logic of each handler.
 
 The `with_env_var` helper in `src/main.rs` uses `unsafe` to modify environment variables. While guarded by a mutex to prevent race conditions within the test suite, modifying the environment of a running process is fundamentally unsound in Rust.
 
-### 5. [ ] Lack of Structured Observability
+### 5. [x] Lack of Structured Observability
 
 While the application uses `tracing`, it lacks `#[instrument]` macros on handlers. This means log entries are not automatically correlated with specific request scopes, making it harder to trace the flow of a single request through the system in high-traffic scenarios.
 

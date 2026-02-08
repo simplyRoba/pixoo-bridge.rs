@@ -184,7 +184,7 @@ COPY release-artifacts/linux-arm64/pixoo-bridge /usr/local/bin/pixoo-bridge-arm6
 
 Both binaries are copied, then one is deleted. This doubles the build context transfer. The `COPY --from` multi-stage pattern or `ADD` with the correct platform would be cleaner.
 
-### 10. [ ] No Request ID/Correlation
+### 10. [x] No Request ID/Correlation
 
 There's no request ID middleware. When debugging production issues with logs like:
 
