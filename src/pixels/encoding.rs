@@ -1,7 +1,7 @@
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine;
 
-use super::buffer::PIXOO_FRAME_LEN;
+use super::canvas::PIXOO_FRAME_LEN;
 
 /// Encode a 64x64 RGB pixel buffer into Base64 `PicData`.
 ///
