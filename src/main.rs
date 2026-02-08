@@ -109,31 +109,8 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
-    use std::sync::{Arc, Mutex, OnceLock};
+    use std::sync::Arc;
     use tower::util::ServiceExt;
-
-    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-        static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
-        ENV_MUTEX
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock")
-    }
-
-    fn with_env_var<T>(key: &str, value: Option<&str>, f: impl FnOnce() -> T) -> T {
-        let _guard = env_lock();
-        let original = env::var(key).ok();
-        match value {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
-        }
-        let result = f();
-        match original {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
-        }
-        result
-    }
 
     #[tokio::test]
     async fn integration_build_app_includes_tool_routes() {
@@ -226,7 +203,8 @@ mod tests {
 
     #[test]
     fn resolves_log_level_defaults_to_info() {
-        let (level, invalid) = with_env_var("PIXOO_BRIDGE_LOG_LEVEL", None, resolve_log_level);
+        let (level, invalid) =
+            temp_env::with_var("PIXOO_BRIDGE_LOG_LEVEL", None::<&str>, resolve_log_level);
         assert_eq!(level, LevelFilter::INFO);
         assert!(invalid.is_none());
     }
@@ -234,14 +212,14 @@ mod tests {
     #[test]
     fn resolves_log_level_from_env() {
         let (level, invalid) =
-            with_env_var("PIXOO_BRIDGE_LOG_LEVEL", Some("debug"), resolve_log_level);
+            temp_env::with_var("PIXOO_BRIDGE_LOG_LEVEL", Some("debug"), resolve_log_level);
         assert_eq!(level, LevelFilter::DEBUG);
         assert!(invalid.is_none());
     }
 
     #[test]
     fn resolves_log_level_invalid_falls_back_to_info() {
-        let (level, invalid) = with_env_var(
+        let (level, invalid) = temp_env::with_var(
             "PIXOO_BRIDGE_LOG_LEVEL",
             Some("not-a-level"),
             resolve_log_level,

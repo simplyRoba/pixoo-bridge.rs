@@ -63,31 +63,8 @@ mod tests {
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
     use std::env;
-    use std::sync::{Arc, Mutex, OnceLock};
+    use std::sync::Arc;
     use tower::ServiceExt;
-
-    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-        static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
-        ENV_MUTEX
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock")
-    }
-
-    fn with_env_var<T>(key: &str, value: Option<&str>, f: impl FnOnce() -> T) -> T {
-        let _guard = env_lock();
-        let original = env::var(key).ok();
-        match value {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
-        }
-        let result = f();
-        match original {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
-        }
-        result
-    }
 
     fn read_bool_env(key: &str, default: bool) -> bool {
         match env::var(key) {
@@ -167,9 +144,10 @@ mod tests {
             then.status(200);
         });
 
-        let health_forward = with_env_var("PIXOO_BRIDGE_HEALTH_FORWARD", None, || {
-            read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true)
-        });
+        let health_forward =
+            temp_env::with_var("PIXOO_BRIDGE_HEALTH_FORWARD", None::<&str>, || {
+                read_bool_env("PIXOO_BRIDGE_HEALTH_FORWARD", true)
+            });
         let app = build_system_app(system_state(
             PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client"),
             health_forward,

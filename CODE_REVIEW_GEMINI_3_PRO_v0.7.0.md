@@ -61,7 +61,7 @@ let Some(client) = state.pixoo_client.clone() else {
 ```
 This repetition is noise that distracts from the business logic of each handler.
 
-### 4. [ ] Unsafe Code in Tests
+### 4. [x] Unsafe Code in Tests
 
 The `with_env_var` helper in `src/main.rs` uses `unsafe` to modify environment variables. While guarded by a mutex to prevent race conditions within the test suite, modifying the environment of a running process is fundamentally unsound in Rust.
 

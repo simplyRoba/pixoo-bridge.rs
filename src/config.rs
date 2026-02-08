@@ -112,48 +112,24 @@ fn resolve_listener_port() -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, OnceLock};
-
-    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-        static ENV_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
-        ENV_MUTEX
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock")
-    }
-
-    fn with_env_var<T>(key: &str, value: Option<&str>, f: impl FnOnce() -> T) -> T {
-        let _guard = env_lock();
-        let original = env::var(key).ok();
-        match value {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
-        }
-        let result = f();
-        match original {
-            Some(v) => unsafe { env::set_var(key, v) },
-            None => unsafe { env::remove_var(key) },
-        }
-        result
-    }
 
     #[test]
     fn pixoo_base_url_missing_is_error() {
-        let err = with_env_var("PIXOO_BASE_URL", None, resolve_pixoo_base_url)
+        let err = temp_env::with_var("PIXOO_BASE_URL", None::<&str>, resolve_pixoo_base_url)
             .expect_err("expected missing base url error");
         assert_eq!(err, ConfigError::MissingPixooBaseUrl);
     }
 
     #[test]
     fn pixoo_base_url_invalid_is_error() {
-        let err = with_env_var("PIXOO_BASE_URL", Some("not a url"), resolve_pixoo_base_url)
+        let err = temp_env::with_var("PIXOO_BASE_URL", Some("not a url"), resolve_pixoo_base_url)
             .expect_err("expected invalid base url error");
         assert!(matches!(err, ConfigError::InvalidPixooBaseUrl(_)));
     }
 
     #[test]
     fn pixoo_base_url_valid_is_loaded() {
-        let value = with_env_var(
+        let value = temp_env::with_var(
             "PIXOO_BASE_URL",
             Some("http://127.0.0.1"),
             resolve_pixoo_base_url,
@@ -164,25 +140,26 @@ mod tests {
 
     #[test]
     fn pixoo_timeout_uses_env_override() {
-        let config = with_env_var("PIXOO_TIMEOUT_MS", Some("250"), resolve_pixoo_client_config);
+        let config =
+            temp_env::with_var("PIXOO_TIMEOUT_MS", Some("250"), resolve_pixoo_client_config);
         assert_eq!(config.timeout, Duration::from_millis(250));
     }
 
     #[test]
     fn listener_port_defaults_to_4000_when_env_missing() {
-        let port = with_env_var("PIXOO_BRIDGE_PORT", None, resolve_listener_port);
+        let port = temp_env::with_var("PIXOO_BRIDGE_PORT", None::<&str>, resolve_listener_port);
         assert_eq!(port, DEFAULT_LISTENER_PORT);
     }
 
     #[test]
     fn listener_port_uses_custom_override_when_valid() {
-        let port = with_env_var("PIXOO_BRIDGE_PORT", Some("5050"), resolve_listener_port);
+        let port = temp_env::with_var("PIXOO_BRIDGE_PORT", Some("5050"), resolve_listener_port);
         assert_eq!(port, 5050);
     }
 
     #[test]
     fn listener_port_falls_back_on_invalid_values() {
-        let port = with_env_var(
+        let port = temp_env::with_var(
             "PIXOO_BRIDGE_PORT",
             Some("not-a-port"),
             resolve_listener_port,
