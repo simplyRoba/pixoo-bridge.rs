@@ -18,7 +18,7 @@ const MAX_LISTENER_PORT: u16 = 65535;
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use pixoo_bridge::pixoo::PixooClient;
-use routes::{mount_manage_routes, mount_system_routes, mount_tool_routes};
+use routes::{mount_draw_routes, mount_manage_routes, mount_system_routes, mount_tool_routes};
 use state::AppState;
 
 #[tokio::main]
@@ -63,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn build_app(state: Arc<AppState>) -> Router {
     let app: Router<Arc<AppState>> = Router::new();
+    let app = mount_draw_routes(app);
     let app = mount_tool_routes(app);
     let app = mount_manage_routes(app);
     let app = mount_system_routes(app);

@@ -974,6 +974,7 @@ name = "pixoo-bridge"
 version = "0.8.1"
 dependencies = [
  "axum",
+ "base64",
  "chrono",
  "httpmock",
  "reqwest",

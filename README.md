@@ -32,6 +32,7 @@ On startup the container logs the resolved configuration (health forwarding flag
 | `POST` | `/tools/stopwatch/{action}` | Control stopwatch. Action: `start`, `stop`, `reset` | `200` | `400` invalid action |
 | `POST` | `/tools/scoreboard` | Set scores. Body: `{ "blue_score": 0-999, "red_score": 0-999 }` | `200` | `400` out-of-range |
 | `POST` | `/tools/soundmeter/{action}` | Control soundmeter. Action: `start`, `stop` | `200` | `400` invalid action |
+| `POST` | `/draw/fill` | Fill the display with a single RGB color. Body: `{ "red": 0-255, "green": 0-255, "blue": 0-255 }` | `200` | `400` invalid payload |
 | `GET` | `/manage/settings` | Display settings (visibility, brightness, rotation, mirror, temp unit, clock ID). | `200` | — |
 | `GET` | `/manage/time` | Device time as ISO-8601 UTC/local timestamps. | `200` | — |
 | `GET` | `/manage/weather` | Weather data (temps, pressure, humidity, wind). | `200` | — |
