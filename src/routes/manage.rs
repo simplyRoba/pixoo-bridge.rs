@@ -1,5 +1,4 @@
-use axum::extract::{Extension, Json, Path, State};
-use axum::extract::{Extension, Json, Path, State};
+use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
@@ -16,7 +15,6 @@ use tracing::{debug, error};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::state::AppState;
-use pixoo_bridge::request_id::RequestId;
 
 pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
@@ -53,40 +51,25 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         )
 }
 
-#[tracing::instrument(skip(state), fields(request_id = %request_id))]
-async fn manage_settings(
-    Extension(request_id): Extension<RequestId>,
-    State(state): State<Arc<AppState>>,
-) -> Response {
-    let response =
-        match dispatch_manage_command(&state, PixooCommand::ManageGetSettings, request_id.clone())
-            .await
-        {
-            Ok(response) => response,
-            Err(resp) => return resp,
-        };
+#[tracing::instrument(skip(state))]
+async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
+    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetSettings).await {
+        Ok(response) => response,
+        Err(resp) => return resp,
+    };
 
     match map_settings(&response) {
         Ok(payload) => Json(payload).into_response(),
         Err(err) => {
-            error!(request_id = %request_id, error = %err, "failed to map settings response");
+            error!(error = %err, "failed to map settings response");
             service_unavailable()
         }
     }
 }
 
-#[tracing::instrument(skip(state), fields(request_id = %request_id))]
-async fn manage_time(
-    Extension(request_id): Extension<RequestId>,
-    State(state): State<Arc<AppState>>,
-) -> Response {
-    let response = match dispatch_manage_command(
-        &state,
-        PixooCommand::ManageGetTime,
-        request_id.clone(),
-    )
-    .await
-    {
+#[tracing::instrument(skip(state))]
+async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
+    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetTime).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };
@@ -94,24 +77,15 @@ async fn manage_time(
     match map_time(&response) {
         Ok(payload) => Json(payload).into_response(),
         Err(err) => {
-            error!(request_id = %request_id, error = %err, "failed to map time response");
+            error!(error = %err, "failed to map time response");
             service_unavailable()
         }
     }
 }
 
-#[tracing::instrument(skip(state), fields(request_id = %request_id))]
-async fn manage_weather(
-    Extension(request_id): Extension<RequestId>,
-    State(state): State<Arc<AppState>>,
-) -> Response {
-    let response = match dispatch_manage_command(
-        &state,
-        PixooCommand::ManageGetWeather,
-        request_id.clone(),
-    )
-    .await
-    {
+#[tracing::instrument(skip(state))]
+async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
+    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetWeather).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };
@@ -119,15 +93,14 @@ async fn manage_weather(
     match map_weather(&response) {
         Ok(payload) => Json(payload).into_response(),
         Err(err) => {
-            error!(request_id = %request_id, error = %err, "failed to map weather response");
+            error!(error = %err, "failed to map weather response");
             service_unavailable()
         }
     }
 }
 
-#[tracing::instrument(skip(state, payload), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state, payload))]
 async fn manage_set_location(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LocationRequest>,
 ) -> Response {
@@ -145,20 +118,11 @@ async fn manage_set_location(
         Value::String(payload.latitude.to_string()),
     );
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageSetLocation,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetLocation, args).await
 }
 
-#[tracing::instrument(skip(state), fields(request_id = %request_id))]
-async fn manage_set_time(
-    Extension(request_id): Extension<RequestId>,
-    State(state): State<Arc<AppState>>,
-) -> Response {
+#[tracing::instrument(skip(state))]
+async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
     let utc_secs = match current_utc_seconds() {
         Ok(secs) => secs,
         Err(err) => {
@@ -171,12 +135,11 @@ async fn manage_set_time(
     let mut args = Map::new();
     args.insert("Utc".to_string(), Value::from(utc_secs));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageSetUtc, args, request_id.clone()).await
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetUtc, args).await
 }
 
-#[tracing::instrument(skip(state, offset), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_set_timezone(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(offset): Path<String>,
 ) -> Response {
@@ -195,18 +158,11 @@ async fn manage_set_timezone(
     let mut args = Map::new();
     args.insert("TimeZoneValue".to_string(), Value::String(timezone_value));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageSetTimezone,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetTimezone, args).await
 }
 
-#[tracing::instrument(skip(state, mode), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_set_time_mode(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(mode): Path<String>,
 ) -> Response {
@@ -219,18 +175,11 @@ async fn manage_set_time_mode(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageSetTimeMode,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetTimeMode, args).await
 }
 
-#[tracing::instrument(skip(state, unit), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_set_temperature_unit(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(unit): Path<String>,
 ) -> Response {
@@ -243,18 +192,11 @@ async fn manage_set_temperature_unit(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageSetTemperatureUnit,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageSetTemperatureUnit, args).await
 }
 
-#[tracing::instrument(skip(state, action), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_display_on(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
 ) -> Response {
@@ -265,18 +207,11 @@ async fn manage_display_on(
     let mut args = Map::new();
     args.insert("OnOff".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageDisplayPower,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayPower, args).await
 }
 
-#[tracing::instrument(skip(state, value), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_display_brightness(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(value): Path<String>,
 ) -> Response {
@@ -288,18 +223,11 @@ async fn manage_display_brightness(
     let mut args = Map::new();
     args.insert("Brightness".to_string(), Value::from(brightness_value));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageDisplayBrightness,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayBrightness, args).await
 }
 
-#[tracing::instrument(skip(state, angle), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_display_rotation(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(angle): Path<String>,
 ) -> Response {
@@ -311,18 +239,11 @@ async fn manage_display_rotation(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageDisplayRotation,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayRotation, args).await
 }
 
-#[tracing::instrument(skip(state, action), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_display_mirror(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
 ) -> Response {
@@ -333,18 +254,11 @@ async fn manage_display_mirror(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageDisplayMirror,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayMirror, args).await
 }
 
-#[tracing::instrument(skip(state, action), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state))]
 async fn manage_display_overclock(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
 ) -> Response {
@@ -355,13 +269,7 @@ async fn manage_display_overclock(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageDisplayOverclock,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayOverclock, args).await
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -374,9 +282,8 @@ struct WhiteBalanceRequest {
     blue: i32,
 }
 
-#[tracing::instrument(skip(state, payload), fields(request_id = %request_id))]
+#[tracing::instrument(skip(state, payload))]
 async fn manage_display_white_balance(
-    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<Value>,
 ) -> Response {
@@ -397,37 +304,19 @@ async fn manage_display_white_balance(
     args.insert("GValue".to_string(), Value::from(payload.green));
     args.insert("BValue".to_string(), Value::from(payload.blue));
 
-    dispatch_manage_post_command(
-        &state,
-        PixooCommand::ManageDisplayWhiteBalance,
-        args,
-        request_id.clone(),
-    )
-    .await
+    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayWhiteBalance, args).await
 }
 
-#[tracing::instrument(skip(state), fields(request_id = %request_id))]
 async fn dispatch_manage_command(
     state: &AppState,
     command: PixooCommand,
-    request_id: RequestId,
 ) -> Result<PixooResponse, Response> {
     let client = &state.pixoo_client;
-    match client
-        .send_command(command.clone(), Map::new(), Some(request_id.clone()))
-        .await
-    {
+    match client.send_command(command.clone(), Map::new()).await {
         Ok(response) => Ok(response),
         Err(err) => {
-            let (status, body) =
-                map_pixoo_error(&err, &format!("Pixoo {command} command"), Some(&request_id));
-            error!(
-                command = %command,
-                error = ?err,
-                status = %status,
-                request_id = %request_id,
-                "Pixoo manage command failed"
-            );
+            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
+            error!(command = %command, error = ?err, status = %status, "Pixoo manage command failed");
             Err((status, body).into_response())
         }
     }
@@ -529,29 +418,17 @@ fn current_utc_seconds() -> Result<i64, String> {
     Ok(secs)
 }
 
-#[tracing::instrument(skip(state), fields(request_id = %request_id))]
 async fn dispatch_manage_post_command(
     state: &AppState,
     command: PixooCommand,
     args: Map<String, Value>,
-    request_id: RequestId,
 ) -> Response {
     let client = &state.pixoo_client;
-    match client
-        .send_command(command.clone(), args, Some(request_id.clone()))
-        .await
-    {
+    match client.send_command(command.clone(), args).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
-            let (status, body) =
-                map_pixoo_error(&err, &format!("Pixoo {command} command"), Some(&request_id));
-            error!(
-                command = %command,
-                error = ?err,
-                status = %status,
-                request_id = %request_id,
-                "Pixoo manage command failed"
-            );
+            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
+            error!(command = %command, error = ?err, status = %status, "Pixoo manage command failed");
             (status, body).into_response()
         }
     }

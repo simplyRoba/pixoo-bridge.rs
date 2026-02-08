@@ -18,7 +18,7 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use config::AppConfig;
 use pixoo_bridge::pixoo::PixooClient;
-use pixoo_bridge::request_id::{RequestId, REQUEST_ID_HEADER};
+use pixoo_bridge::request_tracing::{self, RequestId};
 use routes::{mount_draw_routes, mount_manage_routes, mount_system_routes, mount_tool_routes};
 use state::AppState;
 
@@ -71,7 +71,7 @@ fn build_app(state: Arc<AppState>) -> Router {
     let app = mount_system_routes(app);
 
     app.layer(from_fn(access_log))
-        .layer(from_fn(request_id_middleware))
+        .layer(from_fn(request_tracing::middleware))
         .with_state(state)
 }
 
@@ -83,27 +83,11 @@ async fn access_log(req: Request<Body>, next: Next) -> Response {
         .extensions()
         .get::<RequestId>()
         .cloned()
-        .unwrap_or_else(RequestId::new);
+        .unwrap_or_default();
     let response = next.run(req).await;
     let latency = start.elapsed();
     let status = response.status();
     debug!(method=%method, path=%path, status=%status, latency=?latency, request_id=%request_id, "access log");
-    response
-}
-
-async fn request_id_middleware(mut req: Request<Body>, next: Next) -> Response {
-    let request_id = req
-        .headers()
-        .get(REQUEST_ID_HEADER)
-        .and_then(RequestId::from_header_value)
-        .unwrap_or_else(RequestId::new);
-    req.extensions_mut().insert(request_id.clone());
-    request_id.record();
-
-    let response = next.run(req).await;
-    response
-        .headers_mut()
-        .insert(REQUEST_ID_HEADER, request_id.header_value());
     response
 }
 
@@ -233,7 +217,7 @@ mod tests {
 
         let header = response
             .headers()
-            .get(REQUEST_ID_HEADER)
+            .get(request_tracing::HEADER_NAME)
             .expect("request id header present");
         assert!(!header.to_str().unwrap().is_empty());
     }
