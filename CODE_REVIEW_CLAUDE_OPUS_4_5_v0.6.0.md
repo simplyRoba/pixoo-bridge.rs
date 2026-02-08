@@ -287,7 +287,7 @@ This would give structured logging with request context automatically.
 
 The "check if client exists, return 503 if not" pattern could be a middleware layer rather than repeated in every handler.
 
-### 9. Graceful Shutdown
+### 9. [x] Graceful Shutdown
 
 There's no signal handling for `SIGTERM`/`SIGINT`. In a containerized environment, this means in-flight requests could be dropped during deployments.
 
