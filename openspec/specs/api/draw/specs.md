@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Provide a focused draw capability that lets clients fill the Pixoo panel with a single color using a thin HTTP surface. This capability serves as the foundation for future draw endpoints by enforcing consistent validation, Pixoo command sequencing, and shared payload helpers.
+
+## Requirements
 
 ### Requirement: Draw fill endpoint exposes single-color automation
 The system SHALL provide a `POST /draw/fill` API that accepts a JSON body containing `red`, `green`, and `blue` integer values between 0 and 255 inclusive. The handler SHALL return `200 OK` with an empty body when the Pixoo device successfully accepts the animation and appropriate error responses when the request fails validation or the device reports an error.
@@ -8,7 +12,7 @@ The system SHALL provide a `POST /draw/fill` API that accepts a JSON body contai
 - **THEN** the server responds with `200 OK` and an empty body, and the Pixoo device receives the automation that paints every pixel in the requested RGB color.
 
 ### Requirement: Pixoo command flow for draw fill
-The draw handler SHALL internally fetch a fresh animation ID via `Draw/GetHttpGifId` before issuing a single-frame automation with `Draw/SendHttpGif`. The automation arguments SHALL set `PicNum=1`, `PicOffset=0`, `PicWidth=64`, and include the previously fetched `PicID`. `PicSpeed` SHOULD default to a small non-zero value (e.g., 100 ms) to satisfy any device expectations.
+The draw handler SHALL internally fetch a fresh animation ID via `Draw/GetHttpGifId` before issuing a single-frame automation with `Draw/SendHttpGif`. The automation arguments SHALL set `PicNum=1`, `PicOffset=0`, `PicWidth=64`, and include the previously fetched `PicID`. 
 
 #### Scenario: Pixoo commands are sequenced correctly
 - **WHEN** the handler receives a valid fill request
