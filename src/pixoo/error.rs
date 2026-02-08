@@ -1,3 +1,4 @@
+use crate::request_id::RequestId;
 use axum::{http::StatusCode, Json};
 use serde::Serialize;
 use serde_json::Value;
@@ -123,6 +124,7 @@ pub struct PixooHttpErrorResponse {
 pub fn map_pixoo_error(
     error: &PixooError,
     context: &str,
+    request_id: Option<&RequestId>,
 ) -> (StatusCode, Json<PixooHttpErrorResponse>) {
     let kind = match error.category() {
         PixooErrorCategory::Unreachable => PixooHttpErrorKind::Unreachable,
@@ -136,9 +138,14 @@ pub fn map_pixoo_error(
         PixooHttpErrorKind::DeviceError => StatusCode::SERVICE_UNAVAILABLE,
     };
 
+    let message = match request_id {
+        Some(id) => format!("{context}: {error} (request_id={id})"),
+        None => format!("{context}: {error}"),
+    };
+
     let payload = PixooHttpErrorResponse {
         error_status: status.as_u16(),
-        message: format!("{context}: {error}"),
+        message,
         error_kind: kind,
         error_code: error.error_code(),
     };
@@ -172,7 +179,7 @@ mod tests {
             .await
             .expect_err("expected unreachable");
 
-        let (status, body) = map_pixoo_error(&err, "test unreachable");
+        let (status, body) = map_pixoo_error(&err, "test unreachable", None);
         let response = body.0;
 
         assert_eq!(status, StatusCode::BAD_GATEWAY);
@@ -195,7 +202,7 @@ mod tests {
             .await
             .expect_err("expected device error");
 
-        let (status, body) = map_pixoo_error(&err, "test device");
+        let (status, body) = map_pixoo_error(&err, "test device", None);
         let response = body.0;
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
@@ -222,7 +229,7 @@ mod tests {
             .await
             .expect_err("expected timeout");
 
-        let (status, body) = map_pixoo_error(&err, "test timeout");
+        let (status, body) = map_pixoo_error(&err, "test timeout", None);
         let response = body.0;
 
         assert_eq!(status, StatusCode::GATEWAY_TIMEOUT);

@@ -1,4 +1,5 @@
-use axum::extract::{Json, Path, State};
+use axum::extract::{Extension, Json, Path, State};
+use axum::extract::{Extension, Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
@@ -12,6 +13,7 @@ use tracing::error;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::state::AppState;
+use pixoo_bridge::request_id::RequestId;
 
 pub fn mount_tool_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
@@ -149,7 +151,9 @@ fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
     validation_error_response(details)
 }
 
+#[tracing::instrument(skip(state, payload), fields(request_id = %request_id))]
 async fn timer_start(
+    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<TimerRequest>,
 ) -> Response {
@@ -162,17 +166,26 @@ async fn timer_start(
     args.insert("Second".to_string(), Value::from(payload.second));
     args.insert("Status".to_string(), Value::from(1));
 
-    dispatch_command(&state, PixooCommand::ToolsTimer, args).await
+    dispatch_command(&state, PixooCommand::ToolsTimer, args, request_id.clone()).await
 }
 
-async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
+#[tracing::instrument(skip(state), fields(request_id = %request_id))]
+async fn timer_stop(
+    Extension(request_id): Extension<RequestId>,
+    State(state): State<Arc<AppState>>,
+) -> Response {
     let mut args = Map::new();
     args.insert("Status".to_string(), Value::from(0));
 
-    dispatch_command(&state, PixooCommand::ToolsTimer, args).await
+    dispatch_command(&state, PixooCommand::ToolsTimer, args, request_id.clone()).await
 }
 
-async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
+#[tracing::instrument(skip(state, action), fields(request_id = %request_id))]
+async fn stopwatch(
+    Extension(request_id): Extension<RequestId>,
+    State(state): State<Arc<AppState>>,
+    Path(action): Path<String>,
+) -> Response {
     let Ok(parsed) = action.parse::<StopwatchAction>() else {
         return action_validation_error(&action, StopwatchAction::allowed_values());
     };
@@ -180,10 +193,18 @@ async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String
     let mut args = Map::new();
     args.insert("Status".to_string(), Value::from(parsed.status()));
 
-    dispatch_command(&state, PixooCommand::ToolsStopwatch, args).await
+    dispatch_command(
+        &state,
+        PixooCommand::ToolsStopwatch,
+        args,
+        request_id.clone(),
+    )
+    .await
 }
 
+#[tracing::instrument(skip(state, payload), fields(request_id = %request_id))]
 async fn scoreboard(
+    Extension(request_id): Extension<RequestId>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ScoreboardRequest>,
 ) -> Response {
@@ -195,10 +216,21 @@ async fn scoreboard(
     args.insert("BlueScore".to_string(), Value::from(payload.blue_score));
     args.insert("RedScore".to_string(), Value::from(payload.red_score));
 
-    dispatch_command(&state, PixooCommand::ToolsScoreboard, args).await
+    dispatch_command(
+        &state,
+        PixooCommand::ToolsScoreboard,
+        args,
+        request_id.clone(),
+    )
+    .await
 }
 
-async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
+#[tracing::instrument(skip(state, action), fields(request_id = %request_id))]
+async fn soundmeter(
+    Extension(request_id): Extension<RequestId>,
+    State(state): State<Arc<AppState>>,
+    Path(action): Path<String>,
+) -> Response {
     let Ok(parsed) = action.parse::<SoundmeterAction>() else {
         return action_validation_error(&action, SoundmeterAction::allowed_values());
     };
@@ -206,20 +238,38 @@ async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<Strin
     let mut args = Map::new();
     args.insert("NoiseStatus".to_string(), Value::from(parsed.status()));
 
-    dispatch_command(&state, PixooCommand::ToolsSoundMeter, args).await
+    dispatch_command(
+        &state,
+        PixooCommand::ToolsSoundMeter,
+        args,
+        request_id.clone(),
+    )
+    .await
 }
 
+#[tracing::instrument(skip(state), fields(request_id = %request_id))]
 async fn dispatch_command(
     state: &AppState,
     command: PixooCommand,
     args: Map<String, Value>,
+    request_id: RequestId,
 ) -> Response {
     let client = &state.pixoo_client;
-    match client.send_command(command.clone(), args).await {
+    match client
+        .send_command(command.clone(), args, Some(request_id.clone()))
+        .await
+    {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
-            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
-            error!(command = %command, error = ?err, status = %status, "Pixoo tool command failed");
+            let (status, body) =
+                map_pixoo_error(&err, &format!("Pixoo {command} command"), Some(&request_id));
+            error!(
+                command = %command,
+                error = ?err,
+                status = %status,
+                request_id = %request_id,
+                "Pixoo tool command failed"
+            );
             (status, body).into_response()
         }
     }

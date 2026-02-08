@@ -1,4 +1,5 @@
-use axum::extract::{Json, State};
+use axum::extract::{Extension, Json, State};
+use axum::extract::{Extension, Json, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
@@ -12,6 +13,7 @@ use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::draw::{encode_pic_data, uniform_pixel_buffer};
 use crate::state::AppState;
+use pixoo_bridge::request_id::RequestId;
 
 const SINGLE_FRAME_PIC_SPEED_MS: i64 = 9999;
 
@@ -29,7 +31,12 @@ struct DrawFillRequest {
     blue: u16,
 }
 
-async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value>) -> Response {
+#[tracing::instrument(skip(state, payload), fields(request_id = %request_id))]
+async fn draw_fill(
+    Extension(request_id): Extension<RequestId>,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<Value>,
+) -> Response {
     let payload = match serde_json::from_value::<DrawFillRequest>(payload) {
         Ok(request) => request,
         Err(err) => {
@@ -58,28 +65,38 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
     let pic_data = match encode_pic_data(&buffer) {
         Ok(value) => value,
         Err(err) => {
-            error!(error = %err, "failed to encode draw payload");
+            error!(request_id = %request_id, error = %err, "failed to encode draw payload");
             return internal_server_error("failed to encode draw payload");
         }
     };
 
-    let pic_id = match get_next_pic_id(client).await {
+    let pic_id = match get_next_pic_id(client, &request_id).await {
         Ok(value) => value,
         Err(resp) => return resp,
     };
 
-    send_draw_gif(client, pic_id, 1, 0, pic_data).await
+    send_draw_gif(client, pic_id, 1, 0, pic_data, request_id.clone()).await
 }
 
-async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
+#[tracing::instrument(skip(client), fields(request_id = %request_id))]
+async fn get_next_pic_id(client: &PixooClient, request_id: &RequestId) -> Result<i64, Response> {
     let response = match client
-        .send_command(PixooCommand::DrawGetGifId, Map::new())
+        .send_command(
+            PixooCommand::DrawGetGifId,
+            Map::new(),
+            Some(request_id.clone()),
+        )
         .await
     {
         Ok(response) => response,
         Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo draw id command");
-            error!(error = ?err, status = %status, "Pixoo draw id command failed");
+            let (status, body) = map_pixoo_error(&err, "Pixoo draw id command", Some(request_id));
+            error!(
+                request_id = %request_id,
+                error = ?err,
+                status = %status,
+                "Pixoo draw id command failed"
+            );
             return Err((status, body).into_response());
         }
     };
@@ -103,18 +120,25 @@ async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
     match parsed {
         Ok(value) => Ok(value),
         Err(err) => {
-            error!(error = %err, response = ?response, "invalid PicID in draw response");
+            error!(
+                request_id = %request_id,
+                error = %err,
+                response = ?response,
+                "invalid PicID in draw response"
+            );
             Err(service_unavailable())
         }
     }
 }
 
+#[tracing::instrument(skip(client, pic_data), fields(request_id = %request_id))]
 async fn send_draw_gif(
     client: &PixooClient,
     pic_id: i64,
     pic_num: i64,
     pic_offset: i64,
     pic_data: String,
+    request_id: RequestId,
 ) -> Response {
     let mut args = Map::new();
     args.insert("PicID".to_string(), Value::from(pic_id));
@@ -127,11 +151,20 @@ async fn send_draw_gif(
     );
     args.insert("PicData".to_string(), Value::String(pic_data));
 
-    match client.send_command(PixooCommand::DrawSendGif, args).await {
+    match client
+        .send_command(PixooCommand::DrawSendGif, args, Some(request_id.clone()))
+        .await
+    {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo draw send command");
-            error!(error = ?err, status = %status, "Pixoo draw send command failed");
+            let (status, body) =
+                map_pixoo_error(&err, "Pixoo draw send command", Some(&request_id));
+            error!(
+                request_id = %request_id,
+                error = ?err,
+                status = %status,
+                "Pixoo draw send command failed"
+            );
             (status, body).into_response()
         }
     }

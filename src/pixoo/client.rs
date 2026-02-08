@@ -1,5 +1,6 @@
 use crate::pixoo::command::PixooCommand;
 use crate::pixoo::error::PixooError;
+use crate::request_id::RequestId;
 use reqwest::header::CONTENT_TYPE;
 use serde_json::{Map, Value};
 use std::time::Duration;
@@ -97,13 +98,28 @@ impl PixooClient {
         &self,
         command: PixooCommand,
         args: Map<String, Value>,
+        request_id: Option<RequestId>,
     ) -> Result<PixooResponse, PixooError> {
         let payload = Self::build_payload(&command, args);
-        debug!(command = ?command, payload = ?payload, "sending Pixoo command");
+        let request_id_value = request_id
+            .as_ref()
+            .map(|id: &RequestId| id.as_str())
+            .unwrap_or("missing");
+        debug!(
+            command = ?command,
+            payload = ?payload,
+            request_id = %request_id_value,
+            "sending Pixoo command"
+        );
 
-        let response = self.execute_with_retry(&payload).await;
+        let response = self.execute_with_retry(&payload, request_id.as_ref()).await;
         if let Ok(ref body) = response {
-            debug!(command = ?command, response = ?body, "Pixoo command response");
+            debug!(
+                command = ?command,
+                response = ?body,
+                request_id = %request_id_value,
+                "Pixoo command response"
+            );
         }
         response
     }
@@ -121,6 +137,7 @@ impl PixooClient {
     async fn execute_with_retry(
         &self,
         payload: &Map<String, Value>,
+        request_id: Option<&RequestId>,
     ) -> Result<PixooResponse, PixooError> {
         let mut attempt = 0;
 
@@ -138,7 +155,7 @@ impl PixooClient {
                 Err(err) => {
                     let retriable = is_retriable(&err);
                     if attempt >= self.retries || !retriable {
-                        log_pixoo_error("sending Pixoo command", &err, retriable);
+                        log_pixoo_error("sending Pixoo command", &err, retriable, request_id);
                         return Err(err);
                     }
 
@@ -167,7 +184,7 @@ impl PixooClient {
                 Err(err) => {
                     let retriable = is_retriable(&err);
                     if attempt >= self.retries || !retriable {
-                        log_pixoo_error("Pixoo health check", &err, retriable);
+                        log_pixoo_error("Pixoo health check", &err, retriable, None);
                         return Err(err);
                     }
 
@@ -258,9 +275,18 @@ fn parse_error_code(value: &Value) -> Result<i64, PixooError> {
     }
 }
 
-fn log_pixoo_error(context: &str, err: &PixooError, retriable: bool) {
+fn log_pixoo_error(
+    context: &str,
+    err: &PixooError,
+    retriable: bool,
+    request_id: Option<&RequestId>,
+) {
+    let request_id_value = request_id
+        .map(|value: &RequestId| value.as_str())
+        .unwrap_or("missing");
     error!(
         context = context,
+        request_id = %request_id_value,
         error = %err,
         http_status = ?err.http_status(),
         error_code = ?err.error_code(),

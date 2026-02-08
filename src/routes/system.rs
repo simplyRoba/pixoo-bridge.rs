@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Extension, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -11,6 +11,7 @@ use std::sync::Arc;
 use tracing::{debug, error};
 
 use crate::state::AppState;
+use pixoo_bridge::request_id::RequestId;
 
 pub fn mount_system_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
@@ -18,7 +19,11 @@ pub fn mount_system_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         .route("/reboot", post(reboot))
 }
 
-async fn health(State(state): State<Arc<AppState>>) -> Response {
+#[tracing::instrument(skip(state), fields(request_id = %request_id))]
+async fn health(
+    Extension(request_id): Extension<RequestId>,
+    State(state): State<Arc<AppState>>,
+) -> Response {
     if !state.health_forward {
         return (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response();
     }
@@ -30,23 +35,41 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
             (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response()
         }
         Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo health check");
-            error!(error = ?err, status = %status, "Pixoo health check failed");
+            let (status, body) = map_pixoo_error(&err, "Pixoo health check", Some(&request_id));
+            error!(
+                request_id = %request_id,
+                error = ?err,
+                status = %status,
+                "Pixoo health check failed"
+            );
             (status, body).into_response()
         }
     }
 }
 
-async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+#[tracing::instrument(skip(state), fields(request_id = %request_id))]
+async fn reboot(
+    Extension(request_id): Extension<RequestId>,
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
     let client = &state.pixoo_client;
     match client
-        .send_command(PixooCommand::SystemReboot, Map::<String, Value>::new())
+        .send_command(
+            PixooCommand::SystemReboot,
+            Map::<String, Value>::new(),
+            Some(request_id.clone()),
+        )
         .await
     {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo reboot command");
-            error!(error = ?err, status = %status, "Pixoo reboot command failed");
+            let (status, body) = map_pixoo_error(&err, "Pixoo reboot command", Some(&request_id));
+            error!(
+                request_id = %request_id,
+                error = ?err,
+                status = %status,
+                "Pixoo reboot command failed"
+            );
             (status, body).into_response()
         }
     }

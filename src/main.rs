@@ -18,6 +18,7 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use config::AppConfig;
 use pixoo_bridge::pixoo::PixooClient;
+use pixoo_bridge::request_id::{RequestId, REQUEST_ID_HEADER};
 use routes::{mount_draw_routes, mount_manage_routes, mount_system_routes, mount_tool_routes};
 use state::AppState;
 
@@ -69,17 +70,40 @@ fn build_app(state: Arc<AppState>) -> Router {
     let app = mount_manage_routes(app);
     let app = mount_system_routes(app);
 
-    app.layer(from_fn(access_log)).with_state(state)
+    app.layer(from_fn(access_log))
+        .layer(from_fn(request_id_middleware))
+        .with_state(state)
 }
 
 async fn access_log(req: Request<Body>, next: Next) -> Response {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
     let start = Instant::now();
+    let request_id = req
+        .extensions()
+        .get::<RequestId>()
+        .cloned()
+        .unwrap_or_else(RequestId::new);
     let response = next.run(req).await;
     let latency = start.elapsed();
     let status = response.status();
-    debug!(method=%method, path=%path, status=%status, latency=?latency, "access log");
+    debug!(method=%method, path=%path, status=%status, latency=?latency, request_id=%request_id, "access log");
+    response
+}
+
+async fn request_id_middleware(mut req: Request<Body>, next: Next) -> Response {
+    let request_id = req
+        .headers()
+        .get(REQUEST_ID_HEADER)
+        .and_then(RequestId::from_header_value)
+        .unwrap_or_else(RequestId::new);
+    req.extensions_mut().insert(request_id.clone());
+    request_id.record();
+
+    let response = next.run(req).await;
+    response
+        .headers_mut()
+        .insert(REQUEST_ID_HEADER, request_id.header_value());
     response
 }
 
@@ -183,6 +207,35 @@ mod tests {
             .expect("response");
 
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn request_id_middleware_inserts_header() {
+        let server = MockServer::start_async().await;
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let state = AppState {
+            health_forward: false,
+            pixoo_client: client,
+        };
+        let app = build_app(Arc::new(state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        let header = response
+            .headers()
+            .get(REQUEST_ID_HEADER)
+            .expect("request id header present");
+        assert!(!header.to_str().unwrap().is_empty());
     }
 
     #[test]

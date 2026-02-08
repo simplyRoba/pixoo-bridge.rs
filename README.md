@@ -52,6 +52,10 @@ On startup the container logs the resolved configuration (health forwarding flag
 
 All endpoints may return `502` (unreachable), `503` (device error), or `504` (timeout) with a JSON body: `{ "error_status", "message", "error_kind", "error_code?" }`.
 
+## Observability
+
+Every HTTP response now includes an `X-Request-Id` header. The bridge generates or forwards that identifier in middleware, carries it through tracing spans and Pixoo command logs, and echoes it in error responses so you can trace a single request from the client through the Pixoo device.
+
 ## Contributing
 
 If you want to build or contribute, this project targets a minimal Rust service that bridges Pixoo device protocols to a more usable HTTP interface.
