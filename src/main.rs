@@ -104,11 +104,11 @@ fn resolve_log_level() -> (LevelFilter, Option<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::state::AppState;
     use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
-    use crate::pixoo::{PixooClient, PixooClientConfig};
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::util::ServiceExt;
 

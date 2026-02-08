@@ -1,11 +1,11 @@
+use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
+use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use crate::state::AppState;
 use axum::extract::{Json, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
-use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
-use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
@@ -193,6 +193,8 @@ fn internal_server_error(message: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::SINGLE_FRAME_PIC_SPEED_MS;
+    use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::mount_draw_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -200,8 +202,6 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::routing::post as axum_post;
     use axum::{Json, Router};
-    use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
-    use crate::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::{Arc, Mutex};
     use tokio::net::TcpListener;

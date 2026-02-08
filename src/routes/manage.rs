@@ -1,11 +1,11 @@
+use crate::pixoo::client::PixooResponse;
+use crate::pixoo::{map_pixoo_error, PixooCommand};
 use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::Router;
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use crate::pixoo::client::PixooResponse;
-use crate::pixoo::{map_pixoo_error, PixooCommand};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::str::FromStr;
@@ -608,6 +608,7 @@ impl FromStr for OnOffAction {
 
 #[cfg(test)]
 mod tests {
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::mount_manage_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -615,7 +616,6 @@ mod tests {
     use axum::Router;
     use chrono::{TimeZone, Utc};
     use httpmock::{Method as MockMethod, MockServer};
-    use crate::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;

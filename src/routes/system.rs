@@ -1,3 +1,4 @@
+use crate::pixoo::{map_pixoo_error, PixooCommand};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -5,7 +6,6 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use crate::pixoo::{map_pixoo_error, PixooCommand};
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 use tracing::{debug, error};
@@ -57,11 +57,11 @@ async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use axum::body::{to_bytes, Body};
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
-    use crate::pixoo::{PixooClient, PixooClientConfig};
     use std::env;
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::ServiceExt;
