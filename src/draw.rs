@@ -46,11 +46,21 @@ mod tests {
     }
 
     #[test]
-    fn encode_pic_data_produces_no_padding() {
-        let buffer = uniform_pixel_buffer(255, 0, 128);
+    fn encode_pic_data_black_buffer_is_all_a() {
+        let buffer = uniform_pixel_buffer(0, 0, 0);
         let encoded = encode_pic_data(&buffer).expect("encoded");
-        assert_eq!(encoded.len(), 16384);
-        assert!(!encoded.contains('='));
+        let expected_len = (PIXOO_FRAME_LEN / 3) * 4;
+        let expected = "A".repeat(expected_len);
+        assert_eq!(encoded, expected);
+    }
+
+    #[test]
+    fn encode_pic_data_white_buffer_is_all_slash() {
+        let buffer = uniform_pixel_buffer(255, 255, 255);
+        let encoded = encode_pic_data(&buffer).expect("encoded");
+        let expected_len = (PIXOO_FRAME_LEN / 3) * 4;
+        let expected = "/".repeat(expected_len);
+        assert_eq!(encoded, expected);
     }
 
     #[test]
