@@ -4,7 +4,9 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
 use pixoo_bridge::pixoo::client::PixooResponse;
-use pixoo_bridge::pixoo::{encode_pic_data, map_pixoo_error, uniform_pixel_buffer, PixooCommand};
+use pixoo_bridge::pixoo::{
+    encode_pic_data, map_pixoo_error, uniform_pixel_buffer, PixooClient, PixooCommand,
+};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
@@ -13,7 +15,7 @@ use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::state::AppState;
 
-const DEFAULT_PIC_SPEED_MS: i64 = 100;
+const SINGLE_FRAME_PIC_SPEED_MS: i64 = 9999;
 
 pub fn mount_draw_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router.route("/draw/fill", post(draw_fill))
@@ -85,22 +87,7 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
         }
     };
 
-    let mut args = Map::new();
-    args.insert("PicID".to_string(), Value::from(pic_id));
-    args.insert("PicNum".to_string(), Value::from(1));
-    args.insert("PicOffset".to_string(), Value::from(0));
-    args.insert("PicWidth".to_string(), Value::from(64));
-    args.insert("PicSpeed".to_string(), Value::from(DEFAULT_PIC_SPEED_MS));
-    args.insert("PicData".to_string(), Value::String(pic_data));
-
-    match client.send_command(PixooCommand::DrawSendGif, args).await {
-        Ok(_) => StatusCode::OK.into_response(),
-        Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo draw send command");
-            error!(error = ?err, status = %status, "Pixoo draw send command failed");
-            (status, body).into_response()
-        }
-    }
+    send_draw_gif(&client, pic_id, 1, 0, pic_data).await
 }
 
 fn parse_pic_id(response: &PixooResponse) -> Result<i64, String> {
@@ -116,6 +103,44 @@ fn parse_pic_id(response: &PixooResponse) -> Result<i64, String> {
             .parse::<i64>()
             .map_err(|_| "PicID is not an integer".to_string()),
         _ => Err("PicID is not an integer".to_string()),
+    }
+}
+
+fn build_send_gif_args(
+    pic_id: i64,
+    pic_num: i64,
+    pic_offset: i64,
+    pic_data: String,
+) -> Map<String, Value> {
+    let mut args = Map::new();
+    args.insert("PicID".to_string(), Value::from(pic_id));
+    args.insert("PicNum".to_string(), Value::from(pic_num));
+    args.insert("PicOffset".to_string(), Value::from(pic_offset));
+    args.insert("PicWidth".to_string(), Value::from(64));
+    args.insert(
+        "PicSpeed".to_string(),
+        Value::from(SINGLE_FRAME_PIC_SPEED_MS),
+    );
+    args.insert("PicData".to_string(), Value::String(pic_data));
+    args
+}
+
+async fn send_draw_gif(
+    client: &PixooClient,
+    pic_id: i64,
+    pic_num: i64,
+    pic_offset: i64,
+    pic_data: String,
+) -> Response {
+    let args = build_send_gif_args(pic_id, pic_num, pic_offset, pic_data);
+
+    match client.send_command(PixooCommand::DrawSendGif, args).await {
+        Ok(_) => StatusCode::OK.into_response(),
+        Err(err) => {
+            let (status, body) = map_pixoo_error(&err, "Pixoo draw send command");
+            error!(error = ?err, status = %status, "Pixoo draw send command failed");
+            (status, body).into_response()
+        }
     }
 }
 
@@ -174,7 +199,7 @@ fn internal_server_error(message: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::SINGLE_FRAME_PIC_SPEED_MS;
     use crate::routes::mount_draw_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -287,7 +312,7 @@ mod tests {
         assert_eq!(captured[1]["PicNum"], 1);
         assert_eq!(captured[1]["PicOffset"], 0);
         assert_eq!(captured[1]["PicWidth"], 64);
-        assert_eq!(captured[1]["PicSpeed"], DEFAULT_PIC_SPEED_MS);
+        assert_eq!(captured[1]["PicSpeed"], SINGLE_FRAME_PIC_SPEED_MS);
         let expected_buffer = uniform_pixel_buffer(32, 128, 16);
         let expected_pic_data = encode_pic_data(&expected_buffer).expect("picdata");
         assert_eq!(captured[1]["PicData"], expected_pic_data);
