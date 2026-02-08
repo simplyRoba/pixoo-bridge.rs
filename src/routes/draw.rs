@@ -3,7 +3,6 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
-use pixoo_bridge::pixoo::client::PixooResponse;
 use pixoo_bridge::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
@@ -87,12 +86,9 @@ async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
         }
     };
 
-    let value = match response.get("PicID") {
-        Some(value) => value,
-        None => {
-            error!(response = ?response, "missing PicID in draw response");
-            return Err(service_unavailable());
-        }
+    let Some(value) = response.get("PicID") else {
+        error!(response = ?response, "missing PicID in draw response");
+        return Err(service_unavailable());
     };
 
     let parsed = match value {

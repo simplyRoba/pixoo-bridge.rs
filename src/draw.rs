@@ -64,6 +64,18 @@ mod tests {
     }
 
     #[test]
+    fn encode_pic_data_uniform_buffer_matches_spec_example() {
+        let buffer = uniform_pixel_buffer(255, 0, 128);
+        let encoded = encode_pic_data(&buffer).expect("encoded");
+        let mut expected_pixels = Vec::with_capacity(PIXOO_FRAME_LEN);
+        for _ in 0..(PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT) {
+            expected_pixels.extend_from_slice(&[255, 0, 128]);
+        }
+        let expected = STANDARD_NO_PAD.encode(&expected_pixels);
+        assert_eq!(encoded, expected);
+    }
+
+    #[test]
     fn encode_pic_data_rejects_invalid_length() {
         let err = encode_pic_data(&[0u8; 10]).expect_err("expected length error");
         assert!(err.contains("expected"));
