@@ -136,9 +136,11 @@ pub fn map_pixoo_error(
         PixooHttpErrorKind::DeviceError => StatusCode::SERVICE_UNAVAILABLE,
     };
 
+    let message = format!("{context}: {error}");
+
     let payload = PixooHttpErrorResponse {
         error_status: status.as_u16(),
-        message: format!("{context}: {error}"),
+        message,
         error_kind: kind,
         error_code: error.error_code(),
     };

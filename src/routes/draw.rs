@@ -1,17 +1,16 @@
+use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
+use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
+use crate::state::AppState;
 use axum::extract::{Json, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
-use pixoo_bridge::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 use tracing::error;
 use validator::{Validate, ValidationError, ValidationErrors};
-
-use crate::draw::{encode_pic_data, uniform_pixel_buffer};
-use crate::state::AppState;
 
 const SINGLE_FRAME_PIC_SPEED_MS: i64 = 9999;
 
@@ -29,6 +28,7 @@ struct DrawFillRequest {
     blue: u16,
 }
 
+#[tracing::instrument(skip(state, payload))]
 async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value>) -> Response {
     let payload = match serde_json::from_value::<DrawFillRequest>(payload) {
         Ok(request) => request,
@@ -193,7 +193,8 @@ fn internal_server_error(message: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::SINGLE_FRAME_PIC_SPEED_MS;
-    use crate::draw::{encode_pic_data, uniform_pixel_buffer};
+    use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::mount_draw_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -201,7 +202,6 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::routing::post as axum_post;
     use axum::{Json, Router};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::{Arc, Mutex};
     use tokio::net::TcpListener;

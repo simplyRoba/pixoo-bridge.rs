@@ -1,3 +1,4 @@
+use crate::pixoo::{map_pixoo_error, PixooCommand};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -5,7 +6,6 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 use tracing::{debug, error};
@@ -18,6 +18,7 @@ pub fn mount_system_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         .route("/reboot", post(reboot))
 }
 
+#[tracing::instrument(skip(state))]
 async fn health(State(state): State<Arc<AppState>>) -> Response {
     if !state.health_forward {
         return (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response();
@@ -37,6 +38,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
+#[tracing::instrument(skip(state))]
 async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let client = &state.pixoo_client;
     match client
@@ -55,11 +57,11 @@ async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use axum::body::{to_bytes, Body};
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use std::env;
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::ServiceExt;

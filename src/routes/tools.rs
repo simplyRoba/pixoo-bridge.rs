@@ -1,9 +1,9 @@
+use crate::pixoo::{map_pixoo_error, PixooCommand};
 use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
-use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use std::str::FromStr;
@@ -149,6 +149,7 @@ fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
     validation_error_response(details)
 }
 
+#[tracing::instrument(skip(state, payload))]
 async fn timer_start(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<TimerRequest>,
@@ -165,6 +166,7 @@ async fn timer_start(
     dispatch_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     let mut args = Map::new();
     args.insert("Status".to_string(), Value::from(0));
@@ -172,6 +174,7 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     dispatch_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
     let Ok(parsed) = action.parse::<StopwatchAction>() else {
         return action_validation_error(&action, StopwatchAction::allowed_values());
@@ -183,6 +186,7 @@ async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String
     dispatch_command(&state, PixooCommand::ToolsStopwatch, args).await
 }
 
+#[tracing::instrument(skip(state, payload))]
 async fn scoreboard(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ScoreboardRequest>,
@@ -198,6 +202,7 @@ async fn scoreboard(
     dispatch_command(&state, PixooCommand::ToolsScoreboard, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
     let Ok(parsed) = action.parse::<SoundmeterAction>() else {
         return action_validation_error(&action, SoundmeterAction::allowed_values());
@@ -227,13 +232,13 @@ async fn dispatch_command(
 
 #[cfg(test)]
 mod tests {
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::mount_tool_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
     use axum::http::{Method, Request, StatusCode};
     use axum::Router;
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;

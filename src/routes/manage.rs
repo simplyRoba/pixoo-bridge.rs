@@ -1,11 +1,11 @@
+use crate::pixoo::client::PixooResponse;
+use crate::pixoo::{map_pixoo_error, PixooCommand};
 use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::Router;
 use chrono::{NaiveDateTime, TimeZone, Utc};
-use pixoo_bridge::pixoo::client::PixooResponse;
-use pixoo_bridge::pixoo::{map_pixoo_error, PixooCommand};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::str::FromStr;
@@ -51,6 +51,7 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         )
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_manage_command(&state, PixooCommand::ManageGetSettings).await {
         Ok(response) => response,
@@ -66,6 +67,7 @@ async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_manage_command(&state, PixooCommand::ManageGetTime).await {
         Ok(response) => response,
@@ -81,6 +83,7 @@ async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_manage_command(&state, PixooCommand::ManageGetWeather).await {
         Ok(response) => response,
@@ -96,6 +99,7 @@ async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
+#[tracing::instrument(skip(state, payload))]
 async fn manage_set_location(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LocationRequest>,
@@ -117,6 +121,7 @@ async fn manage_set_location(
     dispatch_manage_post_command(&state, PixooCommand::ManageSetLocation, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
     let utc_secs = match current_utc_seconds() {
         Ok(secs) => secs,
@@ -133,6 +138,7 @@ async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
     dispatch_manage_post_command(&state, PixooCommand::ManageSetUtc, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_set_timezone(
     State(state): State<Arc<AppState>>,
     Path(offset): Path<String>,
@@ -155,6 +161,7 @@ async fn manage_set_timezone(
     dispatch_manage_post_command(&state, PixooCommand::ManageSetTimezone, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_set_time_mode(
     State(state): State<Arc<AppState>>,
     Path(mode): Path<String>,
@@ -171,6 +178,7 @@ async fn manage_set_time_mode(
     dispatch_manage_post_command(&state, PixooCommand::ManageSetTimeMode, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_set_temperature_unit(
     State(state): State<Arc<AppState>>,
     Path(unit): Path<String>,
@@ -187,6 +195,7 @@ async fn manage_set_temperature_unit(
     dispatch_manage_post_command(&state, PixooCommand::ManageSetTemperatureUnit, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_display_on(
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
@@ -201,6 +210,7 @@ async fn manage_display_on(
     dispatch_manage_post_command(&state, PixooCommand::ManageDisplayPower, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_display_brightness(
     State(state): State<Arc<AppState>>,
     Path(value): Path<String>,
@@ -216,6 +226,7 @@ async fn manage_display_brightness(
     dispatch_manage_post_command(&state, PixooCommand::ManageDisplayBrightness, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_display_rotation(
     State(state): State<Arc<AppState>>,
     Path(angle): Path<String>,
@@ -231,6 +242,7 @@ async fn manage_display_rotation(
     dispatch_manage_post_command(&state, PixooCommand::ManageDisplayRotation, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_display_mirror(
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
@@ -245,6 +257,7 @@ async fn manage_display_mirror(
     dispatch_manage_post_command(&state, PixooCommand::ManageDisplayMirror, args).await
 }
 
+#[tracing::instrument(skip(state))]
 async fn manage_display_overclock(
     State(state): State<Arc<AppState>>,
     Path(action): Path<String>,
@@ -269,6 +282,7 @@ struct WhiteBalanceRequest {
     blue: i32,
 }
 
+#[tracing::instrument(skip(state, payload))]
 async fn manage_display_white_balance(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<Value>,
@@ -594,6 +608,7 @@ impl FromStr for OnOffAction {
 
 #[cfg(test)]
 mod tests {
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::mount_manage_routes;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -601,7 +616,6 @@ mod tests {
     use axum::Router;
     use chrono::{TimeZone, Utc};
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use serde_json::{json, Value};
     use std::sync::Arc;
     use tower::ServiceExt;
@@ -1247,8 +1261,8 @@ mod tests {
         )
         .await;
 
-        eprintln!("Status: {}", status);
-        eprintln!("Body: {}", body);
+        eprintln!("Status: {status}");
+        eprintln!("Body: {body}");
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
@@ -1265,7 +1279,7 @@ mod tests {
         )
         .await;
 
-        eprintln!("Body: {}", body);
+        eprintln!("Body: {body}");
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
@@ -1364,7 +1378,7 @@ mod tests {
         )
         .await;
 
-        eprintln!("missing white balance body: {}", body);
+        eprintln!("missing white balance body: {body}");
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert!(body.contains("missing"));

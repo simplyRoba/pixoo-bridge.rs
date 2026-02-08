@@ -1,5 +1,7 @@
 mod config;
-mod draw;
+mod pixels;
+mod pixoo;
+mod request_tracing;
 mod routes;
 mod state;
 
@@ -17,7 +19,8 @@ use tracing_subscriber::filter::LevelFilter;
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use config::AppConfig;
-use pixoo_bridge::pixoo::PixooClient;
+use pixoo::PixooClient;
+use request_tracing::RequestId;
 use routes::{mount_draw_routes, mount_manage_routes, mount_system_routes, mount_tool_routes};
 use state::AppState;
 
@@ -69,17 +72,24 @@ fn build_app(state: Arc<AppState>) -> Router {
     let app = mount_manage_routes(app);
     let app = mount_system_routes(app);
 
-    app.layer(from_fn(access_log)).with_state(state)
+    app.layer(from_fn(access_log))
+        .layer(from_fn(request_tracing::propagate))
+        .with_state(state)
 }
 
 async fn access_log(req: Request<Body>, next: Next) -> Response {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
     let start = Instant::now();
+    let request_id = req
+        .extensions()
+        .get::<RequestId>()
+        .cloned()
+        .unwrap_or_default();
     let response = next.run(req).await;
     let latency = start.elapsed();
     let status = response.status();
-    debug!(method=%method, path=%path, status=%status, latency=?latency, "access log");
+    debug!(method=%method, path=%path, status=%status, latency=?latency, request_id=%request_id, "access log");
     response
 }
 
@@ -94,11 +104,11 @@ fn resolve_log_level() -> (LevelFilter, Option<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::state::AppState;
     use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
-    use pixoo_bridge::pixoo::{PixooClient, PixooClientConfig};
     use std::sync::{Arc, Mutex, OnceLock};
     use tower::util::ServiceExt;
 
@@ -183,6 +193,35 @@ mod tests {
             .expect("response");
 
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn request_id_middleware_inserts_header() {
+        let server = MockServer::start_async().await;
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let state = AppState {
+            health_forward: false,
+            pixoo_client: client,
+        };
+        let app = build_app(Arc::new(state));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        let header = response
+            .headers()
+            .get(request_tracing::HEADER_NAME)
+            .expect("request id header present");
+        assert!(!header.to_str().unwrap().is_empty());
     }
 
     #[test]
