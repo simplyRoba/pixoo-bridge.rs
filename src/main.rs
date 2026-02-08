@@ -13,6 +13,7 @@ use axum::{
     Router,
 };
 use std::{env, net::SocketAddr, sync::Arc, time::Instant};
+use tokio::signal;
 use tracing::{debug, error, info, warn};
 use tracing_subscriber::filter::LevelFilter;
 
@@ -60,8 +61,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app.into_make_service()).await?;
+    axum::serve(listener, app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
+    info!("Graceful shutdown complete");
     Ok(())
 }
 
@@ -87,6 +91,34 @@ async fn access_log(req: Request<Body>, next: Next) -> Response {
     let status = response.status();
     debug!(method=%method, path=%path, status=%status, latency=?latency, request_id=%request_id, "access log");
     response
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {
+            info!("Received SIGINT, starting graceful shutdown");
+        }
+        () = terminate => {
+            info!("Received SIGTERM, starting graceful shutdown");
+        }
+    }
 }
 
 fn resolve_log_level(source: &impl ConfigSource) -> (LevelFilter, Option<String>) {
