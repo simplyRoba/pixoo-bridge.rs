@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.8.0...v0.8.1) (2026-02-08)
+
+
+### Bug Fixes
+
+* add debug logging for Pixoo command interactions ([18a0810](https://github.com/simplyRoba/pixoo-bridge.rs/commit/18a08109eeb1c61ea6322982bd7ba68ba143ca19))
+* invert timezone offset sign for Pixoo compatibility ([6b42b5e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/6b42b5e00b81fb97e8b5993540c5cc27a64a9311))
+* update authors and repository URL in Cargo.toml ([97ab1c9](https://github.com/simplyRoba/pixoo-bridge.rs/commit/97ab1c9492547379cbe865204e36b31764be002c))
+* update license to AGPL-3.0-or-later in Cargo.toml ([dd72a58](https://github.com/simplyRoba/pixoo-bridge.rs/commit/dd72a5898f86eb6a6cb774af37fa8a6e12a4c09c))
+
 ## [0.8.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.7.0...v0.8.0) (2026-02-06)
 
 
