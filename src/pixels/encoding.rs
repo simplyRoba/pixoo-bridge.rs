@@ -1,20 +1,7 @@
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine;
 
-pub const PIXOO_FRAME_WIDTH: usize = 64;
-pub const PIXOO_FRAME_HEIGHT: usize = 64;
-pub const PIXOO_PIXEL_BYTES: usize = 3;
-pub const PIXOO_FRAME_LEN: usize = PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT * PIXOO_PIXEL_BYTES;
-
-pub fn uniform_pixel_buffer(red: u8, green: u8, blue: u8) -> Vec<u8> {
-    let mut buffer = vec![0u8; PIXOO_FRAME_LEN];
-    for chunk in buffer.chunks_exact_mut(PIXOO_PIXEL_BYTES) {
-        chunk[0] = red;
-        chunk[1] = green;
-        chunk[2] = blue;
-    }
-    buffer
-}
+use super::buffer::PIXOO_FRAME_LEN;
 
 /// Encode a 64x64 RGB pixel buffer into Base64 `PicData`.
 ///
@@ -35,15 +22,7 @@ pub fn encode_pic_data(pixels: &[u8]) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn uniform_buffer_sets_expected_bytes() {
-        let buffer = uniform_pixel_buffer(255, 0, 128);
-        assert_eq!(buffer.len(), PIXOO_FRAME_LEN);
-        assert_eq!(&buffer[0..3], &[255, 0, 128]);
-        let tail = &buffer[PIXOO_FRAME_LEN - 3..PIXOO_FRAME_LEN];
-        assert_eq!(tail, &[255, 0, 128]);
-    }
+    use crate::pixels::{uniform_pixel_buffer, PIXOO_FRAME_WIDTH};
 
     #[test]
     fn encode_pic_data_black_buffer_is_all_a() {
@@ -68,7 +47,7 @@ mod tests {
         let buffer = uniform_pixel_buffer(255, 0, 128);
         let encoded = encode_pic_data(&buffer).expect("encoded");
         let mut expected_pixels = Vec::with_capacity(PIXOO_FRAME_LEN);
-        for _ in 0..(PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT) {
+        for _ in 0..(PIXOO_FRAME_WIDTH * PIXOO_FRAME_WIDTH) {
             expected_pixels.extend_from_slice(&[255, 0, 128]);
         }
         let expected = STANDARD_NO_PAD.encode(&expected_pixels);
