@@ -3,9 +3,11 @@ name = "pixoo-bridge"
 version = "0.8.0"
 edition = "2021"
 description = "HTTP bridge for Pixoo LED matrix devices"
-authors = ["pixoo-bridge maintainers"]
+readme = "README.md"
+authors = ["simplyroba"]
 license = "AGPL-3.0"
-repository = "https://github.com/axel-linux/pixoo-bridge.rs"
+license-file = "LICENSE"
+repository = "https://github.com/simplyRoba/pixoo-bridge.rs"
 
 [lints.clippy]
 pedantic = { level = "deny", priority = -1 }
