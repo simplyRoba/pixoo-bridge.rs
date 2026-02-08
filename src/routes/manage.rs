@@ -141,11 +141,12 @@ async fn manage_set_timezone(
         Ok(value) => value,
         Err(message) => return offset_validation_error(&message),
     };
-
-    let timezone_value = if offset_value >= 0 {
-        format!("GMT+{offset_value}")
-    } else {
-        format!("GMT{offset_value}")
+    // Pixoo expects the opposite sign from what humans call "timezone offset",
+    // so sending +3 requires the command `GMT-3` when interacting with `/post`.
+    let timezone_value = match offset_value {
+        0 => "GMT+0".to_string(),
+        value if value > 0 => format!("GMT-{value}"),
+        value => format!("GMT+{}", value.abs()),
     };
 
     let mut args = Map::new();
@@ -861,12 +862,30 @@ mod tests {
             when.method(MockMethod::POST)
                 .path("/post")
                 .body_includes("\"Command\":\"Sys/TimeZone\"")
-                .body_includes("\"TimeZoneValue\":\"GMT-5\"");
+                .body_includes("\"TimeZoneValue\":\"GMT+5\"");
             then.status(200).body(r#"{"error_code":0}"#);
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
         let (status, _) = send_post(&app, "/manage/time/offset/-5", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn timezone_positive_offset_inverts_sign() {
+        let server = MockServer::start_async().await;
+        let mock = server.mock(|when, then| {
+            when.method(MockMethod::POST)
+                .path("/post")
+                .body_includes("\"Command\":\"Sys/TimeZone\"")
+                .body_includes("\"TimeZoneValue\":\"GMT-3\"");
+            then.status(200).body(r#"{"error_code":0}"#);
+        });
+
+        let app = build_manage_app(manage_state_with_client(&server.base_url()));
+        let (status, _) = send_post(&app, "/manage/time/offset/+3", None).await;
 
         assert_eq!(status, StatusCode::OK);
         mock.assert();
