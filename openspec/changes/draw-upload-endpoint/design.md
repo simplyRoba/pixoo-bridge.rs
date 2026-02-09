@@ -60,7 +60,7 @@ Both values are threaded into `AppState` so handlers can access them without re-
 
 ### 5. Module layout
 
-- **`src/pixels/imaging.rs`** (new): `decode_upload(bytes, content_type) → Vec<DecodedFrame>` where `DecodedFrame { rgb_buffer: Vec<u8>, delay_ms: u64 }`. Handles format detection, decoding, resizing, alpha compositing, and frame extraction. This keeps image processing logic out of the route handler.
+- **`src/pixels/imaging.rs`** (new): `decode_upload(bytes, content_type) → Vec<DecodedFrame>` where `DecodedFrame { rgb_buffer: Vec<u8>, delay_ms: u32 }`. Handles format detection, decoding, resizing, alpha compositing, and frame extraction. This keeps image processing logic out of the route handler.
 - **`src/pixels/mod.rs`**: Re-export the new module's public API.
 - **`src/routes/draw.rs`**: Add the `draw_upload` handler. Reuse the existing `get_next_pic_id` and `send_draw_gif` helpers (already scoped to this module) in a loop over decoded frames.
 
