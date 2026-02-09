@@ -96,7 +96,7 @@ The system SHALL provide an image processing module that accepts raw file bytes 
 ## MODIFIED Requirements
 
 ### Requirement: Pixoo command flow for draw fill
-The draw handler SHALL internally fetch a fresh animation ID via `Draw/GetHttpGifId` before issuing a single-frame automation with `Draw/SendHttpGif`. The automation arguments SHALL set `PicNum=1`, `PicOffset=0`, `PicWidth=64`, and include the previously fetched `PicID`. The GIF ID retrieval and frame-sending logic SHALL be implemented as shared helpers reusable by both `/draw/fill` and `/draw/upload`.
+The draw handler SHALL internally fetch a fresh animation ID via `Draw/GetHttpGifId` before issuing a single-frame automation with `Draw/SendHttpGif`. The automation arguments SHALL set `PicNum=1`, `PicOffset=0`, `PicWidth=64`, and include the previously fetched `PicId`. The GIF ID retrieval and frame-sending logic SHALL be implemented as shared helpers reusable by both `/draw/fill` and `/draw/upload`.
 
 #### Scenario: Pixoo commands are sequenced correctly
 - **WHEN** the handler receives a valid fill request

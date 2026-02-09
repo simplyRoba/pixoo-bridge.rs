@@ -186,8 +186,8 @@ async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
         }
     };
 
-    let Some(value) = response.get("PicID") else {
-        error!(response = ?response, "missing PicID in draw response");
+    let Some(value) = response.get("PicId") else {
+        error!(response = ?response, "missing PicId in draw response");
         return Err(service_unavailable());
     };
 
@@ -195,17 +195,17 @@ async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
         Value::Number(number) => number
             .as_i64()
             .or_else(|| number.as_u64().and_then(|v| i64::try_from(v).ok()))
-            .ok_or_else(|| "PicID is not an integer".to_string()),
+            .ok_or_else(|| "PicId is not an integer".to_string()),
         Value::String(text) => text
             .parse::<i64>()
-            .map_err(|_| "PicID is not an integer".to_string()),
-        _ => Err("PicID is not an integer".to_string()),
+            .map_err(|_| "PicId is not an integer".to_string()),
+        _ => Err("PicId is not an integer".to_string()),
     };
 
     match parsed {
         Ok(value) => Ok(value),
         Err(err) => {
-            error!(error = %err, response = ?response, "invalid PicID in draw response");
+            error!(error = %err, response = ?response, "invalid PicId in draw response");
             Err(service_unavailable())
         }
     }
@@ -220,7 +220,7 @@ async fn send_draw_frame(
     pic_data: String,
 ) -> Response {
     let mut args = Map::new();
-    args.insert("PicID".to_string(), Value::from(pic_id));
+    args.insert("PicId".to_string(), Value::from(pic_id));
     args.insert("PicNum".to_string(), Value::from(pic_num));
     args.insert("PicOffset".to_string(), Value::from(pic_offset));
     args.insert("PicWidth".to_string(), Value::from(64));
@@ -324,7 +324,7 @@ mod tests {
         if command == "Draw/GetHttpGifId" {
             (
                 StatusCode::OK,
-                Json(json!({ "error_code": 0, "PicID": 42 })),
+                Json(json!({ "error_code": 0, "PicId": 42 })),
             )
         } else {
             (StatusCode::OK, Json(json!({ "error_code": 0 })))
@@ -398,7 +398,7 @@ mod tests {
         assert_eq!(captured.len(), 2);
         assert_eq!(captured[0]["Command"], "Draw/GetHttpGifId");
         assert_eq!(captured[1]["Command"], "Draw/SendHttpGif");
-        assert_eq!(captured[1]["PicID"], 42);
+        assert_eq!(captured[1]["PicId"], 42);
         assert_eq!(captured[1]["PicNum"], 1);
         assert_eq!(captured[1]["PicOffset"], 0);
         assert_eq!(captured[1]["PicWidth"], 64);

@@ -15,7 +15,7 @@
 
 ## 4. Draw fill implementation and tests
 
-- [x] 4.1 Implement the fill handler: generate the uniform buffer, fetch a PicID, build the automation payload, and send it to Pixoo.
+- [x] 4.1 Implement the fill handler: generate the uniform buffer, fetch a PicId, build the automation payload, and send it to Pixoo.
 - [x] 4.2 Add remote tests (mock Pixoo server) to assert the command sequence and payload contents for a successful fill.
 
 ## 5. Wrap-up
