@@ -59,6 +59,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pixoo_base_url = %config.pixoo_base_url,
         pixoo_client = true,
         health_forward = config.health_forward,
+        animation_speed_factor = config.animation_speed_factor,
+        max_image_size = config.max_image_size,
         "Pixoo bridge configuration loaded"
     );
 
