@@ -406,8 +406,7 @@ fn parse_timezone_offset(value: &str) -> Result<i8, String> {
         return Err("offset must be between -12 and 14".to_string());
     }
 
-    #[allow(clippy::cast_possible_truncation)]
-    Ok(parsed as i8)
+    Ok(i8::try_from(parsed).unwrap())
 }
 
 fn current_utc_seconds() -> Result<i64, String> {
