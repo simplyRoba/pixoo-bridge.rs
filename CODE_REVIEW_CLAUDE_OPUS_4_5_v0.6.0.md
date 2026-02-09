@@ -260,7 +260,7 @@ Reduces boilerplate compared to manual `impl Display`.
 
 The project has an `openspec/` directory but the code doesn't use procedural macros to generate the spec from code. Using `utoipa` would keep the spec in sync with the implementation.
 
-### 6. Use Typed Extractors for Path Parameters
+### 6. [x] Use Typed Extractors for Path Parameters (won't fix)
 
 ```rust
 // Instead of parsing strings manually:
@@ -273,6 +273,8 @@ async fn stopwatch(Path(action): Path<StopwatchAction>) -> Response {
 ```
 
 Axum can deserialize path parameters directly into enums.
+
+**Resolution:** Won't fix. Current `FromStr` + manual parsing provides better error messages with allowed values. Typed extractors would lose this UX benefit.
 
 ### 7. [x] Add Tracing Spans
 
