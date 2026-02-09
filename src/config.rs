@@ -193,13 +193,13 @@ fn parse_byte_size(input: &str) -> Option<usize> {
 
     // Find where the numeric part ends and the suffix begins
     let num_end = upper
-        .find(|c: char| !c.is_ascii_digit() && c != '.')
+        .find(|c: char| !c.is_ascii_digit())
         .unwrap_or(upper.len());
 
     let (num_str, suffix) = upper.split_at(num_end);
-    let number: f64 = num_str.parse().ok()?;
+    let number: usize = num_str.parse().ok()?;
 
-    let multiplier: u64 = match suffix {
+    let multiplier: usize = match suffix {
         "" | "B" => 1,
         "K" | "KB" => 1024,
         "M" | "MB" => 1024 * 1024,
@@ -207,12 +207,7 @@ fn parse_byte_size(input: &str) -> Option<usize> {
         _ => return None,
     };
 
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
-    Some((number * multiplier as f64) as usize)
+    number.checked_mul(multiplier)
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine;
 
-use super::canvas::PIXOO_FRAME_LEN;
+use super::PIXOO_FRAME_LEN;
 
 /// Encode a 64x64 RGB pixel buffer into Base64 `PicData`.
 ///
@@ -22,7 +22,7 @@ pub fn encode_pic_data(pixels: &[u8]) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pixels::{uniform_pixel_buffer, PIXOO_FRAME_WIDTH};
+    use crate::pixels::{uniform_pixel_buffer, PIXOO_FRAME_DIM};
 
     #[test]
     fn encode_pic_data_black_buffer_is_all_a() {
@@ -47,7 +47,7 @@ mod tests {
         let buffer = uniform_pixel_buffer(255, 0, 128);
         let encoded = encode_pic_data(&buffer).expect("encoded");
         let mut expected_pixels = Vec::with_capacity(PIXOO_FRAME_LEN);
-        for _ in 0..(PIXOO_FRAME_WIDTH * PIXOO_FRAME_WIDTH) {
+        for _ in 0..(PIXOO_FRAME_DIM * PIXOO_FRAME_DIM) {
             expected_pixels.extend_from_slice(&[255, 0, 128]);
         }
         let expected = STANDARD_NO_PAD.encode(&expected_pixels);

@@ -6,7 +6,7 @@ use image::{
 use std::io::Cursor;
 use tracing::warn;
 
-use super::canvas::{PIXOO_FRAME_HEIGHT, PIXOO_FRAME_WIDTH, PIXOO_PIXEL_BYTES};
+use super::{PIXOO_FRAME_DIM, PIXOO_FRAME_LEN};
 
 const MAX_ANIMATION_FRAMES: usize = 60;
 
@@ -139,34 +139,31 @@ fn decode_animation_frames<'a>(
     Ok(frames)
 }
 
-#[allow(clippy::cast_possible_truncation)] // 64 always fits in u32
 fn resize_and_extract(img: &DynamicImage) -> Vec<u8> {
-    let resized = img.resize_exact(
-        PIXOO_FRAME_WIDTH as u32,
-        PIXOO_FRAME_HEIGHT as u32,
-        FilterType::Triangle,
-    );
+    let resized = img.resize_exact(PIXOO_FRAME_DIM, PIXOO_FRAME_DIM, FilterType::Triangle);
     let rgba = resized.to_rgba8();
     composite_to_rgb(&rgba)
 }
 
 /// Composites RGBA pixels against a black background and returns flat RGB bytes.
 fn composite_to_rgb(rgba: &RgbaImage) -> Vec<u8> {
-    let pixel_count = PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT;
-    let mut rgb = Vec::with_capacity(pixel_count * PIXOO_PIXEL_BYTES);
+    let mut rgb = Vec::with_capacity(PIXOO_FRAME_LEN);
 
     for pixel in rgba.pixels() {
         let [r, g, b, a] = pixel.0;
-        let alpha = f32::from(a) / 255.0;
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        {
-            rgb.push((f32::from(r) * alpha) as u8);
-            rgb.push((f32::from(g) * alpha) as u8);
-            rgb.push((f32::from(b) * alpha) as u8);
-        }
+        rgb.push(premultiply(r, a));
+        rgb.push(premultiply(g, a));
+        rgb.push(premultiply(b, a));
     }
 
     rgb
+}
+
+/// Premultiplies a color channel by alpha against a black background.
+/// Max value: 255 * 255 / 255 = 255, so the result always fits in `u8`.
+fn premultiply(channel: u8, alpha: u8) -> u8 {
+    // Unwrap is safe: max result is 255 * 255 / 255 = 255
+    u8::try_from(u16::from(channel) * u16::from(alpha) / 255).unwrap()
 }
 
 #[cfg(test)]
@@ -233,10 +230,7 @@ mod tests {
         let data = create_solid_jpeg(100, 100);
         let frames = decode_upload(&data, Some("image/jpeg")).expect("decode");
         assert_eq!(frames.len(), 1);
-        assert_eq!(
-            frames[0].rgb_buffer.len(),
-            PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT * PIXOO_PIXEL_BYTES
-        );
+        assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
     }
 
     #[test]
@@ -244,10 +238,7 @@ mod tests {
         let data = create_solid_png(32, 32, 255, 0, 0);
         let frames = decode_upload(&data, Some("image/png")).expect("decode");
         assert_eq!(frames.len(), 1);
-        assert_eq!(
-            frames[0].rgb_buffer.len(),
-            PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT * PIXOO_PIXEL_BYTES
-        );
+        assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
         // All pixels should be red
         assert_eq!(frames[0].rgb_buffer[0], 255);
         assert_eq!(frames[0].rgb_buffer[1], 0);
@@ -260,10 +251,7 @@ mod tests {
         let frames = decode_upload(&data, Some("image/gif")).expect("decode");
         assert_eq!(frames.len(), 5);
         for frame in &frames {
-            assert_eq!(
-                frame.rgb_buffer.len(),
-                PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT * PIXOO_PIXEL_BYTES
-            );
+            assert_eq!(frame.rgb_buffer.len(), PIXOO_FRAME_LEN);
         }
     }
 
