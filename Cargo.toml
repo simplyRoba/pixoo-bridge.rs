@@ -27,6 +27,7 @@ chrono = { version = "0.4", features = ["alloc"] }
 validator = { version = "0.20", features = ["derive"] }
 base64 = "0.22"
 uuid = { version = "1", features = ["v4", "std"] }
+thiserror = "1.0"
 
 [dev-dependencies]
 tokio-test = "0.4"

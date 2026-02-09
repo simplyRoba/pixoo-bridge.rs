@@ -1,55 +1,30 @@
 use axum::{http::StatusCode, Json};
 use serde::Serialize;
 use serde_json::Value;
-use std::error::Error;
-use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum PixooError {
-    Http(reqwest::Error),
+    #[error("http error: {0}")]
+    Http(#[from] reqwest::Error),
+
+    #[error("unexpected HTTP status: {0}")]
     HttpStatus(u16),
+
+    #[error("invalid base url: {0}")]
     InvalidBaseUrl(String),
+
+    #[error("invalid response: {0}")]
     InvalidResponse(String),
+
+    #[error("missing error_code in response")]
     MissingErrorCode,
+
+    #[error("invalid error_code value: {0}")]
     InvalidErrorCode(Value),
+
+    #[error("device returned error_code {code}")]
     DeviceError { code: i64, payload: Value },
-}
-
-impl fmt::Display for PixooError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PixooError::Http(err) => write!(formatter, "http error: {err}"),
-            PixooError::HttpStatus(status) => write!(formatter, "unexpected HTTP status: {status}"),
-            PixooError::InvalidBaseUrl(message) => {
-                write!(formatter, "invalid base url: {message}")
-            }
-            PixooError::InvalidResponse(message) => {
-                write!(formatter, "invalid response: {message}")
-            }
-            PixooError::MissingErrorCode => formatter.write_str("missing error_code in response"),
-            PixooError::InvalidErrorCode(value) => {
-                write!(formatter, "invalid error_code value: {value}")
-            }
-            PixooError::DeviceError { code, .. } => {
-                write!(formatter, "device returned error_code {code}")
-            }
-        }
-    }
-}
-
-impl Error for PixooError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            PixooError::Http(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl From<reqwest::Error> for PixooError {
-    fn from(err: reqwest::Error) -> Self {
-        PixooError::Http(err)
-    }
 }
 
 impl PixooError {

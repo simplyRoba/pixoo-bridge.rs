@@ -237,7 +237,7 @@ Create `src/test_utils.rs` (or a separate `tests/` directory) with:
 - `MockPixooServer` wrapper
 - Common state builders
 
-### 4. Use `thiserror` for Error Definitions
+### 4. [x] Use `thiserror` for Error Definitions
 
 ```rust
 use thiserror::Error;
