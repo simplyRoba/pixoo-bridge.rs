@@ -182,10 +182,9 @@ mod tests {
         let frames = decode_upload(&data, Some("image/jpeg")).expect("decode");
         assert_eq!(frames.len(), 1);
         assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
-        // JPEG compression is lossy, so pixels are near-black
-        assert!(frames[0].rgb_buffer[0] < 10);
-        assert!(frames[0].rgb_buffer[1] < 10);
-        assert!(frames[0].rgb_buffer[2] < 10);
+        assert_eq!(frames[0].rgb_buffer[0], 0);
+        assert_eq!(frames[0].rgb_buffer[1], 0);
+        assert_eq!(frames[0].rgb_buffer[2], 0);
     }
 
     #[test]
@@ -194,10 +193,9 @@ mod tests {
         let frames = decode_upload(&data, Some("image/jpeg")).expect("decode");
         assert_eq!(frames.len(), 1);
         assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
-        // JPEG compression is lossy, so pixels are near-white
-        assert!(frames[0].rgb_buffer[0] > 245);
-        assert!(frames[0].rgb_buffer[1] > 245);
-        assert!(frames[0].rgb_buffer[2] > 245);
+        assert_eq!(frames[0].rgb_buffer[0], 255);
+        assert_eq!(frames[0].rgb_buffer[1], 255);
+        assert_eq!(frames[0].rgb_buffer[2], 255);
     }
 
     #[test]
