@@ -12,7 +12,7 @@ use std::sync::Arc;
 use tracing::error;
 use validator::{Validate, ValidationError, ValidationErrors};
 
-const SINGLE_FRAME_PIC_SPEED_MS: i64 = 9999;
+const SINGLE_FRAME_PIC_SPEED_MS: u32 = 9999;
 
 pub fn mount_draw_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
     router
@@ -116,9 +116,8 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
         Err(resp) => return resp,
     };
 
-    // Frame count is capped at 60, so these casts are safe.
-    #[allow(clippy::cast_possible_wrap)]
-    let pic_num = frames.len() as i64;
+    // Frame count is capped at 60, so this conversion is safe.
+    let pic_num = u32::try_from(frames.len()).unwrap();
     let speed_factor = state.animation_speed_factor;
 
     for (offset, frame) in frames.iter().enumerate() {
@@ -133,14 +132,17 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
         let pic_speed = if frame.delay_ms == 0 {
             SINGLE_FRAME_PIC_SPEED_MS
         } else {
-            #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-            let speed = (frame.delay_ms as f64 * speed_factor).round() as i64;
-            speed.max(1)
+            // f64::from(u32) is lossless; speed_factor > 0 is validated at config time
+            let speed = (f64::from(frame.delay_ms) * speed_factor).round().max(1.0);
+            // Saturating cast: guaranteed ≥ 1.0; values > u32::MAX saturate to u32::MAX
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let ms = speed as u32;
+            ms
         };
 
-        #[allow(clippy::cast_possible_wrap)] // offset is max 59
-        let resp =
-            send_draw_frame(client, pic_id, pic_num, offset as i64, pic_speed, pic_data).await;
+        // offset is max 59, so this conversion is safe
+        let pic_offset = u32::try_from(offset).unwrap();
+        let resp = send_draw_frame(client, pic_id, pic_num, pic_offset, pic_speed, pic_data).await;
         if resp.status() != StatusCode::OK {
             return resp;
         }
@@ -212,9 +214,9 @@ async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
 async fn send_draw_frame(
     client: &PixooClient,
     pic_id: i64,
-    pic_num: i64,
-    pic_offset: i64,
-    pic_speed: i64,
+    pic_num: u32,
+    pic_offset: u32,
+    pic_speed: u32,
     pic_data: String,
 ) -> Response {
     let mut args = Map::new();

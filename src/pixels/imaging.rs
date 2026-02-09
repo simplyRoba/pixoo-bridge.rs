@@ -12,7 +12,7 @@ const MAX_ANIMATION_FRAMES: usize = 60;
 
 pub struct DecodedFrame {
     pub rgb_buffer: Vec<u8>,
-    pub delay_ms: u64,
+    pub delay_ms: u32,
 }
 
 #[derive(Debug)]
@@ -122,11 +122,7 @@ fn decode_animation_frames<'a>(
         .take(MAX_ANIMATION_FRAMES)
         .map(|frame| {
             let (numer, denom) = frame.delay().numer_denom_ms();
-            let delay_ms = if denom == 0 {
-                0
-            } else {
-                u64::from(numer) / u64::from(denom)
-            };
+            let delay_ms = if denom == 0 { 0 } else { numer / denom };
             let img = DynamicImage::ImageRgba8(frame.into_buffer());
             let rgb_buffer = resize_and_extract(&img);
             DecodedFrame {
