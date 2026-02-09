@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.9.0...v0.10.0) (2026-02-09)
+
+
+### Features
+
+* **logging:** enhance startup log to include animation speed factor and max image size ([85f26b0](https://github.com/simplyRoba/pixoo-bridge.rs/commit/85f26b09b1022a52b941abbdf8e4e573298a15ee))
+
+
+### Bug Fixes
+
+* standardize PicID to PicId across documentation and implementation ([2d2bcf4](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2d2bcf407d4a537427eb4916edcdf2acfae0b145))
+
 ## [0.9.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.8.1...v0.9.0) (2026-02-09)
 
 
