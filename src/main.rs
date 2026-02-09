@@ -45,6 +45,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = Arc::new(AppState {
         health_forward: config.health_forward,
         pixoo_client,
+        animation_speed_factor: config.animation_speed_factor,
+        max_image_size: config.max_image_size,
     });
     let app = build_app(state.clone());
 
@@ -172,11 +174,7 @@ mod tests {
 
         let client =
             PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
-        let state = AppState {
-            health_forward: false,
-            pixoo_client: client,
-        };
-        let app = build_app(Arc::new(state));
+        let app = build_app(Arc::new(AppState::with_client(client)));
 
         let response = app
             .oneshot(
@@ -202,10 +200,8 @@ mod tests {
 
         let client =
             PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
-        let state = AppState {
-            health_forward: true,
-            pixoo_client: client,
-        };
+        let mut state = AppState::with_client(client);
+        state.health_forward = true;
         let app = build_app(Arc::new(state));
 
         let response = app
@@ -227,11 +223,7 @@ mod tests {
         let server = MockServer::start_async().await;
         let client =
             PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
-        let state = AppState {
-            health_forward: false,
-            pixoo_client: client,
-        };
-        let app = build_app(Arc::new(state));
+        let app = build_app(Arc::new(AppState::with_client(client)));
 
         let response = app
             .oneshot(

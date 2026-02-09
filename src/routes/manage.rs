@@ -406,8 +406,7 @@ fn parse_timezone_offset(value: &str) -> Result<i8, String> {
         return Err("offset must be between -12 and 14".to_string());
     }
 
-    #[allow(clippy::cast_possible_truncation)]
-    Ok(parsed as i8)
+    Ok(i8::try_from(parsed).unwrap())
 }
 
 fn current_utc_seconds() -> Result<i64, String> {
@@ -664,10 +663,7 @@ mod tests {
 
     fn manage_state_with_client(base_url: &str) -> Arc<AppState> {
         let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
-        Arc::new(AppState {
-            health_forward: false,
-            pixoo_client: client,
-        })
+        Arc::new(AppState::with_client(client))
     }
 
     #[tokio::test]

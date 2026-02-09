@@ -1,14 +1,4 @@
-/// Pixoo display width in pixels.
-pub const PIXOO_FRAME_WIDTH: usize = 64;
-
-/// Pixoo display height in pixels.
-pub const PIXOO_FRAME_HEIGHT: usize = 64;
-
-/// Bytes per pixel (RGB).
-pub const PIXOO_PIXEL_BYTES: usize = 3;
-
-/// Total bytes for a single frame (64 × 64 × 3).
-pub const PIXOO_FRAME_LEN: usize = PIXOO_FRAME_WIDTH * PIXOO_FRAME_HEIGHT * PIXOO_PIXEL_BYTES;
+use super::{PIXOO_FRAME_LEN, PIXOO_PIXEL_BYTES};
 
 /// Creates a uniform pixel buffer where every pixel has the same RGB color.
 pub fn uniform_pixel_buffer(red: u8, green: u8, blue: u8) -> Vec<u8> {

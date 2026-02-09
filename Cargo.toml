@@ -16,7 +16,7 @@ module_name_repetitions = "allow"
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
-axum = "0.8"
+axum = { version = "0.8", features = ["multipart"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
@@ -26,6 +26,7 @@ tower = "0.5"
 chrono = { version = "0.4", features = ["alloc"] }
 validator = { version = "0.20", features = ["derive"] }
 base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 uuid = { version = "1", features = ["v4", "std"] }
 thiserror = "1.0"
 

@@ -18,6 +18,8 @@ This project is under heavy development and does not provide user-facing functio
 | `PIXOO_BRIDGE_HEALTH_FORWARD` | no | `true` | `true`/`false` to control whether `/health` cascades to the device. |
 | `PIXOO_BRIDGE_LOG_LEVEL` | no | `info` | Controls logging verbosity (`debug`, `info`, `warn`, `error`). |
 | `PIXOO_BRIDGE_PORT` | no | `4000` | HTTP listener port override that keeps container/network mappings aligned with runtime behavior. |
+| `PIXOO_BRIDGE_MAX_IMAGE_SIZE` | no | `5MB` | Maximum accepted image upload size. Accepts human-readable values like `5MB`, `128KB`. |
+| `PIXOO_ANIMATION_SPEED_FACTOR` | no | `1.4` | Multiplier applied to animation frame delays read from GIF/WebP files. Values > 1 slow down, < 1 speed up. |
 
 The bridge exits on startup if `PIXOO_BASE_URL` is missing or invalid so misconfigurations fail fast.
 
@@ -35,6 +37,7 @@ On startup the container logs the resolved configuration (health forwarding flag
 | `POST` | `/tools/scoreboard` | Set scores. Body: `{ "blue_score": 0-999, "red_score": 0-999 }` | `200` | `400` out-of-range |
 | `POST` | `/tools/soundmeter/{action}` | Control soundmeter. Action: `start`, `stop` | `200` | `400` invalid action |
 | `POST` | `/draw/fill` | Fill the display with a single RGB color. Body: `{ "red": 0-255, "green": 0-255, "blue": 0-255 }` | `200` | `400` invalid payload |
+| `POST` | `/draw/upload` | Upload an image (JPEG, PNG, WebP, GIF) to display. Multipart form with `file` field. Animated GIF/WebP supported (max 60 frames). | `200` | `400` invalid format/missing file, `413` file too large |
 | `GET` | `/manage/settings` | Display settings (visibility, brightness, rotation, mirror, temp unit, clock ID). | `200` | — |
 | `GET` | `/manage/time` | Device time as ISO-8601 UTC/local timestamps. | `200` | — |
 | `GET` | `/manage/weather` | Weather data (temps, pressure, humidity, wind). | `200` | — |
