@@ -71,10 +71,9 @@ mod tests {
     }
 
     fn system_state(client: PixooClient, health_forward: bool) -> Arc<AppState> {
-        Arc::new(AppState {
-            health_forward,
-            pixoo_client: client,
-        })
+        let mut state = AppState::with_client(client);
+        state.health_forward = health_forward;
+        Arc::new(state)
     }
 
     async fn send_request(app: &Router, method: Method, uri: &str) -> (StatusCode, String) {

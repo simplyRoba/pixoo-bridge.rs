@@ -1,7 +1,7 @@
-use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
+use crate::pixels::{decode_upload, encode_pic_data, uniform_pixel_buffer, ImageError};
 use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use crate::state::AppState;
-use axum::extract::{Json, State};
+use axum::extract::{Json, Multipart, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
@@ -15,7 +15,9 @@ use validator::{Validate, ValidationError, ValidationErrors};
 const SINGLE_FRAME_PIC_SPEED_MS: i64 = 9999;
 
 pub fn mount_draw_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
-    router.route("/draw/fill", post(draw_fill))
+    router
+        .route("/draw/fill", post(draw_fill))
+        .route("/draw/upload", post(draw_upload))
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -68,7 +70,105 @@ async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value
         Err(resp) => return resp,
     };
 
-    send_draw_gif(client, pic_id, 1, 0, pic_data).await
+    send_draw_frame(client, pic_id, 1, 0, SINGLE_FRAME_PIC_SPEED_MS, pic_data).await
+}
+
+#[tracing::instrument(skip(state, multipart))]
+async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipart) -> Response {
+    // Extract the file field from the multipart request
+    let (bytes, content_type) = match extract_file_field(&mut multipart).await {
+        Ok(result) => result,
+        Err(resp) => return resp,
+    };
+
+    // Check file size against configured limit
+    if bytes.len() > state.max_image_size {
+        return (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(json!({
+                "error": "file too large",
+                "limit": state.max_image_size,
+                "actual": bytes.len(),
+            })),
+        )
+            .into_response();
+    }
+
+    // Decode and resize the image
+    let frames = match decode_upload(&bytes, content_type.as_deref()) {
+        Ok(frames) => frames,
+        Err(ImageError::UnsupportedFormat) => {
+            return validation_error_simple("file", "unsupported image format");
+        }
+        Err(ImageError::DecodeFailed(msg)) => {
+            error!(error = %msg, "failed to process image");
+            return validation_error_simple("file", "failed to process image");
+        }
+    };
+
+    if frames.is_empty() {
+        return validation_error_simple("file", "image contains no frames");
+    }
+
+    let client = &state.pixoo_client;
+    let pic_id = match get_next_pic_id(client).await {
+        Ok(value) => value,
+        Err(resp) => return resp,
+    };
+
+    // Frame count is capped at 60, so these casts are safe.
+    #[allow(clippy::cast_possible_wrap)]
+    let pic_num = frames.len() as i64;
+    let speed_factor = state.animation_speed_factor;
+
+    for (offset, frame) in frames.iter().enumerate() {
+        let pic_data = match encode_pic_data(&frame.rgb_buffer) {
+            Ok(value) => value,
+            Err(err) => {
+                error!(error = %err, frame = offset, "failed to encode frame");
+                return internal_server_error("failed to encode frame");
+            }
+        };
+
+        let pic_speed = if frame.delay_ms == 0 {
+            SINGLE_FRAME_PIC_SPEED_MS
+        } else {
+            #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+            let speed = (frame.delay_ms as f64 * speed_factor).round() as i64;
+            speed.max(1)
+        };
+
+        #[allow(clippy::cast_possible_wrap)] // offset is max 59
+        let resp =
+            send_draw_frame(client, pic_id, pic_num, offset as i64, pic_speed, pic_data).await;
+        if resp.status() != StatusCode::OK {
+            return resp;
+        }
+    }
+
+    StatusCode::OK.into_response()
+}
+
+async fn extract_file_field(
+    multipart: &mut Multipart,
+) -> Result<(Vec<u8>, Option<String>), Response> {
+    while let Ok(Some(field)) = multipart.next_field().await {
+        if field.name() == Some("file") {
+            let content_type = field.content_type().map(String::from);
+            let bytes = field.bytes().await.map_err(|err| {
+                let message = err.to_string();
+                validation_error_simple("file", &message)
+            })?;
+
+            if bytes.is_empty() {
+                return Err(validation_error_simple("file", "file is empty"));
+            }
+
+            return Ok((bytes.to_vec(), content_type));
+        }
+    }
+
+    Err(validation_error_simple("file", "missing file field"))
 }
 
 async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
@@ -109,11 +209,12 @@ async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
     }
 }
 
-async fn send_draw_gif(
+async fn send_draw_frame(
     client: &PixooClient,
     pic_id: i64,
     pic_num: i64,
     pic_offset: i64,
+    pic_speed: i64,
     pic_data: String,
 ) -> Response {
     let mut args = Map::new();
@@ -121,10 +222,7 @@ async fn send_draw_gif(
     args.insert("PicNum".to_string(), Value::from(pic_num));
     args.insert("PicOffset".to_string(), Value::from(pic_offset));
     args.insert("PicWidth".to_string(), Value::from(64));
-    args.insert(
-        "PicSpeed".to_string(),
-        Value::from(SINGLE_FRAME_PIC_SPEED_MS),
-    );
+    args.insert("PicSpeed".to_string(), Value::from(pic_speed));
     args.insert("PicData".to_string(), Value::String(pic_data));
 
     match client.send_command(PixooCommand::DrawSendGif, args).await {
@@ -281,11 +379,7 @@ mod tests {
     async fn draw_fill_sends_expected_command_sequence() {
         let (base_url, requests) = start_pixoo_mock().await;
         let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
-        let state = Arc::new(AppState {
-            health_forward: false,
-            pixoo_client: client,
-        });
-        let app = build_draw_app(state);
+        let app = build_draw_app(Arc::new(AppState::with_client(client)));
 
         let (status, body) = send_json_request(
             &app,
@@ -315,11 +409,8 @@ mod tests {
     #[tokio::test]
     async fn draw_fill_rejects_invalid_payload() {
         let (base_url, _requests) = start_pixoo_mock().await;
-        let state = Arc::new(AppState {
-            health_forward: false,
-            pixoo_client: PixooClient::new(base_url, PixooClientConfig::default()).expect("client"),
-        });
-        let app = build_draw_app(state);
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
+        let app = build_draw_app(Arc::new(AppState::with_client(client)));
         let (status, body) = send_json_request(
             &app,
             Method::POST,
@@ -332,5 +423,198 @@ mod tests {
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error"], "validation failed");
         assert!(json_body["details"]["red"].is_array());
+    }
+
+    // --- draw_upload tests ---
+
+    use image::codecs::gif::GifEncoder;
+    use image::{DynamicImage, Frame, ImageBuffer, ImageFormat, Rgba, RgbaImage};
+    use std::io::Cursor;
+    use std::time::Duration;
+
+    fn create_test_png() -> Vec<u8> {
+        let img: RgbaImage = ImageBuffer::from_fn(16, 16, |_, _| Rgba([255, 0, 0, 255]));
+        let mut buf = Vec::new();
+        DynamicImage::ImageRgba8(img)
+            .write_to(&mut Cursor::new(&mut buf), ImageFormat::Png)
+            .expect("write png");
+        buf
+    }
+
+    fn create_test_gif(frame_count: usize) -> Vec<u8> {
+        let mut buf = Vec::new();
+        {
+            let mut encoder = GifEncoder::new(&mut buf);
+            encoder
+                .set_repeat(image::codecs::gif::Repeat::Infinite)
+                .unwrap();
+            for i in 0..frame_count {
+                let v = ((i * 10) % 256) as u8;
+                let img: RgbaImage = ImageBuffer::from_fn(8, 8, |_, _| Rgba([v, v, v, 255]));
+                let frame = Frame::from_parts(
+                    img,
+                    0,
+                    0,
+                    image::Delay::from_saturating_duration(Duration::from_millis(100)),
+                );
+                encoder.encode_frame(frame).expect("encode frame");
+            }
+        }
+        buf
+    }
+
+    fn multipart_body(field_name: &str, content_type: &str, data: &[u8]) -> (String, Vec<u8>) {
+        let boundary = "----TestBoundary12345";
+        let mut body = Vec::new();
+        body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+        body.extend_from_slice(
+            format!(
+                "Content-Disposition: form-data; name=\"{field_name}\"; filename=\"test.bin\"\r\n"
+            )
+            .as_bytes(),
+        );
+        body.extend_from_slice(format!("Content-Type: {content_type}\r\n\r\n").as_bytes());
+        body.extend_from_slice(data);
+        body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+        (format!("multipart/form-data; boundary={boundary}"), body)
+    }
+
+    fn multipart_body_no_file() -> (String, Vec<u8>) {
+        let boundary = "----TestBoundary12345";
+        let mut body = Vec::new();
+        body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+        body.extend_from_slice(
+            b"Content-Disposition: form-data; name=\"other\"\r\n\r\nsome value\r\n",
+        );
+        body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+        (format!("multipart/form-data; boundary={boundary}"), body)
+    }
+
+    async fn send_multipart_request(
+        app: &Router,
+        content_type_header: &str,
+        body: Vec<u8>,
+    ) -> (StatusCode, String) {
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/draw/upload")
+            .header("content-type", content_type_header)
+            .body(Body::from(body))
+            .unwrap();
+        let response = app.clone().oneshot(req).await.unwrap();
+        let status = response.status();
+        let body_bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap_or_default();
+        (status, String::from_utf8_lossy(&body_bytes).to_string())
+    }
+
+    fn upload_test_state(base_url: String) -> Arc<AppState> {
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
+        Arc::new(AppState::with_client(client))
+    }
+
+    #[tokio::test]
+    async fn upload_static_png_sends_single_frame() {
+        let (base_url, requests) = start_pixoo_mock().await;
+        let app = build_draw_app(upload_test_state(base_url));
+
+        let png_data = create_test_png();
+        let (ct, body) = multipart_body("file", "image/png", &png_data);
+        let (status, _) = send_multipart_request(&app, &ct, body).await;
+
+        assert_eq!(status, StatusCode::OK);
+
+        let captured = requests.lock().unwrap();
+        assert_eq!(captured.len(), 2);
+        assert_eq!(captured[0]["Command"], "Draw/GetHttpGifId");
+        assert_eq!(captured[1]["Command"], "Draw/SendHttpGif");
+        assert_eq!(captured[1]["PicNum"], 1);
+        assert_eq!(captured[1]["PicOffset"], 0);
+        assert_eq!(captured[1]["PicWidth"], 64);
+    }
+
+    #[tokio::test]
+    async fn upload_animated_gif_sends_multiple_frames() {
+        let (base_url, requests) = start_pixoo_mock().await;
+        let app = build_draw_app(upload_test_state(base_url));
+
+        let gif_data = create_test_gif(3);
+        let (ct, body) = multipart_body("file", "image/gif", &gif_data);
+        let (status, _) = send_multipart_request(&app, &ct, body).await;
+
+        assert_eq!(status, StatusCode::OK);
+
+        let captured = requests.lock().unwrap();
+        // 1 GetHttpGifId + 3 SendHttpGif
+        assert_eq!(captured.len(), 4);
+        assert_eq!(captured[0]["Command"], "Draw/GetHttpGifId");
+        for i in 0..3 {
+            assert_eq!(captured[i + 1]["Command"], "Draw/SendHttpGif");
+            assert_eq!(captured[i + 1]["PicNum"], 3);
+            assert_eq!(captured[i + 1]["PicOffset"], i as i64);
+            assert_eq!(captured[i + 1]["PicWidth"], 64);
+        }
+    }
+
+    #[tokio::test]
+    async fn upload_missing_file_field_returns_400() {
+        let (base_url, _) = start_pixoo_mock().await;
+        let app = build_draw_app(upload_test_state(base_url));
+
+        let (ct, body) = multipart_body_no_file();
+        let (status, resp_body) = send_multipart_request(&app, &ct, body).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&resp_body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+    }
+
+    #[tokio::test]
+    async fn upload_empty_file_returns_400() {
+        let (base_url, _) = start_pixoo_mock().await;
+        let app = build_draw_app(upload_test_state(base_url));
+
+        let (ct, body) = multipart_body("file", "image/png", b"");
+        let (status, resp_body) = send_multipart_request(&app, &ct, body).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&resp_body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+    }
+
+    #[tokio::test]
+    async fn upload_oversized_file_returns_413() {
+        let (base_url, _) = start_pixoo_mock().await;
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
+        let mut state = AppState::with_client(client);
+        state.max_image_size = 100; // 100 byte limit
+        let app = build_draw_app(Arc::new(state));
+
+        let png_data = create_test_png(); // larger than 100 bytes
+        let (ct, body) = multipart_body("file", "image/png", &png_data);
+        let (status, resp_body) = send_multipart_request(&app, &ct, body).await;
+
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+        let json_body: Value = serde_json::from_str(&resp_body).unwrap();
+        assert_eq!(json_body["error"], "file too large");
+        assert_eq!(json_body["limit"], 100);
+    }
+
+    #[tokio::test]
+    async fn upload_unsupported_format_returns_400() {
+        let (base_url, _) = start_pixoo_mock().await;
+        let app = build_draw_app(upload_test_state(base_url));
+
+        let (ct, body) = multipart_body("file", "image/bmp", b"fake bmp data");
+        let (status, resp_body) = send_multipart_request(&app, &ct, body).await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&resp_body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert!(json_body["details"]["file"]
+            .as_str()
+            .unwrap()
+            .contains("unsupported image format"));
     }
 }

@@ -664,10 +664,7 @@ mod tests {
 
     fn manage_state_with_client(base_url: &str) -> Arc<AppState> {
         let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
-        Arc::new(AppState {
-            health_forward: false,
-            pixoo_client: client,
-        })
+        Arc::new(AppState::with_client(client))
     }
 
     #[tokio::test]
