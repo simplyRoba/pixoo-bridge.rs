@@ -216,7 +216,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 If the bridge can't function without a Pixoo device, make it a hard requirement.
 
-### 2. Builder Pattern for PixooClient
+### 2. [x] Builder Pattern for PixooClient (won't fix)
 
 ```rust
 PixooClient::builder()
@@ -228,6 +228,8 @@ PixooClient::builder()
 ```
 
 This makes the client configurable at construction time rather than reading globals.
+
+**Resolution:** Won't fix. `PixooClientConfig` struct already provides the same benefits (named fields, defaults, clear construction) with less boilerplate.
 
 ### 3. [x] Extract a Shared Test Utilities Module
 
