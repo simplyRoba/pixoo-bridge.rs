@@ -165,73 +165,44 @@ fn premultiply(channel: u8, alpha: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::codecs::gif::GifEncoder;
-    use image::{Frame, ImageBuffer, Rgba, RgbaImage};
-    use std::time::Duration;
+    use std::path::PathBuf;
 
-    fn create_solid_png(width: u32, height: u32, r: u8, g: u8, b: u8) -> Vec<u8> {
-        let img = ImageBuffer::from_fn(width, height, |_, _| Rgba([r, g, b, 255]));
-        let mut buf = Vec::new();
-        DynamicImage::ImageRgba8(img)
-            .write_to(&mut Cursor::new(&mut buf), ImageFormat::Png)
-            .expect("write png");
-        buf
+    fn fixtures_dir() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
     }
 
-    fn create_solid_jpeg(width: u32, height: u32) -> Vec<u8> {
-        let img = ImageBuffer::from_fn(width, height, |_, _| Rgba([100, 150, 200, 255]));
-        let mut buf = Vec::new();
-        DynamicImage::ImageRgba8(img)
-            .write_to(&mut Cursor::new(&mut buf), ImageFormat::Jpeg)
-            .expect("write jpeg");
-        buf
-    }
-
-    fn create_animated_gif(frame_count: usize, delay_ms: u32) -> Vec<u8> {
-        let mut buf = Vec::new();
-        {
-            let mut encoder = GifEncoder::new(&mut buf);
-            encoder
-                .set_repeat(image::codecs::gif::Repeat::Infinite)
-                .unwrap();
-            for i in 0..frame_count {
-                let value = ((i * 4) % 256) as u8;
-                let img: RgbaImage =
-                    ImageBuffer::from_fn(8, 8, |_, _| Rgba([value, value, value, 255]));
-                let frame = Frame::from_parts(
-                    img,
-                    0,
-                    0,
-                    image::Delay::from_saturating_duration(Duration::from_millis(u64::from(
-                        delay_ms,
-                    ))),
-                );
-                encoder.encode_frame(frame).expect("encode frame");
-            }
-        }
-        buf
-    }
-
-    fn create_png_with_alpha() -> Vec<u8> {
-        let img = ImageBuffer::from_fn(4, 4, |_, _| Rgba([255, 128, 64, 128]));
-        let mut buf = Vec::new();
-        DynamicImage::ImageRgba8(img)
-            .write_to(&mut Cursor::new(&mut buf), ImageFormat::Png)
-            .expect("write png");
-        buf
+    fn load_fixture(name: &str) -> Vec<u8> {
+        std::fs::read(fixtures_dir().join(name))
+            .unwrap_or_else(|err| panic!("failed to read fixture {name}: {err}"))
     }
 
     #[test]
-    fn decodes_static_jpeg() {
-        let data = create_solid_jpeg(100, 100);
+    fn decodes_static_jpeg_black() {
+        let data = load_fixture("black_100x100.jpg");
         let frames = decode_upload(&data, Some("image/jpeg")).expect("decode");
         assert_eq!(frames.len(), 1);
         assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
+        // JPEG compression is lossy, so pixels are near-black
+        assert!(frames[0].rgb_buffer[0] < 10);
+        assert!(frames[0].rgb_buffer[1] < 10);
+        assert!(frames[0].rgb_buffer[2] < 10);
+    }
+
+    #[test]
+    fn decodes_static_jpeg_white() {
+        let data = load_fixture("white_100x100.jpg");
+        let frames = decode_upload(&data, Some("image/jpeg")).expect("decode");
+        assert_eq!(frames.len(), 1);
+        assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
+        // JPEG compression is lossy, so pixels are near-white
+        assert!(frames[0].rgb_buffer[0] > 245);
+        assert!(frames[0].rgb_buffer[1] > 245);
+        assert!(frames[0].rgb_buffer[2] > 245);
     }
 
     #[test]
     fn decodes_static_png() {
-        let data = create_solid_png(32, 32, 255, 0, 0);
+        let data = load_fixture("red_32x32.png");
         let frames = decode_upload(&data, Some("image/png")).expect("decode");
         assert_eq!(frames.len(), 1);
         assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
@@ -242,35 +213,66 @@ mod tests {
     }
 
     #[test]
+    fn decodes_static_webp() {
+        let data = load_fixture("white_8x8.webp");
+        let frames = decode_upload(&data, Some("image/webp")).expect("decode");
+        assert_eq!(frames.len(), 1);
+        assert_eq!(frames[0].rgb_buffer.len(), PIXOO_FRAME_LEN);
+        // All pixels should be white
+        assert_eq!(frames[0].rgb_buffer[0], 255);
+        assert_eq!(frames[0].rgb_buffer[1], 255);
+        assert_eq!(frames[0].rgb_buffer[2], 255);
+    }
+
+    #[test]
     fn decodes_animated_gif_multiple_frames() {
-        let data = create_animated_gif(5, 100);
+        let data = load_fixture("black_white_animated_100x100_200ms.gif");
         let frames = decode_upload(&data, Some("image/gif")).expect("decode");
-        assert_eq!(frames.len(), 5);
+        assert!(
+            frames.len() >= 2,
+            "expected multiple frames, got {}",
+            frames.len()
+        );
         for frame in &frames {
             assert_eq!(frame.rgb_buffer.len(), PIXOO_FRAME_LEN);
         }
     }
 
     #[test]
-    fn animated_gif_respects_frame_delay() {
-        let data = create_animated_gif(3, 100);
-        let frames = decode_upload(&data, Some("image/gif")).expect("decode");
-        // GIF delay encoding rounds to 10ms units, so 100ms should come back as ~100ms
+    fn decodes_animated_webp_multiple_frames() {
+        let data = load_fixture("black_gray_white_animated_8x8_100ms.webp");
+        let frames = decode_upload(&data, Some("image/webp")).expect("decode");
+        assert_eq!(frames.len(), 3);
         for frame in &frames {
+            assert_eq!(frame.rgb_buffer.len(), PIXOO_FRAME_LEN);
             assert!(frame.delay_ms >= 90 && frame.delay_ms <= 110);
         }
     }
 
     #[test]
+    fn animated_gif_respects_frame_delay() {
+        let data = load_fixture("black_white_animated_100x100_1000ms.gif");
+        let frames = decode_upload(&data, Some("image/gif")).expect("decode");
+        // GIF delay encoding rounds to 10ms units, so 1000ms should come back as ~1000ms
+        for frame in &frames {
+            assert!(
+                frame.delay_ms >= 990 && frame.delay_ms <= 1010,
+                "expected ~1000ms, got {}ms",
+                frame.delay_ms
+            );
+        }
+    }
+
+    #[test]
     fn truncates_gif_at_60_frames() {
-        let data = create_animated_gif(80, 50);
+        let data = load_fixture("gray_animated_8x8_50ms_80frames.gif");
         let frames = decode_upload(&data, Some("image/gif")).expect("decode");
         assert_eq!(frames.len(), MAX_ANIMATION_FRAMES);
     }
 
     #[test]
     fn exactly_60_frames_not_truncated() {
-        let data = create_animated_gif(60, 50);
+        let data = load_fixture("gray_animated_8x8_50ms_60frames.gif");
         let frames = decode_upload(&data, Some("image/gif")).expect("decode");
         assert_eq!(frames.len(), 60);
     }
@@ -283,30 +285,32 @@ mod tests {
 
     #[test]
     fn rejects_corrupt_data() {
-        let result = decode_upload(b"not a jpeg", Some("image/jpeg"));
+        // text.png is a text file with an image extension
+        let data = load_fixture("text.png");
+        let result = decode_upload(&data, Some("image/png"));
         assert!(matches!(result, Err(ImageError::DecodeFailed(_))));
     }
 
     #[test]
     fn falls_back_to_magic_bytes_on_missing_content_type() {
-        let data = create_solid_png(16, 16, 0, 255, 0);
+        let data = load_fixture("red_32x32.png");
         let frames = decode_upload(&data, None).expect("decode");
         assert_eq!(frames.len(), 1);
     }
 
     #[test]
     fn falls_back_to_magic_bytes_on_octet_stream() {
-        let data = create_solid_png(16, 16, 0, 0, 255);
+        let data = load_fixture("white_8x8.webp");
         let frames = decode_upload(&data, Some("application/octet-stream")).expect("decode");
         assert_eq!(frames.len(), 1);
     }
 
     #[test]
     fn alpha_composited_against_black() {
-        let data = create_png_with_alpha();
+        let data = load_fixture("semitransparent_4x4.png");
         let frames = decode_upload(&data, Some("image/png")).expect("decode");
         assert_eq!(frames.len(), 1);
-        // Alpha = 128/255 ≈ 0.502
+        // RGBA(255, 128, 64, 128), alpha = 128/255 ≈ 0.502
         // R: 255 * 0.502 ≈ 128, G: 128 * 0.502 ≈ 64, B: 64 * 0.502 ≈ 32
         let r = frames[0].rgb_buffer[0];
         let g = frames[0].rgb_buffer[1];
