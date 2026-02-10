@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo test:*)",
+      "Bash(find:*)",
+      "Bash(git fetch:*)",
+      "Bash(grep:*)",
+      "Bash(openspec instructions apply:*)",
+      "Bash(openspec instructions design:*)",
+      "Bash(openspec instructions proposal:*)",
+      "Bash(openspec instructions specs:*)",
+      "Bash(openspec instructions tasks:*)",
+      "Bash(openspec list:*)",
+      "Bash(openspec new:*)",
+      "Bash(openspec status:*)"
+    ]
+  }
+}

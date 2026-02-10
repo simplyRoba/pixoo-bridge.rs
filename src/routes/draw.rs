@@ -1,4 +1,6 @@
-use crate::pixels::{decode_upload, encode_pic_data, uniform_pixel_buffer, ImageError, PIXOO_FRAME_DIM};
+use crate::pixels::{
+    decode_upload, encode_pic_data, uniform_pixel_buffer, ImageError, PIXOO_FRAME_DIM,
+};
 use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use crate::state::AppState;
 use axum::extract::{Json, Multipart, State};
