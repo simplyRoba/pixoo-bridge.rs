@@ -1,38 +1,34 @@
-use axum::extract::Json;
+use axum::body::Body;
+use axum::extract::rejection::JsonRejection;
+use axum::extract::{FromRequest, Json, Request};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use serde::de::DeserializeOwned;
 use serde_json::{json, Map, Value};
-use validator::{ValidationError, ValidationErrors};
+use validator::{Validate, ValidationError, ValidationErrors};
 
-pub fn validation_error_message(error: &ValidationError) -> String {
-    if let Some(message) = &error.message {
-        message.to_string()
-    } else {
-        error.code.to_string()
+/// A JSON extractor that deserializes and validates the request body,
+/// returning consistent validation error responses on failure.
+pub struct ValidatedJson<T>(pub T);
+
+impl<S, T> FromRequest<S> for ValidatedJson<T>
+where
+    T: DeserializeOwned + Validate,
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
+        let Json(value) = Json::<T>::from_request(req, state)
+            .await
+            .map_err(|err: JsonRejection| validation_error_simple("body", &err.body_text()))?;
+
+        if let Err(errors) = value.validate() {
+            return Err(validation_errors_response(&errors));
+        }
+
+        Ok(ValidatedJson(value))
     }
-}
-
-pub fn validation_error_response(details: Map<String, Value>) -> Response {
-    let body = json!({
-        "error": "validation failed",
-        "details": Value::Object(details),
-    });
-
-    (StatusCode::BAD_REQUEST, Json(body)).into_response()
-}
-
-pub fn validation_errors_response(errors: &ValidationErrors) -> Response {
-    let mut details = Map::new();
-
-    for (field, field_errors) in errors.field_errors() {
-        let messages: Vec<Value> = field_errors
-            .iter()
-            .map(|error| Value::String(validation_error_message(error)))
-            .collect();
-        details.insert(field.to_string(), Value::Array(messages));
-    }
-
-    validation_error_response(details)
 }
 
 pub fn validation_error_simple(field: &str, message: &str) -> Response {
@@ -68,6 +64,37 @@ pub fn internal_server_error(message: &str) -> Response {
         Json(json!({ "error": message })),
     )
         .into_response()
+}
+
+fn validation_error_message(error: &ValidationError) -> String {
+    if let Some(message) = &error.message {
+        message.to_string()
+    } else {
+        error.code.to_string()
+    }
+}
+
+fn validation_error_response(details: Map<String, Value>) -> Response {
+    let body = json!({
+        "error": "validation failed",
+        "details": Value::Object(details),
+    });
+
+    (StatusCode::BAD_REQUEST, Json(body)).into_response()
+}
+
+fn validation_errors_response(errors: &ValidationErrors) -> Response {
+    let mut details = Map::new();
+
+    for (field, field_errors) in errors.field_errors() {
+        let messages: Vec<Value> = field_errors
+            .iter()
+            .map(|error| Value::String(validation_error_message(error)))
+            .collect();
+        details.insert(field.to_string(), Value::Array(messages));
+    }
+
+    validation_error_response(details)
 }
 
 #[cfg(test)]

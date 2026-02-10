@@ -117,7 +117,7 @@ args.insert("PicWidth".to_string(), Value::from(64));
 
 This magic number `64` matches `PIXOO_FRAME_DIM` from `src/pixels/mod.rs:6`, but the constant isn't referenced. If the frame dimension constant were ever changed (e.g., for different Pixoo models), this hardcoded `64` would silently diverge.
 
-### 5. [ ] Inconsistent Deserialization Pattern for JSON Bodies
+### 5. [x] Inconsistent Deserialization Pattern for JSON Bodies
 
 `draw_fill` and `manage_display_white_balance` use a two-step deserialization pattern: accept `Json<Value>`, then manually call `serde_json::from_value::<T>()`. Other handlers (like `timer_start`, `scoreboard`) use the direct `Json<T>` extractor. The two-step pattern was presumably chosen to provide better error messages, but it creates inconsistency. More importantly, `Json<T>` already returns a 422 with a serde error message on deserialization failure, so the manual approach provides marginal benefit.
 
@@ -235,7 +235,7 @@ pub async fn send_command(
 
 This eliminates all `command.clone()` calls at dispatch sites, and makes ownership semantics clearer—the client doesn't need to own the command.
 
-### 6. [ ] Consider `axum::extract::rejection` for Consistent Deserialization Errors
+### 6. [x] Consider `axum::extract::rejection` for Consistent Deserialization Errors
 
 Instead of the two-step `Json<Value>` → `serde_json::from_value::<T>()` pattern, implement a custom `Json` rejection handler globally. Axum 0.8 supports `#[derive(FromRequest)]` with custom rejection types, which would standardize error formatting across all handlers without per-handler boilerplate.
 

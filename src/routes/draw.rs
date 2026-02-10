@@ -15,7 +15,7 @@ use tracing::error;
 use validator::Validate;
 
 use super::common::{
-    internal_server_error, service_unavailable, validation_error_simple, validation_errors_response,
+    internal_server_error, service_unavailable, validation_error_simple, ValidatedJson,
 };
 
 const SINGLE_FRAME_PIC_SPEED_MS: u32 = 9999;
@@ -37,19 +37,10 @@ struct DrawFillRequest {
 }
 
 #[tracing::instrument(skip(state, payload))]
-async fn draw_fill(State(state): State<Arc<AppState>>, Json(payload): Json<Value>) -> Response {
-    let payload = match serde_json::from_value::<DrawFillRequest>(payload) {
-        Ok(request) => request,
-        Err(err) => {
-            let message = err.to_string();
-            return validation_error_simple("body", &message);
-        }
-    };
-
-    if let Err(errors) = payload.validate() {
-        return validation_errors_response(&errors);
-    }
-
+async fn draw_fill(
+    State(state): State<Arc<AppState>>,
+    ValidatedJson(payload): ValidatedJson<DrawFillRequest>,
+) -> Response {
     let client = &state.pixoo_client;
 
     let Ok(red) = u8::try_from(payload.red) else {

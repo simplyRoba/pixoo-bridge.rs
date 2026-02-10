@@ -1,5 +1,5 @@
 use crate::pixoo::{map_pixoo_error, PixooCommand};
-use axum::extract::{Json, Path, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tracing::error;
 use validator::Validate;
 
-use super::common::{action_validation_error, validation_errors_response};
+use super::common::{action_validation_error, ValidatedJson};
 
 use crate::state::AppState;
 
@@ -110,12 +110,8 @@ impl FromStr for SoundmeterAction {
 #[tracing::instrument(skip(state, payload))]
 async fn timer_start(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<TimerRequest>,
+    ValidatedJson(payload): ValidatedJson<TimerRequest>,
 ) -> Response {
-    if let Err(errors) = payload.validate() {
-        return validation_errors_response(&errors);
-    }
-
     let mut args = Map::new();
     args.insert("Minute".to_string(), Value::from(payload.minute));
     args.insert("Second".to_string(), Value::from(payload.second));
@@ -147,12 +143,8 @@ async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String
 #[tracing::instrument(skip(state, payload))]
 async fn scoreboard(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<ScoreboardRequest>,
+    ValidatedJson(payload): ValidatedJson<ScoreboardRequest>,
 ) -> Response {
-    if let Err(errors) = payload.validate() {
-        return validation_errors_response(&errors);
-    }
-
     let mut args = Map::new();
     args.insert("BlueScore".to_string(), Value::from(payload.blue_score));
     args.insert("RedScore".to_string(), Value::from(payload.red_score));

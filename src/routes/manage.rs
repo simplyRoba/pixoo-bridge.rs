@@ -16,7 +16,7 @@ use validator::Validate;
 
 use super::common::{
     action_validation_error, internal_server_error, service_unavailable, validation_error_simple,
-    validation_errors_response,
+    ValidatedJson,
 };
 
 use crate::state::AppState;
@@ -107,12 +107,8 @@ async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
 #[tracing::instrument(skip(state, payload))]
 async fn manage_set_location(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<LocationRequest>,
+    ValidatedJson(payload): ValidatedJson<LocationRequest>,
 ) -> Response {
-    if let Err(errors) = payload.validate() {
-        return validation_errors_response(&errors);
-    }
-
     let mut args = Map::new();
     args.insert(
         "Longitude".to_string(),
@@ -290,20 +286,8 @@ struct WhiteBalanceRequest {
 #[tracing::instrument(skip(state, payload))]
 async fn manage_display_white_balance(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<Value>,
+    ValidatedJson(payload): ValidatedJson<WhiteBalanceRequest>,
 ) -> Response {
-    let payload = match serde_json::from_value::<WhiteBalanceRequest>(payload) {
-        Ok(request) => request,
-        Err(err) => {
-            let message = err.to_string();
-            return validation_error_simple("body", &message);
-        }
-    };
-
-    if let Err(errors) = payload.validate() {
-        return validation_errors_response(&errors);
-    }
-
     let mut args = Map::new();
     args.insert("RValue".to_string(), Value::from(payload.red));
     args.insert("GValue".to_string(), Value::from(payload.green));
