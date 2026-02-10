@@ -83,7 +83,7 @@ Clippy pedantic is enabled project-wide (`Cargo.toml:12`) with `deny` level, wit
 
 ## What's Bad
 
-### 1. Duplicated Validation/Error Helpers Across Route Modules
+### 1. [ ] Duplicated Validation/Error Helpers Across Route Modules
 
 The following functions are defined nearly identically in `src/routes/tools.rs`, `src/routes/manage.rs`, and `src/routes/draw.rs`:
 
@@ -99,15 +99,15 @@ fn internal_server_error(message: &str) -> Response  // manage + draw
 
 This is seven functions duplicated two to three times each. Changes to the validation error format must be applied in multiple places, and drift is inevitable.
 
-### 2. `MockConfig` Is Duplicated in Two Test Modules
+### 2. [ ] `MockConfig` Is Duplicated in Two Test Modules
 
 `MockConfig` (a `HashMap`-backed `ConfigSource` implementation) is defined identically in both `src/config.rs:218-235` and `src/main.rs:150-167`. While test-only, this is the same duplication pattern the previous reviews flagged with `with_env_var`.
 
-### 3. `send_json_request` Test Helper Is Tripled
+### 3. [ ] `send_json_request` Test Helper Is Tripled
 
 The `send_json_request` helper function appears in three test modules (`tools.rs:250-275`, `manage.rs:626-650`, `draw.rs:354-378`) with identical bodies. This is 25 lines repeated three times.
 
-### 4. Hardcoded `PicWidth` Constant
+### 4. [x] Hardcoded `PicWidth` Constant
 
 In `src/routes/draw.rs:226`:
 
@@ -117,11 +117,11 @@ args.insert("PicWidth".to_string(), Value::from(64));
 
 This magic number `64` matches `PIXOO_FRAME_DIM` from `src/pixels/mod.rs:6`, but the constant isn't referenced. If the frame dimension constant were ever changed (e.g., for different Pixoo models), this hardcoded `64` would silently diverge.
 
-### 5. Inconsistent Deserialization Pattern for JSON Bodies
+### 5. [ ] Inconsistent Deserialization Pattern for JSON Bodies
 
 `draw_fill` and `manage_display_white_balance` use a two-step deserialization pattern: accept `Json<Value>`, then manually call `serde_json::from_value::<T>()`. Other handlers (like `timer_start`, `scoreboard`) use the direct `Json<T>` extractor. The two-step pattern was presumably chosen to provide better error messages, but it creates inconsistency. More importantly, `Json<T>` already returns a 422 with a serde error message on deserialization failure, so the manual approach provides marginal benefit.
 
-### 6. `DrawFillRequest` Uses `u16` Where `u8` Suffices
+### 6. [ ] `DrawFillRequest` Uses `u16` Where `u8` Suffices
 
 ```rust
 struct DrawFillRequest {
@@ -133,7 +133,7 @@ struct DrawFillRequest {
 
 The validation caps values at 255, and the handler immediately converts to `u8` via `u8::try_from(payload.red)` with fallible conversion. Using `u8` directly would make the type self-documenting and eliminate the three `try_from` checks that return `internal_server_error`. The validation with `range(min = 0, max = 255)` would still guard against serde parsing a value > 255 if the field were `u8` (serde would reject it at parse time).
 
-### 7. `PixooCommand::clone()` in Dispatch Functions
+### 7. [ ] `PixooCommand::clone()` in Dispatch Functions
 
 Several dispatch functions call `command.clone()` unnecessarily:
 
@@ -144,7 +144,7 @@ client.send_command(command.clone(), Map::new()).await
 
 `PixooCommand` is a simple enum with no heap allocation. The `clone()` is cheap but semantically misleading—it suggests the value needs to survive beyond the call. The actual reason is that `command` is moved into the `format!` macro in the error branch. Using `&PixooCommand` in `send_command` or referencing `command` by reference in the format string would eliminate these clones.
 
-### 8. Dockerfile Health Check Port Is Hardcoded
+### 8. [ ] Dockerfile Health Check Port Is Hardcoded
 
 ```dockerfile
 HEALTHCHECK ... CMD curl -fsS http://localhost:4000/health || exit 1
@@ -152,11 +152,11 @@ HEALTHCHECK ... CMD curl -fsS http://localhost:4000/health || exit 1
 
 When `PIXOO_BRIDGE_PORT` is set to a non-default value, the health check fails silently. The health check should honor the configured port, e.g., `curl -fsS http://localhost:${PIXOO_BRIDGE_PORT:-4000}/health`.
 
-### 9. Request ID Not Included in Error Response Bodies
+### 9. [ ] Request ID Not Included in Error Response Bodies
 
 The `X-Request-Id` is propagated as a header and logged, but structured error responses (`PixooHttpErrorResponse` at `src/pixoo/error.rs:89-96`) don't include a `request_id` field. When consumers log the response body but not headers, the correlation chain breaks.
 
-### 10. Access Log Uses `debug` Level
+### 10. [ ] Access Log Uses `debug` Level
 
 ```rust
 // src/main.rs:96

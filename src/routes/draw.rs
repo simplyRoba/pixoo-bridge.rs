@@ -1,4 +1,4 @@
-use crate::pixels::{decode_upload, encode_pic_data, uniform_pixel_buffer, ImageError};
+use crate::pixels::{decode_upload, encode_pic_data, uniform_pixel_buffer, ImageError, PIXOO_FRAME_DIM};
 use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use crate::state::AppState;
 use axum::extract::{Json, Multipart, State};
@@ -223,7 +223,7 @@ async fn send_draw_frame(
     args.insert("PicId".to_string(), Value::from(pic_id));
     args.insert("PicNum".to_string(), Value::from(pic_num));
     args.insert("PicOffset".to_string(), Value::from(pic_offset));
-    args.insert("PicWidth".to_string(), Value::from(64));
+    args.insert("PicWidth".to_string(), Value::from(PIXOO_FRAME_DIM));
     args.insert("PicSpeed".to_string(), Value::from(pic_speed));
     args.insert("PicData".to_string(), Value::String(pic_data));
 
