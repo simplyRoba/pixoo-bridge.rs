@@ -154,9 +154,11 @@ HEALTHCHECK ... CMD curl -fsS http://localhost:4000/health || exit 1
 
 When `PIXOO_BRIDGE_PORT` is set to a non-default value, the health check fails silently. The health check should honor the configured port, e.g., `curl -fsS http://localhost:${PIXOO_BRIDGE_PORT:-4000}/health`.
 
-### 9. [ ] Request ID Not Included in Error Response Bodies
+### 9. [x] Request ID Not Included in Error Response Bodies (won't fix)
 
 The `X-Request-Id` is propagated as a header and logged, but structured error responses (`PixooHttpErrorResponse` at `src/pixoo/error.rs:89-96`) don't include a `request_id` field. When consumers log the response body but not headers, the correlation chain breaks.
+
+**Resolution:** Won't fix. The request ID is already available via the `X-Request-Id` response header, which is the standard mechanism for request correlation. Duplicating it into every error response body would require threading `Extension<RequestId>` through all ~20 handlers and their dispatch functions, adding significant boilerplate for marginal benefit. Consumers that need correlation should read the response header.
 
 ### 10. [x] Access Log Uses `debug` Level (won't fix)
 
