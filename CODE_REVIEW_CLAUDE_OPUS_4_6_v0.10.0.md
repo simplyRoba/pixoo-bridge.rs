@@ -156,7 +156,7 @@ When `PIXOO_BRIDGE_PORT` is set to a non-default value, the health check fails s
 
 The `X-Request-Id` is propagated as a header and logged, but structured error responses (`PixooHttpErrorResponse` at `src/pixoo/error.rs:89-96`) don't include a `request_id` field. When consumers log the response body but not headers, the correlation chain breaks.
 
-### 10. [ ] Access Log Uses `debug` Level
+### 10. [x] Access Log Uses `debug` Level (won't fix)
 
 ```rust
 // src/main.rs:96
@@ -164,6 +164,8 @@ debug!(method=%method, path=%path, status=%status, latency=?latency, request_id=
 ```
 
 Access logs are typically `info`-level in production services. At the default `info` level, no request access logging occurs. This means operators have no visibility into traffic without enabling `debug`, which also turns on verbose Pixoo command payloads.
+
+**Resolution:** Won't fix. Keeping access logs at `debug` level is intentional to minimize log volume in production.
 
 ---
 
@@ -207,7 +209,7 @@ struct DrawFillRequest {
 
 Serde will reject values > 255 at deserialization, and `validator` ranges can still be applied. The three `u8::try_from` checks become unnecessary.
 
-### 4. [ ] Separate Access Log Level from Command Debug Level
+### 4. [x] Separate Access Log Level from Command Debug Level (won't fix)
 
 Introduce a dedicated `PIXOO_BRIDGE_ACCESS_LOG` env var (defaulting to `true`) or use a target filter:
 
