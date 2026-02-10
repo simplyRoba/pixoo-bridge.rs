@@ -121,7 +121,7 @@ This magic number `64` matches `PIXOO_FRAME_DIM` from `src/pixels/mod.rs:6`, but
 
 `draw_fill` and `manage_display_white_balance` use a two-step deserialization pattern: accept `Json<Value>`, then manually call `serde_json::from_value::<T>()`. Other handlers (like `timer_start`, `scoreboard`) use the direct `Json<T>` extractor. The two-step pattern was presumably chosen to provide better error messages, but it creates inconsistency. More importantly, `Json<T>` already returns a 422 with a serde error message on deserialization failure, so the manual approach provides marginal benefit.
 
-### 6. [ ] `DrawFillRequest` Uses `u16` Where `u8` Suffices
+### 6. [x] `DrawFillRequest` Uses `u16` Where `u8` Suffices (won't fix)
 
 ```rust
 struct DrawFillRequest {
@@ -132,6 +132,8 @@ struct DrawFillRequest {
 ```
 
 The validation caps values at 255, and the handler immediately converts to `u8` via `u8::try_from(payload.red)` with fallible conversion. Using `u8` directly would make the type self-documenting and eliminate the three `try_from` checks that return `internal_server_error`. The validation with `range(min = 0, max = 255)` would still guard against serde parsing a value > 255 if the field were `u8` (serde would reject it at parse time).
+
+**Resolution:** Won't fix. Switching to `u8` changes the error response shape from field-specific `{"details": {"red": ["range"]}}` to a generic `{"details": {"body": "invalid value: integer `999`, expected u8"}}`, breaking the API error contract.
 
 ### 7. [x] `PixooCommand::clone()` in Dispatch Functions
 
@@ -144,7 +146,7 @@ client.send_command(command.clone(), Map::new()).await
 
 `PixooCommand` is a simple enum with no heap allocation. The `clone()` is cheap but semantically misleading—it suggests the value needs to survive beyond the call. The actual reason is that `command` is moved into the `format!` macro in the error branch. Using `&PixooCommand` in `send_command` or referencing `command` by reference in the format string would eliminate these clones.
 
-### 8. [ ] Dockerfile Health Check Port Is Hardcoded
+### 8. [x] Dockerfile Health Check Port Is Hardcoded
 
 ```dockerfile
 HEALTHCHECK ... CMD curl -fsS http://localhost:4000/health || exit 1
@@ -197,7 +199,7 @@ Create `src/test_helpers.rs` (gated behind `#[cfg(test)]`) containing:
 
 This consolidates ~80 lines of triplicated test infrastructure.
 
-### 3. [ ] Use `u8` for RGB Fields
+### 3. [x] Use `u8` for RGB Fields (won't fix)
 
 ```rust
 struct DrawFillRequest {
@@ -208,6 +210,8 @@ struct DrawFillRequest {
 ```
 
 Serde will reject values > 255 at deserialization, and `validator` ranges can still be applied. The three `u8::try_from` checks become unnecessary.
+
+**Resolution:** Won't fix. Switching to `u8` changes the error response shape from field-specific `{"details": {"red": ["range"]}}` to a generic `{"details": {"body": "invalid value: integer `999`, expected u8"}}`, breaking the API error contract.
 
 ### 4. [x] Separate Access Log Level from Command Debug Level (won't fix)
 
