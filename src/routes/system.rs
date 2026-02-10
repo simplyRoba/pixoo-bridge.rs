@@ -42,7 +42,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
 async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let client = &state.pixoo_client;
     match client
-        .send_command(PixooCommand::SystemReboot, Map::<String, Value>::new())
+        .send_command(&PixooCommand::SystemReboot, Map::<String, Value>::new())
         .await
     {
         Ok(_) => StatusCode::OK.into_response(),

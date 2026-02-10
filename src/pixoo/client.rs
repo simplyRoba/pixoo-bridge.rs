@@ -95,10 +95,10 @@ impl PixooClient {
     /// Returns [`PixooError::MissingErrorCode`] if the response lacks an `error_code` field.
     pub async fn send_command(
         &self,
-        command: PixooCommand,
+        command: &PixooCommand,
         args: Map<String, Value>,
     ) -> Result<PixooResponse, PixooError> {
-        let payload = Self::build_payload(&command, args);
+        let payload = Self::build_payload(command, args);
         debug!(command = ?command, payload = ?payload, "sending Pixoo command");
 
         let response = self.execute_with_retry(&payload).await;
@@ -413,7 +413,7 @@ mod tests {
         let config = PixooClientConfig::new(Duration::from_secs(10), 0, Duration::from_millis(10));
         let client = PixooClient::new(server.base_url(), config).expect("client");
         let err = client
-            .send_command(PixooCommand::SystemReboot, Map::new())
+            .send_command(&PixooCommand::SystemReboot, Map::new())
             .await
             .expect_err("expected http status error");
 
@@ -432,7 +432,7 @@ mod tests {
 
         let client = PixooClient::new(base_url, default_config()).expect("client");
         let response = client
-            .send_command(PixooCommand::SystemReboot, Map::new())
+            .send_command(&PixooCommand::SystemReboot, Map::new())
             .await
             .expect("request should succeed");
 
@@ -446,7 +446,7 @@ mod tests {
 
         let client = PixooClient::new(base_url, default_config()).expect("client");
         let err = client
-            .send_command(PixooCommand::SystemReboot, Map::new())
+            .send_command(&PixooCommand::SystemReboot, Map::new())
             .await
             .expect_err("expected http status error");
 
@@ -505,7 +505,7 @@ mod tests {
         let client = PixooClient::new(base_url, config).expect("client");
 
         let response = client
-            .send_command(PixooCommand::SystemReboot, Map::new())
+            .send_command(&PixooCommand::SystemReboot, Map::new())
             .await
             .expect("request should succeed");
 
@@ -549,7 +549,7 @@ mod tests {
 
         let client = PixooClient::new(server.base_url(), default_config()).expect("client");
         let response = client
-            .send_command(PixooCommand::SystemReboot, Map::new())
+            .send_command(&PixooCommand::SystemReboot, Map::new())
             .await
             .expect("request should succeed");
 

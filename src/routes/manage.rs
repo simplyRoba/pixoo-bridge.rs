@@ -312,7 +312,7 @@ async fn dispatch_manage_command(
     command: PixooCommand,
 ) -> Result<PixooResponse, Response> {
     let client = &state.pixoo_client;
-    match client.send_command(command.clone(), Map::new()).await {
+    match client.send_command(&command, Map::new()).await {
         Ok(response) => Ok(response),
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
@@ -423,7 +423,7 @@ async fn dispatch_manage_post_command(
     args: Map<String, Value>,
 ) -> Response {
     let client = &state.pixoo_client;
-    match client.send_command(command.clone(), args).await {
+    match client.send_command(&command, args).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));

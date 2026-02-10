@@ -220,7 +220,7 @@ async fn dispatch_command(
     args: Map<String, Value>,
 ) -> Response {
     let client = &state.pixoo_client;
-    match client.send_command(command.clone(), args).await {
+    match client.send_command(&command, args).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));

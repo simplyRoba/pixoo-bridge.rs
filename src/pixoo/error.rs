@@ -145,7 +145,7 @@ mod tests {
         let base_url = free_address().await;
         let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
         let err = client
-            .send_command(PixooCommand::ToolsTimer, Map::<String, Value>::new())
+            .send_command(&PixooCommand::ToolsTimer, Map::<String, Value>::new())
             .await
             .expect_err("expected unreachable");
 
@@ -168,7 +168,7 @@ mod tests {
         let base_url = server.base_url();
         let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
         let err = client
-            .send_command(PixooCommand::ToolsTimer, Map::<String, Value>::new())
+            .send_command(&PixooCommand::ToolsTimer, Map::<String, Value>::new())
             .await
             .expect_err("expected device error");
 
@@ -195,7 +195,7 @@ mod tests {
             PixooClientConfig::new(Duration::from_millis(50), 2, Duration::from_millis(200));
         let client = PixooClient::new(format!("http://{addr}"), config).expect("client");
         let err = client
-            .send_command(PixooCommand::ToolsTimer, Map::<String, Value>::new())
+            .send_command(&PixooCommand::ToolsTimer, Map::<String, Value>::new())
             .await
             .expect_err("expected timeout");
 

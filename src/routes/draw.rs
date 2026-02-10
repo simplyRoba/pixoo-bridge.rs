@@ -175,7 +175,7 @@ async fn extract_file_field(
 
 async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
     let response = match client
-        .send_command(PixooCommand::DrawGetGifId, Map::new())
+        .send_command(&PixooCommand::DrawGetGifId, Map::new())
         .await
     {
         Ok(response) => response,
@@ -227,7 +227,7 @@ async fn send_draw_frame(
     args.insert("PicSpeed".to_string(), Value::from(pic_speed));
     args.insert("PicData".to_string(), Value::String(pic_data));
 
-    match client.send_command(PixooCommand::DrawSendGif, args).await {
+    match client.send_command(&PixooCommand::DrawSendGif, args).await {
         Ok(_) => StatusCode::OK.into_response(),
         Err(err) => {
             let (status, body) = map_pixoo_error(&err, "Pixoo draw send command");

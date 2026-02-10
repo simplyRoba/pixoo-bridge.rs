@@ -133,7 +133,7 @@ struct DrawFillRequest {
 
 The validation caps values at 255, and the handler immediately converts to `u8` via `u8::try_from(payload.red)` with fallible conversion. Using `u8` directly would make the type self-documenting and eliminate the three `try_from` checks that return `internal_server_error`. The validation with `range(min = 0, max = 255)` would still guard against serde parsing a value > 255 if the field were `u8` (serde would reject it at parse time).
 
-### 7. [ ] `PixooCommand::clone()` in Dispatch Functions
+### 7. [x] `PixooCommand::clone()` in Dispatch Functions
 
 Several dispatch functions call `command.clone()` unnecessarily:
 
@@ -219,7 +219,7 @@ info!(target: "access_log", method=%method, path=%path, status=%status, ...);
 
 This lets operators see traffic at `info` level without the noise of debug-level Pixoo payloads.
 
-### 5. [ ] Use `&PixooCommand` in `send_command`
+### 5. [x] Use `&PixooCommand` in `send_command`
 
 ```rust
 pub async fn send_command(
