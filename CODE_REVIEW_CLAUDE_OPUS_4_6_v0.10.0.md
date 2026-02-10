@@ -83,7 +83,7 @@ Clippy pedantic is enabled project-wide (`Cargo.toml:12`) with `deny` level, wit
 
 ## What's Bad
 
-### 1. [ ] Duplicated Validation/Error Helpers Across Route Modules
+### 1. [x] Duplicated Validation/Error Helpers Across Route Modules
 
 The following functions are defined nearly identically in `src/routes/tools.rs`, `src/routes/manage.rs`, and `src/routes/draw.rs`:
 
@@ -173,7 +173,7 @@ Access logs are typically `info`-level in production services. At the default `i
 
 ## What I Would Have Done Differently
 
-### 1. [ ] Extract Shared Route Utilities
+### 1. [x] Extract Shared Route Utilities
 
 Create `src/routes/common.rs` with the duplicated validation/error helpers:
 

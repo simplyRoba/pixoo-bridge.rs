@@ -5,11 +5,13 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
 use serde::Deserialize;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::error;
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::Validate;
+
+use super::common::{action_validation_error, validation_errors_response};
 
 use crate::state::AppState;
 
@@ -103,50 +105,6 @@ impl FromStr for SoundmeterAction {
             _ => Err(()),
         }
     }
-}
-
-fn validation_error_message(error: &ValidationError) -> String {
-    if let Some(message) = &error.message {
-        message.to_string()
-    } else {
-        error.code.to_string()
-    }
-}
-
-fn validation_error_response(details: Map<String, Value>) -> Response {
-    let body = json!({
-        "error": "validation failed",
-        "details": Value::Object(details),
-    });
-
-    (StatusCode::BAD_REQUEST, Json(body)).into_response()
-}
-
-fn validation_errors_response(errors: &ValidationErrors) -> Response {
-    let mut details = Map::new();
-
-    for (field, field_errors) in errors.field_errors() {
-        let messages: Vec<Value> = field_errors
-            .iter()
-            .map(|error| Value::String(validation_error_message(error)))
-            .collect();
-        details.insert(field.to_string(), Value::Array(messages));
-    }
-
-    validation_error_response(details)
-}
-
-fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
-    let mut details = Map::new();
-    details.insert(
-        "action".to_string(),
-        json!({
-            "provided": action,
-            "allowed": allowed,
-        }),
-    );
-
-    validation_error_response(details)
 }
 
 #[tracing::instrument(skip(state, payload))]

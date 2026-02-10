@@ -1,3 +1,4 @@
+mod common;
 mod draw;
 mod manage;
 mod system;

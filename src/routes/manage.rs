@@ -7,12 +7,17 @@ use axum::routing::{get, post};
 use axum::Router;
 use chrono::{NaiveDateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, error};
-use validator::{Validate, ValidationError, ValidationErrors};
+use validator::Validate;
+
+use super::common::{
+    action_validation_error, internal_server_error, service_unavailable, validation_error_simple,
+    validation_errors_response,
+};
 
 use crate::state::AppState;
 
@@ -322,74 +327,8 @@ async fn dispatch_manage_command(
     }
 }
 
-fn service_unavailable() -> Response {
-    (
-        StatusCode::SERVICE_UNAVAILABLE,
-        Json(json!({ "error": "Pixoo command failed" })),
-    )
-        .into_response()
-}
-
-fn internal_server_error(message: &str) -> Response {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(json!({ "error": message })),
-    )
-        .into_response()
-}
-
-fn validation_error_message(error: &ValidationError) -> String {
-    if let Some(message) = &error.message {
-        message.to_string()
-    } else {
-        error.code.to_string()
-    }
-}
-
-fn validation_error_response(details: Map<String, Value>) -> Response {
-    let body = json!({
-        "error": "validation failed",
-        "details": Value::Object(details),
-    });
-
-    (StatusCode::BAD_REQUEST, Json(body)).into_response()
-}
-
-fn validation_errors_response(errors: &ValidationErrors) -> Response {
-    let mut details = Map::new();
-
-    for (field, field_errors) in errors.field_errors() {
-        let messages: Vec<Value> = field_errors
-            .iter()
-            .map(|error| Value::String(validation_error_message(error)))
-            .collect();
-        details.insert(field.to_string(), Value::Array(messages));
-    }
-
-    validation_error_response(details)
-}
-
 fn offset_validation_error(message: &str) -> Response {
     validation_error_simple("offset", message)
-}
-
-fn validation_error_simple(field: &str, message: &str) -> Response {
-    let mut details = Map::new();
-    details.insert(field.to_string(), Value::String(message.to_string()));
-    validation_error_response(details)
-}
-
-fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
-    let mut details = Map::new();
-    details.insert(
-        "action".to_string(),
-        json!({
-            "provided": action,
-            "allowed": allowed,
-        }),
-    );
-
-    validation_error_response(details)
 }
 
 fn parse_timezone_offset(value: &str) -> Result<i8, String> {
