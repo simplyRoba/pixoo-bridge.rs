@@ -8,9 +8,6 @@ use std::{fmt, str::FromStr};
 use uuid::Uuid;
 
 /// HTTP header name for request correlation.
-#[cfg(test)]
-pub const HEADER_NAME: &str = "X-Request-Id";
-#[cfg(not(test))]
 const HEADER_NAME: &str = "X-Request-Id";
 
 /// A UUID-based identifier for correlating logs and traces to a single request.
@@ -107,6 +104,8 @@ pub async fn propagate(mut req: Request<Body>, next: Next) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{middleware::from_fn, routing::get, Router};
+    use tower::util::ServiceExt;
 
     #[test]
     fn round_trip_header_value() {
@@ -127,5 +126,28 @@ mod tests {
         let id1 = RequestId::default();
         let id2 = RequestId::default();
         assert_ne!(id1, id2);
+    }
+
+    #[tokio::test]
+    async fn propagate_inserts_header() {
+        let app = Router::new()
+            .route("/", get(|| async { "ok" }))
+            .layer(from_fn(propagate));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        let header = response
+            .headers()
+            .get(HEADER_NAME)
+            .expect("request id header present");
+        assert!(!header.to_str().unwrap().is_empty());
     }
 }

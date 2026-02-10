@@ -240,7 +240,7 @@ mod tests {
 
         let header = response
             .headers()
-            .get(request_tracing::HEADER_NAME)
+            .get("X-Request-Id")
             .expect("request id header present");
         assert!(!header.to_str().unwrap().is_empty());
     }
