@@ -239,7 +239,7 @@ This eliminates all `command.clone()` calls at dispatch sites, and makes ownersh
 
 Instead of the two-step `Json<Value>` → `serde_json::from_value::<T>()` pattern, implement a custom `Json` rejection handler globally. Axum 0.8 supports `#[derive(FromRequest)]` with custom rejection types, which would standardize error formatting across all handlers without per-handler boilerplate.
 
-### 7. [ ] Add Integration Tests for the Full Middleware Stack
+### 7. [x] Add Integration Tests for the Full Middleware Stack
 
 The current integration tests in `main.rs` verify route mounting but don't test error paths through the full stack (middleware + handler + error mapping). A test that sends a request to a stopped Pixoo mock and verifies the complete response (status, body structure, request ID header) would catch middleware ordering issues.
 

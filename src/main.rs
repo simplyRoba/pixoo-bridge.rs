@@ -245,6 +245,83 @@ mod tests {
         assert!(!header.to_str().unwrap().is_empty());
     }
 
+    #[tokio::test]
+    async fn error_path_unreachable_device_returns_502_with_request_id() {
+        let client = PixooClient::new(
+            "http://127.0.0.1:1".to_string(),
+            PixooClientConfig::default(),
+        )
+        .expect("client");
+        let app = build_app(Arc::new(AppState::with_client(client)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/tools/stopwatch/start")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
+
+        let request_id = response
+            .headers()
+            .get("X-Request-Id")
+            .expect("X-Request-Id header");
+        assert!(!request_id.to_str().unwrap().is_empty());
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["error_kind"], "unreachable");
+        assert_eq!(json["error_status"], 502);
+        assert!(json["message"].as_str().unwrap().len() > 0);
+    }
+
+    #[tokio::test]
+    async fn error_path_device_error_returns_503_with_request_id() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":1}"#);
+        });
+
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let app = build_app(Arc::new(AppState::with_client(client)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::POST)
+                    .uri("/tools/stopwatch/start")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+        let request_id = response
+            .headers()
+            .get("X-Request-Id")
+            .expect("X-Request-Id header");
+        assert!(!request_id.to_str().unwrap().is_empty());
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["error_kind"], "device-error");
+        assert_eq!(json["error_status"], 503);
+        assert_eq!(json["error_code"], 1);
+    }
+
     #[test]
     fn resolves_log_level_defaults_to_info() {
         let config = MockConfig::new();
