@@ -28,7 +28,7 @@ validator = { version = "0.20", features = ["derive"] }
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 uuid = { version = "1", features = ["v4", "std"] }
-thiserror = "1.0"
+thiserror = "2.0"
 
 [dev-dependencies]
 tokio-test = "0.4"
