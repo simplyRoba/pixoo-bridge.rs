@@ -138,33 +138,14 @@ fn resolve_log_level(source: &impl ConfigSource) -> (LevelFilter, Option<String>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::testing::MockConfig;
     use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::state::AppState;
     use axum::body::Body;
     use axum::http::{Method, Request, StatusCode};
     use httpmock::{Method as MockMethod, MockServer};
-    use std::collections::HashMap;
     use std::sync::Arc;
     use tower::util::ServiceExt;
-
-    struct MockConfig(HashMap<&'static str, &'static str>);
-
-    impl MockConfig {
-        fn new() -> Self {
-            Self(HashMap::new())
-        }
-
-        fn with(mut self, key: &'static str, value: &'static str) -> Self {
-            self.0.insert(key, value);
-            self
-        }
-    }
-
-    impl ConfigSource for MockConfig {
-        fn get(&self, key: &str) -> Option<String> {
-            self.0.get(key).map(|s| (*s).to_string())
-        }
-    }
 
     #[tokio::test]
     async fn integration_build_app_includes_tool_routes() {

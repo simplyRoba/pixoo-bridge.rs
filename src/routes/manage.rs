@@ -548,44 +548,17 @@ impl FromStr for OnOffAction {
 mod tests {
     use super::mount_manage_routes;
     use crate::pixoo::{PixooClient, PixooClientConfig};
+    use crate::routes::common::testing::send_json_request;
     use crate::state::AppState;
-    use axum::body::{to_bytes, Body};
-    use axum::http::{Method, Request, StatusCode};
+    use axum::http::{Method, StatusCode};
     use axum::Router;
     use chrono::{TimeZone, Utc};
     use httpmock::{Method as MockMethod, MockServer};
     use serde_json::{json, Value};
     use std::sync::Arc;
-    use tower::ServiceExt;
 
     fn build_manage_app(state: Arc<AppState>) -> Router {
         mount_manage_routes(Router::new()).with_state(state)
-    }
-
-    async fn send_json_request(
-        app: &Router,
-        method: Method,
-        uri: &str,
-        body: Option<serde_json::Value>,
-    ) -> (StatusCode, String) {
-        let builder = Request::builder().method(method).uri(uri);
-        let builder = if body.is_some() {
-            builder.header("content-type", "application/json")
-        } else {
-            builder
-        };
-        let req = builder
-            .body(match body {
-                Some(value) => Body::from(value.to_string()),
-                None => Body::empty(),
-            })
-            .unwrap();
-        let response = app.clone().oneshot(req).await.unwrap();
-        let status = response.status();
-        let body_bytes = to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap_or_default();
-        (status, String::from_utf8_lossy(&body_bytes).to_string())
     }
 
     async fn send_get(app: &Router, uri: &str) -> (StatusCode, String) {

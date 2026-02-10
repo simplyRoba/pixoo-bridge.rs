@@ -99,11 +99,11 @@ fn internal_server_error(message: &str) -> Response  // manage + draw
 
 This is seven functions duplicated two to three times each. Changes to the validation error format must be applied in multiple places, and drift is inevitable.
 
-### 2. [ ] `MockConfig` Is Duplicated in Two Test Modules
+### 2. [x] `MockConfig` Is Duplicated in Two Test Modules
 
 `MockConfig` (a `HashMap`-backed `ConfigSource` implementation) is defined identically in both `src/config.rs:218-235` and `src/main.rs:150-167`. While test-only, this is the same duplication pattern the previous reviews flagged with `with_env_var`.
 
-### 3. [ ] `send_json_request` Test Helper Is Tripled
+### 3. [x] `send_json_request` Test Helper Is Tripled
 
 The `send_json_request` helper function appears in three test modules (`tools.rs:250-275`, `manage.rs:626-650`, `draw.rs:354-378`) with identical bodies. This is 25 lines repeated three times.
 
@@ -188,7 +188,7 @@ pub fn internal_server_error(message: &str) -> Response { ... }
 
 This immediately eliminates ~120 lines of duplication and ensures consistent error formatting.
 
-### 2. [ ] Extract Shared Test Utilities
+### 2. [x] Extract Shared Test Utilities
 
 Create `src/test_helpers.rs` (gated behind `#[cfg(test)]`) containing:
 

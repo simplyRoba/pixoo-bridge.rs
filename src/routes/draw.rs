@@ -249,6 +249,7 @@ mod tests {
     use super::SINGLE_FRAME_PIC_SPEED_MS;
     use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
     use crate::pixoo::{PixooClient, PixooClientConfig};
+    use crate::routes::common::testing::send_json_request;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
     use axum::extract::State as AxumState;
@@ -302,32 +303,6 @@ mod tests {
 
     fn build_draw_app(state: Arc<AppState>) -> Router {
         mount_draw_routes(Router::new()).with_state(state)
-    }
-
-    async fn send_json_request(
-        app: &Router,
-        method: Method,
-        uri: &str,
-        body: Option<serde_json::Value>,
-    ) -> (StatusCode, String) {
-        let builder = Request::builder().method(method).uri(uri);
-        let builder = if body.is_some() {
-            builder.header("content-type", "application/json")
-        } else {
-            builder
-        };
-        let req = builder
-            .body(match body {
-                Some(value) => Body::from(value.to_string()),
-                None => Body::empty(),
-            })
-            .unwrap();
-        let response = app.clone().oneshot(req).await.unwrap();
-        let status = response.status();
-        let body_bytes = to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap_or_default();
-        (status, String::from_utf8_lossy(&body_bytes).to_string())
     }
 
     #[tokio::test]

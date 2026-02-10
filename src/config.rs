@@ -211,18 +211,18 @@ fn parse_byte_size(input: &str) -> Option<usize> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+pub mod testing {
+    use super::ConfigSource;
     use std::collections::HashMap;
 
-    struct MockConfig(HashMap<&'static str, &'static str>);
+    pub struct MockConfig(HashMap<&'static str, &'static str>);
 
     impl MockConfig {
-        fn new() -> Self {
+        pub fn new() -> Self {
             Self(HashMap::new())
         }
 
-        fn with(mut self, key: &'static str, value: &'static str) -> Self {
+        pub fn with(mut self, key: &'static str, value: &'static str) -> Self {
             self.0.insert(key, value);
             self
         }
@@ -233,6 +233,12 @@ mod tests {
             self.0.get(key).map(|s| (*s).to_string())
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::testing::MockConfig;
+    use super::*;
 
     #[test]
     fn pixoo_base_url_missing_is_error() {
