@@ -169,7 +169,7 @@ Access logs are typically `info`-level in production services. At the default `i
 
 ## What I Would Have Done Differently
 
-### 1. Extract Shared Route Utilities
+### 1. [ ] Extract Shared Route Utilities
 
 Create `src/routes/common.rs` with the duplicated validation/error helpers:
 
@@ -184,7 +184,7 @@ pub fn internal_server_error(message: &str) -> Response { ... }
 
 This immediately eliminates ~120 lines of duplication and ensures consistent error formatting.
 
-### 2. Extract Shared Test Utilities
+### 2. [ ] Extract Shared Test Utilities
 
 Create `src/test_helpers.rs` (gated behind `#[cfg(test)]`) containing:
 
@@ -195,7 +195,7 @@ Create `src/test_helpers.rs` (gated behind `#[cfg(test)]`) containing:
 
 This consolidates ~80 lines of triplicated test infrastructure.
 
-### 3. Use `u8` for RGB Fields
+### 3. [ ] Use `u8` for RGB Fields
 
 ```rust
 struct DrawFillRequest {
@@ -207,7 +207,7 @@ struct DrawFillRequest {
 
 Serde will reject values > 255 at deserialization, and `validator` ranges can still be applied. The three `u8::try_from` checks become unnecessary.
 
-### 4. Separate Access Log Level from Command Debug Level
+### 4. [ ] Separate Access Log Level from Command Debug Level
 
 Introduce a dedicated `PIXOO_BRIDGE_ACCESS_LOG` env var (defaulting to `true`) or use a target filter:
 
@@ -217,7 +217,7 @@ info!(target: "access_log", method=%method, path=%path, status=%status, ...);
 
 This lets operators see traffic at `info` level without the noise of debug-level Pixoo payloads.
 
-### 5. Use `&PixooCommand` in `send_command`
+### 5. [ ] Use `&PixooCommand` in `send_command`
 
 ```rust
 pub async fn send_command(
@@ -229,15 +229,15 @@ pub async fn send_command(
 
 This eliminates all `command.clone()` calls at dispatch sites, and makes ownership semantics clearer—the client doesn't need to own the command.
 
-### 6. Consider `axum::extract::rejection` for Consistent Deserialization Errors
+### 6. [ ] Consider `axum::extract::rejection` for Consistent Deserialization Errors
 
 Instead of the two-step `Json<Value>` → `serde_json::from_value::<T>()` pattern, implement a custom `Json` rejection handler globally. Axum 0.8 supports `#[derive(FromRequest)]` with custom rejection types, which would standardize error formatting across all handlers without per-handler boilerplate.
 
-### 7. Add Integration Tests for the Full Middleware Stack
+### 7. [ ] Add Integration Tests for the Full Middleware Stack
 
 The current integration tests in `main.rs` verify route mounting but don't test error paths through the full stack (middleware + handler + error mapping). A test that sends a request to a stopped Pixoo mock and verifies the complete response (status, body structure, request ID header) would catch middleware ordering issues.
 
-### 8. Rate Limiting or Request Throttling
+### 8. [ ] Rate Limiting or Request Throttling
 
 The bridge forwards every request directly to the device. A burst of requests (from a misbehaving automation, for example) could overwhelm the Pixoo hardware. Tower provides `RateLimitLayer` and `ConcurrencyLimitLayer` that could gate access to the device with minimal code.
 
