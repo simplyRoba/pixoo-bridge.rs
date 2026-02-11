@@ -245,9 +245,11 @@ Instead of the two-step `Json<Value>` → `serde_json::from_value::<T>()` patter
 
 The current integration tests in `main.rs` verify route mounting but don't test error paths through the full stack (middleware + handler + error mapping). A test that sends a request to a stopped Pixoo mock and verifies the complete response (status, body structure, request ID header) would catch middleware ordering issues.
 
-### 8. [ ] Rate Limiting or Request Throttling
+### 8. [x] Rate Limiting or Request Throttling (won't fix)
 
 The bridge forwards every request directly to the device. A burst of requests (from a misbehaving automation, for example) could overwhelm the Pixoo hardware. Tower provides `RateLimitLayer` and `ConcurrencyLimitLayer` that could gate access to the device with minimal code.
+
+**Resolution:** Won't fix. The bridge operates in a trusted local network environment where request volume is inherently low. Adding rate limiting would be over-engineering for the current use case.
 
 ---
 
