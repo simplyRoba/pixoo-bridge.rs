@@ -1,7 +1,8 @@
 use crate::pixels::{
-    decode_upload, encode_pic_data, uniform_pixel_buffer, ImageError, PIXOO_FRAME_DIM,
+    decode_upload, encode_pic_data, uniform_pixel_buffer, DecodedFrame, ImageError, PIXOO_FRAME_DIM,
 };
 use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
+use crate::remote::RemoteFetchError;
 use crate::state::AppState;
 use axum::extract::{Json, Multipart, State};
 use axum::http::StatusCode;
@@ -24,6 +25,7 @@ pub fn mount_draw_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>>
     router
         .route("/draw/fill", post(draw_fill))
         .route("/draw/upload", post(draw_upload))
+        .route("/draw/remote", post(draw_remote))
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -34,6 +36,12 @@ struct DrawFillRequest {
     green: u16,
     #[validate(range(min = 0, max = 255))]
     blue: u16,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+struct DrawRemoteRequest {
+    #[validate(custom(function = "validate_remote_link"))]
+    link: String,
 }
 
 #[tracing::instrument(skip(state, payload))]
@@ -91,23 +99,106 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
             .into_response();
     }
 
-    // Decode and resize the image
-    let frames = match decode_upload(&bytes, content_type.as_deref()) {
+    let client = &state.pixoo_client;
+    let frames = match decode_frames(&bytes, content_type.as_deref(), "file") {
+        Ok(frames) => frames,
+        Err(resp) => return resp,
+    };
+
+    send_frames(client, frames, state.animation_speed_factor).await
+}
+
+#[tracing::instrument(skip(state, payload))]
+async fn draw_remote(
+    State(state): State<Arc<AppState>>,
+    ValidatedJson(payload): ValidatedJson<DrawRemoteRequest>,
+) -> Response {
+    let asset = match state.remote_fetcher.fetch(&payload.link).await {
+        Ok(asset) => asset,
+        Err(RemoteFetchError::TooLarge { limit, actual }) => {
+            return (
+                StatusCode::PAYLOAD_TOO_LARGE,
+                Json(json!({
+                    "error": "file too large",
+                    "limit": limit,
+                    "actual": actual,
+                })),
+            )
+                .into_response();
+        }
+        Err(err) => {
+            error!(error = %err, "remote fetch failed");
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({
+                    "error": "remote fetch failed",
+                    "message": err.to_string(),
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    let frames = match decode_frames(&asset.bytes, asset.content_type.as_deref(), "link") {
+        Ok(frames) => frames,
+        Err(resp) => return resp,
+    };
+
+    let client = &state.pixoo_client;
+    send_frames(client, frames, state.animation_speed_factor).await
+}
+
+async fn extract_file_field(
+    multipart: &mut Multipart,
+) -> Result<(Vec<u8>, Option<String>), Response> {
+    while let Ok(Some(field)) = multipart.next_field().await {
+        if field.name() == Some("file") {
+            let content_type = field.content_type().map(String::from);
+            let bytes = field.bytes().await.map_err(|err| {
+                let message = err.to_string();
+                validation_error_simple("file", &message)
+            })?;
+
+            if bytes.is_empty() {
+                return Err(validation_error_simple("file", "file is empty"));
+            }
+
+            return Ok((bytes.to_vec(), content_type));
+        }
+    }
+
+    Err(validation_error_simple("file", "missing file field"))
+}
+
+#[allow(clippy::result_large_err)]
+fn decode_frames(
+    bytes: &[u8],
+    content_type: Option<&str>,
+    field: &str,
+) -> Result<Vec<DecodedFrame>, Response> {
+    let frames = match decode_upload(bytes, content_type) {
         Ok(frames) => frames,
         Err(ImageError::UnsupportedFormat) => {
-            return validation_error_simple("file", "unsupported image format");
+            return Err(validation_error_simple(field, "unsupported image format"));
         }
         Err(ImageError::DecodeFailed(msg)) => {
             error!(error = %msg, "failed to process image");
-            return validation_error_simple("file", "failed to process image");
+            return Err(validation_error_simple(field, "failed to process image"));
         }
     };
 
     if frames.is_empty() {
-        return validation_error_simple("file", "image contains no frames");
+        return Err(validation_error_simple(field, "image contains no frames"));
     }
 
-    let client = &state.pixoo_client;
+    Ok(frames)
+}
+
+async fn send_frames(
+    client: &PixooClient,
+    frames: Vec<DecodedFrame>,
+    speed_factor: f64,
+) -> Response {
     let pic_id = match get_next_pic_id(client).await {
         Ok(value) => value,
         Err(resp) => return resp,
@@ -115,7 +206,6 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
 
     // Frame count is capped at 60, so this conversion is safe.
     let pic_num = u32::try_from(frames.len()).unwrap();
-    let speed_factor = state.animation_speed_factor;
 
     for (offset, frame) in frames.iter().enumerate() {
         let pic_data = match encode_pic_data(&frame.rgb_buffer) {
@@ -148,26 +238,27 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
     StatusCode::OK.into_response()
 }
 
-async fn extract_file_field(
-    multipart: &mut Multipart,
-) -> Result<(Vec<u8>, Option<String>), Response> {
-    while let Ok(Some(field)) = multipart.next_field().await {
-        if field.name() == Some("file") {
-            let content_type = field.content_type().map(String::from);
-            let bytes = field.bytes().await.map_err(|err| {
-                let message = err.to_string();
-                validation_error_simple("file", &message)
-            })?;
+fn validate_remote_link(link: &str) -> Result<(), validator::ValidationError> {
+    let url = reqwest::Url::parse(link).map_err(|_| {
+        let mut error = validator::ValidationError::new("invalid_url");
+        error.message = Some("link must be an absolute http or https url".into());
+        error
+    })?;
 
-            if bytes.is_empty() {
-                return Err(validation_error_simple("file", "file is empty"));
-            }
-
-            return Ok((bytes.to_vec(), content_type));
-        }
+    let scheme = url.scheme();
+    if scheme != "http" && scheme != "https" {
+        let mut error = validator::ValidationError::new("invalid_scheme");
+        error.message = Some("link must be an absolute http or https url".into());
+        return Err(error);
     }
 
-    Err(validation_error_simple("file", "missing file field"))
+    if url.host_str().is_none() {
+        let mut error = validator::ValidationError::new("invalid_host");
+        error.message = Some("link must be an absolute http or https url".into());
+        return Err(error);
+    }
+
+    Ok(())
 }
 
 async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
@@ -240,6 +331,7 @@ mod tests {
     use super::SINGLE_FRAME_PIC_SPEED_MS;
     use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
     use crate::pixoo::{PixooClient, PixooClientConfig};
+    use crate::remote::{RemoteFetchConfig, RemoteFetcher};
     use crate::routes::common::testing::send_json_request;
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -247,6 +339,7 @@ mod tests {
     use axum::http::{Method, Request, StatusCode};
     use axum::routing::post as axum_post;
     use axum::{Json, Router};
+    use httpmock::{Method as MockMethod, MockServer};
     use serde_json::{json, Value};
     use std::sync::{Arc, Mutex};
     use tokio::net::TcpListener;
@@ -435,6 +528,32 @@ mod tests {
         Arc::new(AppState::with_client(client))
     }
 
+    fn remote_test_state(base_url: String, max_image_size: usize) -> Arc<AppState> {
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
+        let remote_fetcher = RemoteFetcher::new(RemoteFetchConfig::new(
+            Duration::from_millis(5_000),
+            max_image_size,
+        ))
+        .expect("remote fetcher");
+        Arc::new(AppState {
+            health_forward: false,
+            pixoo_client: client,
+            animation_speed_factor: 1.4,
+            max_image_size,
+            remote_fetcher,
+        })
+    }
+
+    async fn send_remote_request(app: &Router, link: &str) -> (StatusCode, String) {
+        send_json_request(
+            app,
+            Method::POST,
+            "/draw/remote",
+            Some(json!({ "link": link })),
+        )
+        .await
+    }
+
     #[tokio::test]
     async fn upload_static_png_sends_single_frame() {
         let (base_url, requests) = start_pixoo_mock().await;
@@ -537,5 +656,85 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("unsupported image format"));
+    }
+
+    #[tokio::test]
+    async fn remote_png_download_sends_single_frame() {
+        let (base_url, requests) = start_pixoo_mock().await;
+        let remote_server = MockServer::start_async().await;
+        let png_data = create_test_png();
+        remote_server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/logo.png");
+            then.status(200)
+                .header("content-type", "image/png")
+                .body(png_data.clone());
+        });
+
+        let app = build_draw_app(remote_test_state(base_url, 5 * 1024 * 1024));
+        let link = format!("{}/logo.png", remote_server.base_url());
+        let (status, body) = send_remote_request(&app, &link).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.is_empty());
+
+        let captured = requests.lock().unwrap();
+        assert_eq!(captured.len(), 2);
+        assert_eq!(captured[0]["Command"], "Draw/GetHttpGifId");
+        assert_eq!(captured[1]["Command"], "Draw/SendHttpGif");
+        assert_eq!(captured[1]["PicNum"], 1);
+    }
+
+    #[tokio::test]
+    async fn remote_invalid_url_returns_400() {
+        let (base_url, _) = start_pixoo_mock().await;
+        let app = build_draw_app(remote_test_state(base_url, 5 * 1024 * 1024));
+
+        let (status, body) = send_remote_request(&app, "ftp://example.com/logo.png").await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+    }
+
+    #[tokio::test]
+    async fn remote_oversized_payload_returns_413() {
+        let (base_url, _) = start_pixoo_mock().await;
+        let remote_server = MockServer::start_async().await;
+        let payload = vec![1_u8; 200];
+        remote_server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/big.png");
+            then.status(200)
+                .header("content-type", "image/png")
+                .header("content-length", "200")
+                .body(payload.clone());
+        });
+
+        let app = build_draw_app(remote_test_state(base_url, 100));
+        let link = format!("{}/big.png", remote_server.base_url());
+        let (status, body) = send_remote_request(&app, &link).await;
+
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "file too large");
+        assert_eq!(json_body["limit"], 100);
+        assert_eq!(json_body["actual"], 200);
+    }
+
+    #[tokio::test]
+    async fn remote_download_error_returns_503() {
+        let (base_url, _) = start_pixoo_mock().await;
+        let remote_server = MockServer::start_async().await;
+        remote_server.mock(|when, then| {
+            when.method(MockMethod::GET).path("/fail.png");
+            then.status(500).body("nope");
+        });
+
+        let app = build_draw_app(remote_test_state(base_url, 5 * 1024 * 1024));
+        let link = format!("{}/fail.png", remote_server.base_url());
+        let (status, body) = send_remote_request(&app, &link).await;
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "remote fetch failed");
     }
 }

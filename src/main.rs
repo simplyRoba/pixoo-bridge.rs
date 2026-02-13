@@ -1,6 +1,7 @@
 mod config;
 mod pixels;
 mod pixoo;
+mod remote;
 mod request_tracing;
 mod routes;
 mod state;
@@ -21,6 +22,7 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use config::{AppConfig, ConfigSource, EnvConfigSource};
 use pixoo::PixooClient;
+use remote::{RemoteFetchConfig, RemoteFetcher};
 use request_tracing::RequestId;
 use routes::mount_all_routes;
 use state::AppState;
@@ -42,11 +44,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
     let pixoo_client = PixooClient::new(config.pixoo_base_url.clone(), config.pixoo_client)?;
+    let remote_fetcher = RemoteFetcher::new(RemoteFetchConfig::new(
+        config.remote_timeout,
+        config.max_image_size,
+    ))?;
     let state = Arc::new(AppState {
         health_forward: config.health_forward,
         pixoo_client,
         animation_speed_factor: config.animation_speed_factor,
         max_image_size: config.max_image_size,
+        remote_fetcher,
     });
     let app = build_app(state.clone());
 
@@ -61,6 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         health_forward = config.health_forward,
         animation_speed_factor = config.animation_speed_factor,
         max_image_size = config.max_image_size,
+        remote_timeout = ?config.remote_timeout,
         "Pixoo bridge configuration loaded"
     );
 

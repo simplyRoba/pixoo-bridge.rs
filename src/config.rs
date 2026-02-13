@@ -5,7 +5,7 @@ use tracing::warn;
 const DEFAULT_LISTENER_PORT: u16 = 4000;
 const MIN_LISTENER_PORT: u16 = 1024;
 const MAX_LISTENER_PORT: u16 = 65535;
-const DEFAULT_PIXOO_TIMEOUT_MS: u64 = 10_000;
+const DEFAULT_REMOTE_TIMEOUT_MS: u64 = 10_000;
 const DEFAULT_ANIMATION_SPEED_FACTOR: f64 = 1.4;
 const DEFAULT_MAX_IMAGE_SIZE: usize = 5 * 1024 * 1024; // 5 MB
 
@@ -36,6 +36,7 @@ pub struct AppConfig {
     pub listener_port: u16,
     pub animation_speed_factor: f64,
     pub max_image_size: usize,
+    pub remote_timeout: Duration,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,7 +68,8 @@ impl AppConfig {
     pub fn load_from(source: &impl ConfigSource) -> Result<Self, ConfigError> {
         let health_forward = read_bool(source, "PIXOO_BRIDGE_HEALTH_FORWARD", true);
         let pixoo_base_url = resolve_pixoo_base_url(source)?;
-        let pixoo_client = resolve_pixoo_client_config(source);
+        let remote_timeout = resolve_remote_timeout(source);
+        let pixoo_client = resolve_pixoo_client_config(remote_timeout);
         let listener_port = resolve_listener_port(source);
         let animation_speed_factor = resolve_animation_speed_factor(source);
         let max_image_size = resolve_max_image_size(source);
@@ -79,6 +81,7 @@ impl AppConfig {
             listener_port,
             animation_speed_factor,
             max_image_size,
+            remote_timeout,
         })
     }
 }
@@ -96,16 +99,19 @@ fn resolve_pixoo_base_url(source: &impl ConfigSource) -> Result<String, ConfigEr
     Ok(value.to_string())
 }
 
-fn resolve_pixoo_client_config(source: &impl ConfigSource) -> PixooClientConfig {
-    let timeout = source
-        .get("PIXOO_TIMEOUT_MS")
-        .and_then(|value| value.parse::<u64>().ok())
-        .map_or_else(
-            || Duration::from_millis(DEFAULT_PIXOO_TIMEOUT_MS),
-            Duration::from_millis,
-        );
+fn resolve_pixoo_client_config(timeout: Duration) -> PixooClientConfig {
     let defaults = PixooClientConfig::default();
     PixooClientConfig::new(timeout, defaults.retries, defaults.backoff)
+}
+
+fn resolve_remote_timeout(source: &impl ConfigSource) -> Duration {
+    source
+        .get("PIXOO_BRIDGE_REMOTE_TIMEOUT_MS")
+        .and_then(|value| value.parse::<u64>().ok())
+        .map_or_else(
+            || Duration::from_millis(DEFAULT_REMOTE_TIMEOUT_MS),
+            Duration::from_millis,
+        )
 }
 
 fn read_bool(source: &impl ConfigSource, key: &str, default: bool) -> bool {
@@ -262,9 +268,11 @@ mod tests {
     }
 
     #[test]
-    fn pixoo_timeout_uses_env_override() {
-        let config = MockConfig::new().with("PIXOO_TIMEOUT_MS", "250");
-        let client_config = resolve_pixoo_client_config(&config);
+    fn remote_timeout_uses_env_override() {
+        let config = MockConfig::new().with("PIXOO_BRIDGE_REMOTE_TIMEOUT_MS", "250");
+        let timeout = resolve_remote_timeout(&config);
+        let client_config = resolve_pixoo_client_config(timeout);
+        assert_eq!(timeout, Duration::from_millis(250));
         assert_eq!(client_config.timeout, Duration::from_millis(250));
     }
 

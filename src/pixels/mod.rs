@@ -14,4 +14,4 @@ pub const PIXOO_FRAME_LEN: usize =
 
 pub use canvas::uniform_pixel_buffer;
 pub use encoding::encode_pic_data;
-pub use imaging::{decode_upload, ImageError};
+pub use imaging::{decode_upload, DecodedFrame, ImageError};
