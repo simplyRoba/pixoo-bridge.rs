@@ -30,7 +30,7 @@ On startup the container logs the resolved configuration (health forwarding flag
 | Method | Endpoint | Description | Success | Client Errors |
 | --- | --- | --- | --- | --- |
 | `GET` | `/health` | Bridge health probe (cascades to device if enabled). | `200` | — |
-| `POST` | `/reboot` | Request a Pixoo reboot. | `204` | — |
+| `POST` | `/reboot` | Request a Pixoo reboot. | `200` | — |
 | `POST` | `/tools/timer/start` | Start timer. Body: `{ "minute": 0-59, "second": 0-59 }` | `200` | `400` invalid payload |
 | `POST` | `/tools/timer/stop` | Stop the timer. | `200` | — |
 | `POST` | `/tools/stopwatch/{action}` | Control stopwatch. Action: `start`, `stop`, `reset` | `200` | `400` invalid action |

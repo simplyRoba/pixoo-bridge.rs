@@ -103,9 +103,9 @@ The `RemoteFetcher` (`src/remote.rs`) follows redirects by default (reqwest's de
 
 The bridge is designed for integration with Home Assistant and automation platforms, which may call it from browser-based UIs. There's no CORS middleware configured. If any browser-based client needs to reach this bridge, every request will fail.
 
-### 10. Reboot Endpoint Returns 200 Instead of 204
+### 10. ~~Reboot Endpoint Returns 200 Instead of 204~~ (resolved)
 
-The README documents `/reboot` as returning `204`, but `system.rs:48` returns `StatusCode::OK` (200). This is a spec/implementation mismatch.
+The README documented `/reboot` as returning `204`, but the spec and implementation both say `200`. The README has been corrected.
 
 ### 11. Leftover Debug Prints in Tests
 
@@ -180,7 +180,7 @@ No red flags. Dependencies are well-chosen and not over-specified.
 
 6. **Add a JSON 404 fallback handler** so undefined routes return the standard error shape instead of plain text.
 
-7. **Fix the `/reboot` response code** to return 204 as documented, or update the docs to say 200.
+7. ~~**Fix the `/reboot` response code**~~ — resolved: README was wrong, not the code. Spec says 200.
 
 8. **Add end-to-end integration tests** that start the actual TCP listener.
 
