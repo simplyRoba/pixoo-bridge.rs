@@ -6,9 +6,11 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use serde_json::{json, Map, Value};
+use serde_json::{json, Map};
 use std::sync::Arc;
 use tracing::{debug, error};
+
+use super::common::dispatch_pixoo_command;
 
 use crate::state::AppState;
 
@@ -39,19 +41,8 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
 }
 
 #[tracing::instrument(skip(state))]
-async fn reboot(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let client = &state.pixoo_client;
-    match client
-        .send_command(&PixooCommand::SystemReboot, Map::<String, Value>::new())
-        .await
-    {
-        Ok(_) => StatusCode::OK.into_response(),
-        Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo reboot command");
-            error!(error = ?err, status = %status, "Pixoo reboot command failed");
-            (status, body).into_response()
-        }
-    }
+async fn reboot(State(state): State<Arc<AppState>>) -> Response {
+    dispatch_pixoo_command(&state, PixooCommand::SystemReboot, Map::new()).await
 }
 
 #[cfg(test)]

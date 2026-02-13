@@ -1,3 +1,6 @@
+use crate::pixoo::client::PixooResponse;
+use crate::pixoo::{map_pixoo_error, PixooCommand};
+use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::rejection::JsonRejection;
 use axum::extract::{FromRequest, Json, Request};
@@ -5,6 +8,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Map, Value};
+use tracing::error;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 /// A JSON extractor that deserializes and validates the request body,
@@ -94,6 +98,45 @@ pub fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
     json_error(StatusCode::BAD_REQUEST, "validation failed")
         .action_error(action, allowed)
         .finish()
+}
+
+/// Sends a Pixoo command and returns the device response.
+///
+/// Used by GET-style handlers that need to read the response body.
+/// On failure, returns an error `Response` ready to send to the client.
+pub async fn dispatch_pixoo_query(
+    state: &AppState,
+    command: PixooCommand,
+) -> Result<PixooResponse, Response> {
+    let client = &state.pixoo_client;
+    match client.send_command(&command, Map::new()).await {
+        Ok(response) => Ok(response),
+        Err(err) => {
+            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
+            error!(command = %command, error = ?err, status = %status, "Pixoo command failed");
+            Err((status, body).into_response())
+        }
+    }
+}
+
+/// Sends a Pixoo command and discards the response.
+///
+/// Used by POST-style handlers that only need success/failure.
+/// Returns `200 OK` on success or the appropriate error response.
+pub async fn dispatch_pixoo_command(
+    state: &AppState,
+    command: PixooCommand,
+    args: Map<String, Value>,
+) -> Response {
+    let client = &state.pixoo_client;
+    match client.send_command(&command, args).await {
+        Ok(_) => StatusCode::OK.into_response(),
+        Err(err) => {
+            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
+            error!(command = %command, error = ?err, status = %status, "Pixoo command failed");
+            (status, body).into_response()
+        }
+    }
 }
 
 pub fn service_unavailable() -> Response {

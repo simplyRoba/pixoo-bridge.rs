@@ -1,7 +1,6 @@
 use crate::pixoo::client::PixooResponse;
-use crate::pixoo::{map_pixoo_error, PixooCommand};
+use crate::pixoo::PixooCommand;
 use axum::extract::{Json, Path, State};
-use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::Router;
@@ -15,8 +14,8 @@ use tracing::{debug, error};
 use validator::Validate;
 
 use super::common::{
-    action_validation_error, internal_server_error, service_unavailable, validation_error_simple,
-    ValidatedJson,
+    action_validation_error, dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error,
+    service_unavailable, validation_error_simple, ValidatedJson,
 };
 
 use crate::state::AppState;
@@ -139,7 +138,7 @@ impl FromStr for OnOffAction {
 
 #[tracing::instrument(skip(state))]
 async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
-    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetSettings).await {
+    let response = match dispatch_pixoo_query(&state, PixooCommand::ManageGetSettings).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };
@@ -155,7 +154,7 @@ async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
 
 #[tracing::instrument(skip(state))]
 async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
-    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetTime).await {
+    let response = match dispatch_pixoo_query(&state, PixooCommand::ManageGetTime).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };
@@ -171,7 +170,7 @@ async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
 
 #[tracing::instrument(skip(state))]
 async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
-    let response = match dispatch_manage_command(&state, PixooCommand::ManageGetWeather).await {
+    let response = match dispatch_pixoo_query(&state, PixooCommand::ManageGetWeather).await {
         Ok(response) => response,
         Err(resp) => return resp,
     };
@@ -200,7 +199,7 @@ async fn manage_set_location(
         Value::String(payload.latitude.to_string()),
     );
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageSetLocation, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageSetLocation, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -217,7 +216,7 @@ async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
     let mut args = Map::new();
     args.insert("Utc".to_string(), Value::from(utc_secs));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageSetUtc, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageSetUtc, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -240,7 +239,7 @@ async fn manage_set_timezone(
     let mut args = Map::new();
     args.insert("TimeZoneValue".to_string(), Value::String(timezone_value));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageSetTimezone, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageSetTimezone, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -257,7 +256,7 @@ async fn manage_set_time_mode(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageSetTimeMode, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageSetTimeMode, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -274,7 +273,7 @@ async fn manage_set_temperature_unit(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageSetTemperatureUnit, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageSetTemperatureUnit, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -289,7 +288,7 @@ async fn manage_display_on(
     let mut args = Map::new();
     args.insert("OnOff".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayPower, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageDisplayPower, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -305,7 +304,7 @@ async fn manage_display_brightness(
     let mut args = Map::new();
     args.insert("Brightness".to_string(), Value::from(brightness_value));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayBrightness, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageDisplayBrightness, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -321,7 +320,7 @@ async fn manage_display_rotation(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(mode_value));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayRotation, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageDisplayRotation, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -336,7 +335,7 @@ async fn manage_display_mirror(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayMirror, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageDisplayMirror, args).await
 }
 
 #[tracing::instrument(skip(state))]
@@ -351,7 +350,7 @@ async fn manage_display_overclock(
     let mut args = Map::new();
     args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayOverclock, args).await
+    dispatch_pixoo_command(&state, PixooCommand::ManageDisplayOverclock, args).await
 }
 
 #[tracing::instrument(skip(state, payload))]
@@ -364,22 +363,7 @@ async fn manage_display_white_balance(
     args.insert("GValue".to_string(), Value::from(payload.green));
     args.insert("BValue".to_string(), Value::from(payload.blue));
 
-    dispatch_manage_post_command(&state, PixooCommand::ManageDisplayWhiteBalance, args).await
-}
-
-async fn dispatch_manage_command(
-    state: &AppState,
-    command: PixooCommand,
-) -> Result<PixooResponse, Response> {
-    let client = &state.pixoo_client;
-    match client.send_command(&command, Map::new()).await {
-        Ok(response) => Ok(response),
-        Err(err) => {
-            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
-            error!(command = %command, error = ?err, status = %status, "Pixoo manage command failed");
-            Err((status, body).into_response())
-        }
-    }
+    dispatch_pixoo_command(&state, PixooCommand::ManageDisplayWhiteBalance, args).await
 }
 
 fn offset_validation_error(message: &str) -> Response {
@@ -409,22 +393,6 @@ fn current_utc_seconds() -> Result<i64, String> {
         .map_err(|err| err.to_string())?;
     let secs = i64::try_from(duration.as_secs()).map_err(|err| err.to_string())?;
     Ok(secs)
-}
-
-async fn dispatch_manage_post_command(
-    state: &AppState,
-    command: PixooCommand,
-    args: Map<String, Value>,
-) -> Response {
-    let client = &state.pixoo_client;
-    match client.send_command(&command, args).await {
-        Ok(_) => StatusCode::OK.into_response(),
-        Err(err) => {
-            let (status, body) = map_pixoo_error(&err, &format!("Pixoo {command} command"));
-            error!(command = %command, error = ?err, status = %status, "Pixoo manage command failed");
-            (status, body).into_response()
-        }
-    }
 }
 
 fn map_settings(response: &PixooResponse) -> Result<ManageSettings, String> {
@@ -1146,7 +1114,7 @@ mod tests {
         });
 
         let app = build_manage_app(manage_state_with_client(&server.base_url()));
-        let (status, body) = send_post(
+        let (status, _) = send_post(
             &app,
             "/manage/display/white-balance",
             Some(json!({ "red": 90, "green": 100, "blue": 100 })),

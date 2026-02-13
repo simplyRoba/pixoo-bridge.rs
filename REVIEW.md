@@ -54,15 +54,9 @@ Running with `clippy::pedantic = "deny"` (`Cargo.toml:12`) and only allowing two
 
 ## What's Not So Good
 
-### 1. Duplicated Dispatch Boilerplate
+### 1. ~~Duplicated Dispatch Boilerplate~~ (resolved)
 
-Every route handler manually builds a `Map<String, Value>`, calls `send_command`, matches on the result, calls `map_pixoo_error`, logs the error, and returns the response. This pattern appears at least 15 times across `tools.rs`, `manage.rs`, `draw.rs`, and `system.rs`. Compare:
-
-- `src/routes/tools.rs:167-181` (`dispatch_command`)
-- `src/routes/manage.rs:414-428` (`dispatch_manage_post_command`)
-- `src/routes/manage.rs:370-383` (`dispatch_manage_command`)
-
-These three functions are nearly identical. `dispatch_command` and `dispatch_manage_post_command` do the exact same thing. This duplication will compound as more endpoints are added.
+Consolidated into two shared functions in `common.rs`: `dispatch_pixoo_command` (fire-and-forget) and `dispatch_pixoo_query` (returns response). All route modules now use these.
 
 ### 2. Untyped Pixoo Protocol Layer
 
@@ -168,7 +162,7 @@ No red flags. Dependencies are well-chosen and not over-specified.
    impl Into<Map<String, Value>> for TimerCommand { ... }
    ```
 
-2. **Unify dispatch functions.** The three nearly-identical dispatch functions should be one. At minimum, merge `dispatch_command` and `dispatch_manage_post_command`.
+2. ~~**Unify dispatch functions.**~~ — resolved: consolidated into `dispatch_pixoo_command` and `dispatch_pixoo_query` in `common.rs`.
 
 3. **Harden `RemoteFetcher`.** Add IP-address filtering to block RFC 1918, link-local, and loopback addresses. Limit redirect count. This is a real SSRF vector.
 

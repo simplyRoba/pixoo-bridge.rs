@@ -1,7 +1,7 @@
 use crate::pixels::{
     decode_upload, encode_pic_data, uniform_pixel_buffer, DecodedFrame, ImageError, PIXOO_FRAME_DIM,
 };
-use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
+use crate::pixoo::PixooCommand;
 use crate::remote::RemoteFetchError;
 use crate::state::AppState;
 use axum::extract::{Multipart, State};
@@ -16,7 +16,8 @@ use tracing::error;
 use validator::Validate;
 
 use super::common::{
-    internal_server_error, json_error, service_unavailable, validation_error_simple, ValidatedJson,
+    dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, json_error,
+    service_unavailable, validation_error_simple, ValidatedJson,
 };
 
 const SINGLE_FRAME_PIC_SPEED_MS: u32 = 9999;
@@ -72,8 +73,6 @@ async fn draw_fill(
     State(state): State<Arc<AppState>>,
     ValidatedJson(payload): ValidatedJson<DrawFillRequest>,
 ) -> Response {
-    let client = &state.pixoo_client;
-
     let Ok(red) = u8::try_from(payload.red) else {
         return internal_server_error("invalid red value");
     };
@@ -93,12 +92,12 @@ async fn draw_fill(
         }
     };
 
-    let pic_id = match get_next_pic_id(client).await {
+    let pic_id = match get_next_pic_id(&state).await {
         Ok(value) => value,
         Err(resp) => return resp,
     };
 
-    send_draw_frame(client, pic_id, 1, 0, SINGLE_FRAME_PIC_SPEED_MS, pic_data).await
+    send_draw_frame(&state, pic_id, 1, 0, SINGLE_FRAME_PIC_SPEED_MS, pic_data).await
 }
 
 #[tracing::instrument(skip(state, multipart))]
@@ -114,13 +113,12 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
         return payload_too_large(state.max_image_size, bytes.len());
     }
 
-    let client = &state.pixoo_client;
     let frames = match decode_frames(&bytes, content_type.as_deref(), "file") {
         Ok(frames) => frames,
         Err(resp) => return resp,
     };
 
-    send_frames(client, frames, state.animation_speed_factor).await
+    send_frames(&state, frames, state.animation_speed_factor).await
 }
 
 #[tracing::instrument(skip(state, payload))]
@@ -144,8 +142,7 @@ async fn draw_remote(
         Err(resp) => return resp,
     };
 
-    let client = &state.pixoo_client;
-    send_frames(client, frames, state.animation_speed_factor).await
+    send_frames(&state, frames, state.animation_speed_factor).await
 }
 
 async fn extract_file_field(
@@ -194,18 +191,8 @@ fn decode_frames(
     Ok(frames)
 }
 
-async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
-    let response = match client
-        .send_command(&PixooCommand::DrawGetGifId, Map::new())
-        .await
-    {
-        Ok(response) => response,
-        Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo draw id command");
-            error!(error = ?err, status = %status, "Pixoo draw id command failed");
-            return Err((status, body).into_response());
-        }
-    };
+async fn get_next_pic_id(state: &AppState) -> Result<i64, Response> {
+    let response = dispatch_pixoo_query(state, PixooCommand::DrawGetGifId).await?;
 
     let Some(value) = response.get("PicId") else {
         error!(response = ?response, "missing PicId in draw response");
@@ -233,7 +220,7 @@ async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
 }
 
 async fn send_draw_frame(
-    client: &PixooClient,
+    state: &AppState,
     pic_id: i64,
     pic_num: u32,
     pic_offset: u32,
@@ -248,22 +235,11 @@ async fn send_draw_frame(
     args.insert("PicSpeed".to_string(), Value::from(pic_speed));
     args.insert("PicData".to_string(), Value::String(pic_data));
 
-    match client.send_command(&PixooCommand::DrawSendGif, args).await {
-        Ok(_) => StatusCode::OK.into_response(),
-        Err(err) => {
-            let (status, body) = map_pixoo_error(&err, "Pixoo draw send command");
-            error!(error = ?err, status = %status, "Pixoo draw send command failed");
-            (status, body).into_response()
-        }
-    }
+    dispatch_pixoo_command(state, PixooCommand::DrawSendGif, args).await
 }
 
-async fn send_frames(
-    client: &PixooClient,
-    frames: Vec<DecodedFrame>,
-    speed_factor: f64,
-) -> Response {
-    let pic_id = match get_next_pic_id(client).await {
+async fn send_frames(state: &AppState, frames: Vec<DecodedFrame>, speed_factor: f64) -> Response {
+    let pic_id = match get_next_pic_id(state).await {
         Ok(value) => value,
         Err(resp) => return resp,
     };
@@ -293,7 +269,7 @@ async fn send_frames(
 
         // offset is max 59, so this conversion is safe
         let pic_offset = u32::try_from(offset).unwrap();
-        let resp = send_draw_frame(client, pic_id, pic_num, pic_offset, pic_speed, pic_data).await;
+        let resp = send_draw_frame(state, pic_id, pic_num, pic_offset, pic_speed, pic_data).await;
         if resp.status() != StatusCode::OK {
             return resp;
         }
