@@ -107,9 +107,9 @@ The bridge is designed for integration with Home Assistant and automation platfo
 
 The README documented `/reboot` as returning `204`, but the spec and implementation both say `200`. The README has been corrected.
 
-### 11. Leftover Debug Prints in Tests
+### 11. ~~Leftover Debug Prints in Tests~~ (resolved)
 
-`src/routes/manage.rs:1156-1157` and `src/routes/manage.rs:1174` contain `eprintln!` debug prints in tests. These are harmless but should be cleaned up.
+Removed the three `eprintln!` calls from manage.rs tests.
 
 ---
 
@@ -131,9 +131,9 @@ The `animation_speed_factor` is configured once at startup and applied uniformly
 
 The architecture assumes a single Pixoo device (one `base_url` in config). If someone has multiple devices, they need to run multiple bridge instances. This is fine for now, but the state design would need to change for multi-device support.
 
-### `PixooClient` Parses Base URL Twice
+### ~~`PixooClient` Parses Base URL Twice~~ (resolved)
 
-In `src/pixoo/client.rs:55-67`, the base URL is parsed by `reqwest::Url::parse` twice (once for `/post`, once for `/get`). This is harmless but wasteful — parse once and derive both.
+Refactored to parse once and derive both `/post` and `/get` URLs.
 
 ---
 
@@ -188,7 +188,7 @@ No red flags. Dependencies are well-chosen and not over-specified.
 
 ### Low Priority
 
-10. **Remove `eprintln!` from test code** in `manage.rs`.
+10. ~~**Remove `eprintln!` from test code**~~ — resolved.
 
 11. **Consider adding OpenAPI/Swagger spec generation** — the API surface is now large enough (20+ endpoints) that auto-generated docs would help consumers.
 

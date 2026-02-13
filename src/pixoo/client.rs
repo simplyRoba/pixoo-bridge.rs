@@ -53,18 +53,12 @@ impl PixooClient {
     /// Returns [`PixooError::Http`] if the HTTP client fails to initialize.
     pub fn new(base_url: impl Into<String>, config: PixooClientConfig) -> Result<Self, PixooError> {
         let base_url = base_url.into();
-        let post_url = reqwest::Url::parse(&base_url)
-            .map_err(|err| PixooError::InvalidBaseUrl(err.to_string()))
-            .map(|mut url| {
-                url.set_path("/post");
-                url.to_string()
-            })?;
-        let get_url = reqwest::Url::parse(&base_url)
-            .map_err(|err| PixooError::InvalidBaseUrl(err.to_string()))
-            .map(|mut url| {
-                url.set_path("/get");
-                url.to_string()
-            })?;
+        let mut parsed = reqwest::Url::parse(&base_url)
+            .map_err(|err| PixooError::InvalidBaseUrl(err.to_string()))?;
+        parsed.set_path("/post");
+        let post_url = parsed.to_string();
+        parsed.set_path("/get");
+        let get_url = parsed.to_string();
         let http = reqwest::Client::builder().timeout(config.timeout).build()?;
 
         Ok(Self {
