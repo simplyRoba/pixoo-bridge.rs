@@ -1153,9 +1153,6 @@ mod tests {
         )
         .await;
 
-        eprintln!("Status: {status}");
-        eprintln!("Body: {body}");
-
         assert_eq!(status, StatusCode::OK);
         mock.assert();
     }
@@ -1170,8 +1167,6 @@ mod tests {
             Some(json!({ "red": 150, "green": 100, "blue": 100 })),
         )
         .await;
-
-        eprintln!("Body: {body}");
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
