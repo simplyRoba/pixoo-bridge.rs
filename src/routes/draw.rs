@@ -4,19 +4,19 @@ use crate::pixels::{
 use crate::pixoo::{map_pixoo_error, PixooClient, PixooCommand};
 use crate::remote::RemoteFetchError;
 use crate::state::AppState;
-use axum::extract::{Json, Multipart, State};
+use axum::extract::{Multipart, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
 use serde::Deserialize;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 use std::sync::Arc;
 use tracing::error;
 use validator::Validate;
 
 use super::common::{
-    internal_server_error, service_unavailable, validation_error_simple, ValidatedJson,
+    internal_server_error, json_error, service_unavailable, validation_error_simple, ValidatedJson,
 };
 
 const SINGLE_FRAME_PIC_SPEED_MS: u32 = 9999;
@@ -42,6 +42,29 @@ struct DrawFillRequest {
 struct DrawRemoteRequest {
     #[validate(custom(function = "validate_remote_link"))]
     link: String,
+}
+
+fn validate_remote_link(link: &str) -> Result<(), validator::ValidationError> {
+    let url = reqwest::Url::parse(link).map_err(|_| {
+        let mut error = validator::ValidationError::new("invalid_url");
+        error.message = Some("link must be an absolute http or https url".into());
+        error
+    })?;
+
+    let scheme = url.scheme();
+    if scheme != "http" && scheme != "https" {
+        let mut error = validator::ValidationError::new("invalid_scheme");
+        error.message = Some("link must be an absolute http or https url".into());
+        return Err(error);
+    }
+
+    if url.host_str().is_none() {
+        let mut error = validator::ValidationError::new("invalid_host");
+        error.message = Some("link must be an absolute http or https url".into());
+        return Err(error);
+    }
+
+    Ok(())
 }
 
 #[tracing::instrument(skip(state, payload))]
@@ -88,15 +111,7 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
 
     // Check file size against configured limit
     if bytes.len() > state.max_image_size {
-        return (
-            StatusCode::PAYLOAD_TOO_LARGE,
-            Json(json!({
-                "error": "file too large",
-                "limit": state.max_image_size,
-                "actual": bytes.len(),
-            })),
-        )
-            .into_response();
+        return payload_too_large(state.max_image_size, bytes.len());
     }
 
     let client = &state.pixoo_client;
@@ -116,26 +131,11 @@ async fn draw_remote(
     let asset = match state.remote_fetcher.fetch(&payload.link).await {
         Ok(asset) => asset,
         Err(RemoteFetchError::TooLarge { limit, actual }) => {
-            return (
-                StatusCode::PAYLOAD_TOO_LARGE,
-                Json(json!({
-                    "error": "file too large",
-                    "limit": limit,
-                    "actual": actual,
-                })),
-            )
-                .into_response();
+            return payload_too_large(limit, actual);
         }
         Err(err) => {
             error!(error = %err, "remote fetch failed");
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({
-                    "error": "remote fetch failed",
-                    "message": err.to_string(),
-                })),
-            )
-                .into_response();
+            return remote_fetch_failed(&err.to_string());
         }
     };
 
@@ -192,73 +192,6 @@ fn decode_frames(
     }
 
     Ok(frames)
-}
-
-async fn send_frames(
-    client: &PixooClient,
-    frames: Vec<DecodedFrame>,
-    speed_factor: f64,
-) -> Response {
-    let pic_id = match get_next_pic_id(client).await {
-        Ok(value) => value,
-        Err(resp) => return resp,
-    };
-
-    // Frame count is capped at 60, so this conversion is safe.
-    let pic_num = u32::try_from(frames.len()).unwrap();
-
-    for (offset, frame) in frames.iter().enumerate() {
-        let pic_data = match encode_pic_data(&frame.rgb_buffer) {
-            Ok(value) => value,
-            Err(err) => {
-                error!(error = %err, frame = offset, "failed to encode frame");
-                return internal_server_error("failed to encode frame");
-            }
-        };
-
-        let pic_speed = if frame.delay_ms == 0 {
-            SINGLE_FRAME_PIC_SPEED_MS
-        } else {
-            // f64::from(u32) is lossless; speed_factor > 0 is validated at config time
-            let speed = (f64::from(frame.delay_ms) * speed_factor).round().max(1.0);
-            // Saturating cast: guaranteed ≥ 1.0; values > u32::MAX saturate to u32::MAX
-            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let ms = speed as u32;
-            ms
-        };
-
-        // offset is max 59, so this conversion is safe
-        let pic_offset = u32::try_from(offset).unwrap();
-        let resp = send_draw_frame(client, pic_id, pic_num, pic_offset, pic_speed, pic_data).await;
-        if resp.status() != StatusCode::OK {
-            return resp;
-        }
-    }
-
-    StatusCode::OK.into_response()
-}
-
-fn validate_remote_link(link: &str) -> Result<(), validator::ValidationError> {
-    let url = reqwest::Url::parse(link).map_err(|_| {
-        let mut error = validator::ValidationError::new("invalid_url");
-        error.message = Some("link must be an absolute http or https url".into());
-        error
-    })?;
-
-    let scheme = url.scheme();
-    if scheme != "http" && scheme != "https" {
-        let mut error = validator::ValidationError::new("invalid_scheme");
-        error.message = Some("link must be an absolute http or https url".into());
-        return Err(error);
-    }
-
-    if url.host_str().is_none() {
-        let mut error = validator::ValidationError::new("invalid_host");
-        error.message = Some("link must be an absolute http or https url".into());
-        return Err(error);
-    }
-
-    Ok(())
 }
 
 async fn get_next_pic_id(client: &PixooClient) -> Result<i64, Response> {
@@ -323,6 +256,62 @@ async fn send_draw_frame(
             (status, body).into_response()
         }
     }
+}
+
+async fn send_frames(
+    client: &PixooClient,
+    frames: Vec<DecodedFrame>,
+    speed_factor: f64,
+) -> Response {
+    let pic_id = match get_next_pic_id(client).await {
+        Ok(value) => value,
+        Err(resp) => return resp,
+    };
+
+    // Frame count is capped at 60, so this conversion is safe.
+    let pic_num = u32::try_from(frames.len()).unwrap();
+
+    for (offset, frame) in frames.iter().enumerate() {
+        let pic_data = match encode_pic_data(&frame.rgb_buffer) {
+            Ok(value) => value,
+            Err(err) => {
+                error!(error = %err, frame = offset, "failed to encode frame");
+                return internal_server_error("failed to encode frame");
+            }
+        };
+
+        let pic_speed = if frame.delay_ms == 0 {
+            SINGLE_FRAME_PIC_SPEED_MS
+        } else {
+            // f64::from(u32) is lossless; speed_factor > 0 is validated at config time
+            let speed = (f64::from(frame.delay_ms) * speed_factor).round().max(1.0);
+            // Saturating cast: guaranteed ≥ 1.0; values > u32::MAX saturate to u32::MAX
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let ms = speed as u32;
+            ms
+        };
+
+        // offset is max 59, so this conversion is safe
+        let pic_offset = u32::try_from(offset).unwrap();
+        let resp = send_draw_frame(client, pic_id, pic_num, pic_offset, pic_speed, pic_data).await;
+        if resp.status() != StatusCode::OK {
+            return resp;
+        }
+    }
+
+    StatusCode::OK.into_response()
+}
+
+fn payload_too_large(limit: usize, actual: usize) -> Response {
+    json_error(StatusCode::PAYLOAD_TOO_LARGE, "file too large")
+        .limit_actual(limit, actual)
+        .finish()
+}
+
+fn remote_fetch_failed(message: &str) -> Response {
+    json_error(StatusCode::SERVICE_UNAVAILABLE, "remote fetch failed")
+        .message(message)
+        .finish()
 }
 
 #[cfg(test)]

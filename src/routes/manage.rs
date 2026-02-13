@@ -56,6 +56,87 @@ pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState
         )
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ManageSettings {
+    display_on: bool,
+    brightness: i64,
+    time_mode: String,
+    rotation_angle: i64,
+    mirrored: bool,
+    temperature_unit: String,
+    current_clock_id: i64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ManageTime {
+    utc_time: String,
+    local_time: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ManageWeather {
+    weather_string: String,
+    current_temperature: f64,
+    minimal_temperature: f64,
+    maximal_temperature: f64,
+    pressure: i64,
+    humidity: i64,
+    wind_speed: f64,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+struct LocationRequest {
+    #[validate(range(min = -180.0, max = 180.0))]
+    longitude: f64,
+    #[validate(range(min = -90.0, max = 90.0))]
+    latitude: f64,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+struct WhiteBalanceRequest {
+    #[validate(range(min = 0, max = 100))]
+    red: i32,
+    #[validate(range(min = 0, max = 100))]
+    green: i32,
+    #[validate(range(min = 0, max = 100))]
+    blue: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum OnOffAction {
+    On,
+    Off,
+}
+
+impl OnOffAction {
+    fn flag_value(&self) -> i32 {
+        match self {
+            Self::On => 1,
+            Self::Off => 0,
+        }
+    }
+
+    fn allowed_values() -> &'static [&'static str] {
+        &["on", "off"]
+    }
+}
+
+impl FromStr for OnOffAction {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "on" => Ok(Self::On),
+            "off" => Ok(Self::Off),
+            _ => Err(()),
+        }
+    }
+}
+
 #[tracing::instrument(skip(state))]
 async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_manage_command(&state, PixooCommand::ManageGetSettings).await {
@@ -273,16 +354,6 @@ async fn manage_display_overclock(
     dispatch_manage_post_command(&state, PixooCommand::ManageDisplayOverclock, args).await
 }
 
-#[derive(Debug, Deserialize, Validate)]
-struct WhiteBalanceRequest {
-    #[validate(range(min = 0, max = 100))]
-    red: i32,
-    #[validate(range(min = 0, max = 100))]
-    green: i32,
-    #[validate(range(min = 0, max = 100))]
-    blue: i32,
-}
-
 #[tracing::instrument(skip(state, payload))]
 async fn manage_display_white_balance(
     State(state): State<Arc<AppState>>,
@@ -455,77 +526,6 @@ fn temperature_unit(response: &PixooResponse) -> Result<String, String> {
     } else {
         "CELSIUS".to_string()
     })
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ManageSettings {
-    display_on: bool,
-    brightness: i64,
-    time_mode: String,
-    rotation_angle: i64,
-    mirrored: bool,
-    temperature_unit: String,
-    current_clock_id: i64,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ManageTime {
-    utc_time: String,
-    local_time: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ManageWeather {
-    weather_string: String,
-    current_temperature: f64,
-    minimal_temperature: f64,
-    maximal_temperature: f64,
-    pressure: i64,
-    humidity: i64,
-    wind_speed: f64,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-struct LocationRequest {
-    #[validate(range(min = -180.0, max = 180.0))]
-    longitude: f64,
-    #[validate(range(min = -90.0, max = 90.0))]
-    latitude: f64,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum OnOffAction {
-    On,
-    Off,
-}
-
-impl OnOffAction {
-    fn flag_value(&self) -> i32 {
-        match self {
-            Self::On => 1,
-            Self::Off => 0,
-        }
-    }
-
-    fn allowed_values() -> &'static [&'static str] {
-        &["on", "off"]
-    }
-}
-
-impl FromStr for OnOffAction {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "on" => Ok(Self::On),
-            "off" => Ok(Self::Off),
-            _ => Err(()),
-        }
-    }
 }
 
 #[cfg(test)]
