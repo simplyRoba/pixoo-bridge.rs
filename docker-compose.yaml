@@ -1,0 +1,8 @@
+services:
+  pixoo-bridge:
+    image: ghcr.io/simplyroba/pixoo-bridge.rs:latest
+    ports:
+      - "4000:4000"
+    environment:
+      PIXOO_BASE_URL: "http://xxx.xxx.xxx.xxx" # replace with your Pixoo IP
+    restart: unless-stopped
