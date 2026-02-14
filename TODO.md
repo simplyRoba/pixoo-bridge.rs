@@ -1,0 +1,1 @@
+- [ ] Make body/path enum parsing case-insensitive; note REVIEW.md suggestion to add a `ValidatedPath` extractor for consistent path validation.
