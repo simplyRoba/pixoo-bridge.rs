@@ -9,11 +9,11 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::Router;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::sync::Arc;
 use tracing::error;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 use super::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, json_error,
@@ -27,6 +27,8 @@ pub fn mount_draw_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>>
         .route("/draw/fill", post(draw_fill))
         .route("/draw/upload", post(draw_upload))
         .route("/draw/remote", post(draw_remote))
+        .route("/draw/text", post(draw_text))
+        .route("/draw/text/clear", post(draw_text_clear))
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -43,6 +45,73 @@ struct DrawFillRequest {
 struct DrawRemoteRequest {
     #[validate(custom(function = "validate_remote_link"))]
     link: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
+struct DrawTextRequest {
+    #[validate(range(min = 0, max = 20))]
+    id: u16,
+    position: TextPosition,
+    scroll_direction: ScrollDirection,
+    #[validate(range(min = 0, max = 7))]
+    font: u16,
+    #[validate(range(min = 16, max = 64))]
+    text_width: u16,
+    #[validate(length(max = 512))]
+    text: String,
+    #[validate(range(min = 0, max = 100))]
+    scroll_speed: u16,
+    #[validate(custom(function = "validate_rgb_color"))]
+    color: RgbColor,
+    text_alignment: TextAlignment,
+}
+
+#[derive(Debug, Deserialize)]
+struct TextPosition {
+    x: u16,
+    y: u16,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct RgbColor {
+    red: u16,
+    green: u16,
+    blue: u16,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+enum ScrollDirection {
+    Left,
+    Right,
+}
+
+impl ScrollDirection {
+    fn key(&self) -> u8 {
+        match self {
+            Self::Left => 0,
+            Self::Right => 1,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+enum TextAlignment {
+    Left,
+    Middle,
+    Right,
+}
+
+impl TextAlignment {
+    fn key(&self) -> u8 {
+        match self {
+            Self::Left => 1,
+            Self::Middle => 2,
+            Self::Right => 3,
+        }
+    }
 }
 
 fn validate_remote_link(link: &str) -> Result<(), validator::ValidationError> {
@@ -66,6 +135,21 @@ fn validate_remote_link(link: &str) -> Result<(), validator::ValidationError> {
     }
 
     Ok(())
+}
+
+fn validate_rgb_color(color: &RgbColor) -> Result<(), ValidationError> {
+    let mut error = ValidationError::new("invalid_color");
+    error.message = Some("color values must be between 0 and 255".into());
+
+    if color.red > 255 || color.green > 255 || color.blue > 255 {
+        return Err(error);
+    }
+
+    Ok(())
+}
+
+fn rgb_to_hex(color: &RgbColor) -> String {
+    format!("#{:02X}{:02X}{:02X}", color.red, color.green, color.blue)
 }
 
 #[tracing::instrument(skip(state, payload))]
@@ -143,6 +227,41 @@ async fn draw_remote(
     };
 
     send_frames(&state, frames, state.animation_speed_factor).await
+}
+
+#[tracing::instrument(skip(state, payload))]
+async fn draw_text(
+    State(state): State<Arc<AppState>>,
+    ValidatedJson(payload): ValidatedJson<DrawTextRequest>,
+) -> Response {
+    let mut args = Map::new();
+    args.insert("LcdId".to_string(), Value::from(0));
+    args.insert("TextId".to_string(), Value::from(payload.id));
+    args.insert("x".to_string(), Value::from(payload.position.x));
+    args.insert("y".to_string(), Value::from(payload.position.y));
+    args.insert(
+        "dir".to_string(),
+        Value::from(payload.scroll_direction.key()),
+    );
+    args.insert("font".to_string(), Value::from(payload.font));
+    args.insert("TextWidth".to_string(), Value::from(payload.text_width));
+    args.insert("speed".to_string(), Value::from(payload.scroll_speed));
+    args.insert("TextString".to_string(), Value::String(payload.text));
+    args.insert(
+        "color".to_string(),
+        Value::String(rgb_to_hex(&payload.color)),
+    );
+    args.insert(
+        "align".to_string(),
+        Value::from(payload.text_alignment.key()),
+    );
+
+    dispatch_pixoo_command(&state, PixooCommand::DrawSendText, args).await
+}
+
+#[tracing::instrument(skip(state))]
+async fn draw_text_clear(State(state): State<Arc<AppState>>) -> Response {
+    dispatch_pixoo_command(&state, PixooCommand::DrawClearText, Map::new()).await
 }
 
 async fn extract_file_field(
@@ -292,8 +411,10 @@ fn remote_fetch_failed(message: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use super::mount_draw_routes;
     use super::SINGLE_FRAME_PIC_SPEED_MS;
+    use super::{
+        mount_draw_routes, DrawTextRequest, RgbColor, ScrollDirection, TextAlignment, TextPosition,
+    };
     use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
     use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::remote::{RemoteFetchConfig, RemoteFetcher};
@@ -309,6 +430,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use tokio::net::TcpListener;
     use tower::ServiceExt;
+    use validator::Validate;
 
     #[derive(Clone)]
     struct PixooMockState {
@@ -352,6 +474,24 @@ mod tests {
 
     fn build_draw_app(state: Arc<AppState>) -> Router {
         mount_draw_routes(Router::new()).with_state(state)
+    }
+
+    fn base_text_payload() -> DrawTextRequest {
+        DrawTextRequest {
+            id: 4,
+            position: TextPosition { x: 0, y: 40 },
+            scroll_direction: ScrollDirection::Left,
+            font: 4,
+            text_width: 56,
+            text: "hello, Divoom".to_string(),
+            scroll_speed: 10,
+            color: RgbColor {
+                red: 255,
+                green: 255,
+                blue: 0,
+            },
+            text_alignment: TextAlignment::Left,
+        }
     }
 
     #[tokio::test]
@@ -402,6 +542,173 @@ mod tests {
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error"], "validation failed");
         assert!(json_body["details"]["red"].is_array());
+    }
+
+    #[test]
+    fn text_payload_with_out_of_range_fields() {
+        let mut payload = base_text_payload();
+        payload.id = 25;
+        payload.font = 9;
+        payload.text_width = 10;
+        payload.scroll_speed = 120;
+        payload.color.red = 300;
+        payload.text = "a".repeat(513);
+
+        let errors = payload.validate().expect_err("expected validation error");
+        let fields = errors.field_errors();
+        assert!(fields.contains_key("id"));
+        assert!(fields.contains_key("font"));
+        assert!(fields.contains_key("text_width"));
+        assert!(fields.contains_key("scroll_speed"));
+        assert!(fields.contains_key("color"));
+        assert!(fields.contains_key("text"));
+    }
+
+    #[tokio::test]
+    async fn text_request_sends_pixoo_text_command() {
+        let (base_url, requests) = start_pixoo_mock().await;
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
+        let app = build_draw_app(Arc::new(AppState::with_client(client)));
+
+        let (status, body) = send_json_request(
+            &app,
+            Method::POST,
+            "/draw/text",
+            Some(json!({
+                "id": 4,
+                "position": { "x": 0, "y": 40 },
+                "scrollDirection": "LEFT",
+                "font": 4,
+                "textWidth": 56,
+                "scrollSpeed": 10,
+                "text": "hello, Divoom",
+                "color": { "red": 255, "green": 255, "blue": 0 },
+                "textAlignment": "LEFT"
+            })),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.is_empty());
+
+        let captured = requests.lock().unwrap();
+        assert_eq!(captured.len(), 1);
+        assert_eq!(captured[0]["Command"], "Draw/SendHttpText");
+        assert_eq!(captured[0]["LcdId"], 0);
+        assert_eq!(captured[0]["TextId"], 4);
+        assert_eq!(captured[0]["x"], 0);
+        assert_eq!(captured[0]["y"], 40);
+        assert_eq!(captured[0]["dir"], 0);
+        assert_eq!(captured[0]["font"], 4);
+        assert_eq!(captured[0]["TextWidth"], 56);
+        assert_eq!(captured[0]["speed"], 10);
+        assert_eq!(captured[0]["TextString"], "hello, Divoom");
+        assert_eq!(captured[0]["color"], "#FFFF00");
+        assert_eq!(captured[0]["align"], 1);
+    }
+
+    #[tokio::test]
+    async fn text_request_with_invalid_payload() {
+        let (base_url, requests) = start_pixoo_mock().await;
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
+        let app = build_draw_app(Arc::new(AppState::with_client(client)));
+
+        let (status, body) = send_json_request(
+            &app,
+            Method::POST,
+            "/draw/text",
+            Some(json!({
+                "id": 25,
+                "position": { "x": 0, "y": 40 },
+                "scrollDirection": "LEFT",
+                "font": 4,
+                "textWidth": 10,
+                "scrollSpeed": 10,
+                "text": "hello",
+                "color": { "red": 300, "green": 255, "blue": 0 },
+                "textAlignment": "LEFT"
+            })),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error"], "validation failed");
+        assert!(json_body["details"]["id"].is_array());
+        assert!(json_body["details"]["text_width"].is_array());
+        assert!(json_body["details"]["color"].is_array());
+        let captured = requests.lock().unwrap();
+        assert!(captured.is_empty());
+    }
+
+    #[tokio::test]
+    async fn text_clear_request_sends_pixoo_command() {
+        let (base_url, requests) = start_pixoo_mock().await;
+        let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
+        let app = build_draw_app(Arc::new(AppState::with_client(client)));
+
+        let (status, body) = send_json_request(&app, Method::POST, "/draw/text/clear", None).await;
+
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.is_empty());
+
+        let captured = requests.lock().unwrap();
+        assert_eq!(captured.len(), 1);
+        assert_eq!(captured[0]["Command"], "Draw/ClearHttpText");
+    }
+
+    #[tokio::test]
+    async fn text_clear_request_with_pixoo_error() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":1}"#);
+        });
+
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let app = build_draw_app(Arc::new(AppState::with_client(client)));
+        let (status, body) = send_json_request(&app, Method::POST, "/draw/text/clear", None).await;
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error_kind"], "device-error");
+        assert_eq!(json_body["error_code"], 1);
+    }
+
+    #[tokio::test]
+    async fn text_request_with_pixoo_error() {
+        let server = MockServer::start_async().await;
+        server.mock(|when, then| {
+            when.method(MockMethod::POST).path("/post");
+            then.status(200).body(r#"{"error_code":1}"#);
+        });
+
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let app = build_draw_app(Arc::new(AppState::with_client(client)));
+        let (status, body) = send_json_request(
+            &app,
+            Method::POST,
+            "/draw/text",
+            Some(json!({
+                "id": 4,
+                "position": { "x": 0, "y": 40 },
+                "scrollDirection": "LEFT",
+                "font": 4,
+                "textWidth": 56,
+                "scrollSpeed": 10,
+                "text": "hello, Divoom",
+                "color": { "red": 255, "green": 255, "blue": 0 },
+                "textAlignment": "LEFT"
+            })),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        let json_body: Value = serde_json::from_str(&body).unwrap();
+        assert_eq!(json_body["error_kind"], "device-error");
+        assert_eq!(json_body["error_code"], 1);
     }
 
     // --- draw_upload tests ---

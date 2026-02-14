@@ -55,6 +55,8 @@ Unexpected Pixoo errors are logged with context; set `PIXOO_BRIDGE_LOG_LEVEL=DEB
 | `POST` | `/draw/fill` | Fill the display with a single RGB color. Body: `{ "red": 0-255, "green": 0-255, "blue": 0-255 }` | `200` | `400` invalid payload |
 | `POST` | `/draw/upload` | Upload an image (JPEG, PNG, WebP, GIF) to display. Multipart form with `file` field. Animated GIF/WebP supported (max 60 frames). | `200` | `400` invalid format/missing file, `413` file too large |
 | `POST` | `/draw/remote` | Download an image from a URL to display. Body: `{ "link": "http(s)://..." }`. | `200` | `400` invalid URL, `413` payload too large, `503` download failed |
+| `POST` | `/draw/text` | Draw text. Body: `{ "id": 0-20, "position": { "x": >=0, "y": >=0 }, "scrollDirection": "LEFT"|"RIGHT", "font": 0-7, "textWidth": 16-64, "scrollSpeed": 0-100, "text": "...", "color": { "red": 0-255, "green": 0-255, "blue": 0-255 }, "textAlignment": "LEFT"|"MIDDLE"|"RIGHT" }` | `200` | `400` invalid payload |
+| `POST` | `/draw/text/clear` | Clear the Pixoo text layer. | `200` | — |
 | `GET` | `/manage/settings` | Display settings (visibility, brightness, rotation, mirror, temp unit, clock ID). | `200` | — |
 | `GET` | `/manage/time` | Device time as ISO-8601 UTC/local timestamps. | `200` | — |
 | `GET` | `/manage/weather` | Weather data (temps, pressure, humidity, wind). | `200` | — |

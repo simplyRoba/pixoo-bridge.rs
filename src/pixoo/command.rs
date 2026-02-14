@@ -25,6 +25,8 @@ pub enum PixooCommand {
     DrawSendGif,
     #[allow(dead_code)] // Required by spec but not yet used
     DrawResetGifId,
+    DrawSendText,
+    DrawClearText,
 }
 
 impl PixooCommand {
@@ -52,6 +54,8 @@ impl PixooCommand {
             PixooCommand::DrawGetGifId => "Draw/GetHttpGifId",
             PixooCommand::DrawSendGif => "Draw/SendHttpGif",
             PixooCommand::DrawResetGifId => "Draw/ResetHttpGifId",
+            PixooCommand::DrawSendText => "Draw/SendHttpText",
+            PixooCommand::DrawClearText => "Draw/ClearHttpText",
         }
     }
 }
@@ -126,5 +130,7 @@ mod tests {
         assert_eq!(PixooCommand::DrawGetGifId.as_str(), "Draw/GetHttpGifId");
         assert_eq!(PixooCommand::DrawSendGif.as_str(), "Draw/SendHttpGif");
         assert_eq!(PixooCommand::DrawResetGifId.as_str(), "Draw/ResetHttpGifId");
+        assert_eq!(PixooCommand::DrawSendText.as_str(), "Draw/SendHttpText");
+        assert_eq!(PixooCommand::DrawClearText.as_str(), "Draw/ClearHttpText");
     }
 }
