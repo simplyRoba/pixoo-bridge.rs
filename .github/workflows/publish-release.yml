@@ -126,7 +126,7 @@ jobs:
 
   docker:
     name: Build and push Docker image
-    needs: upload-release-assets
+    needs: compile
     runs-on: ubuntu-latest
     permissions:
       contents: read
