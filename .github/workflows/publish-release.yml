@@ -43,11 +43,9 @@ jobs:
         include:
           - target: linux-amd64
             triple: x86_64-unknown-linux-gnu
-            cc: gcc
             rustflags: ''
           - target: linux-arm64
             triple: aarch64-unknown-linux-gnu
-            cc: aarch64-linux-gnu-gcc
             rustflags: "-Clinker=aarch64-linux-gnu-gcc"
     steps:
       - name: Checkout repository
@@ -81,7 +79,7 @@ jobs:
           else
             unset RUSTFLAGS
           fi
-          export CC=${{ matrix.cc }}
+          export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
           cargo build --release --target ${{ matrix.triple }}
 
       - name: Collect release binary
