@@ -11,7 +11,8 @@
     // Rust stable + rust-analyzer installed via devcontainer feature
     "ghcr.io/devcontainers/features/rust:1": {
       "version": "stable",
-      "components": "rust-analyzer"
+      "components": "rust-analyzer",
+      "profile": "default"
     },
     // Docker CLI installed; dind=true to enable Docker-in-Docker
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
@@ -31,8 +32,8 @@
     "OPENSPEC_TELEMETRY": "0",
     "DO_NOT_TRACK": "1"
   },
-  // Install global npm tools and initialize starship after container creation
-  "postCreateCommand": "npm install -g opencode-ai @fission-ai/openspec && grep -qxF 'eval \"$(starship init bash)\"' ~/.bashrc || echo 'eval \"$(starship init bash)\"' >> ~/.bashrc",
+  // Initialize starship after container creation
+  "postCreateCommand": "echo 'eval \"$(starship init bash)\"' >> ~/.bashrc",
   // Update global npm tools every time the container starts
-  "initializeCommand": "npm update -g opencode-ai @fission-ai/openspec"
+  "postStartCommand": "npm install -g npm opencode-ai @fission-ai/openspec"
 }
