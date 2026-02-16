@@ -34,6 +34,6 @@
   },
   // Initialize starship after container creation
   "postCreateCommand": "echo 'eval \"$(starship init bash)\"' >> ~/.bashrc",
-  // Update npm and global npm tools every time the container starts
-  "initializeCommand": "npm install -g npm opencode-ai @fission-ai/openspec"
+  // Update global npm tools every time the container starts
+  "postStartCommand": "npm install -g npm opencode-ai @fission-ai/openspec"
 }
