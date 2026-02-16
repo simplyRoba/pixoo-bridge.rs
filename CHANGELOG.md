@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.11.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.10.0...v0.11.0) (2026-02-16)
+
+
+### Features
+
+* add /draw/remote endpoint for downloading images from URLs ([a0327db](https://github.com/simplyRoba/pixoo-bridge.rs/commit/a0327db96d111ba1815e21378a7b8979747d20fe))
+* add comprehensive code review for pixoo-bridge.rs v0.10.0 ([dc08279](https://github.com/simplyRoba/pixoo-bridge.rs/commit/dc082797720ba1f5e4149969b016e99bbf466a6a))
+* add text drawing endpoints and validation for Pixoo commands ([2f20aea](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2f20aea86705a619ab957898f28790f8087db768))
+* enhance error handling with ErrorBuilder and refactor response generation ([6b280cf](https://github.com/simplyRoba/pixoo-bridge.rs/commit/6b280cfeea47dd10c3d44300be77813e96af072d))
+
+
+### Bug Fixes
+
+* **ci:** remove cross-compiler from CI and isolate cache keys ([#73](https://github.com/simplyRoba/pixoo-bridge.rs/issues/73)) ([2787662](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2787662a6bbd3d5f3e9b19bea37cf956b5352f89))
+* correct /reboot success status code in README from 204 to 200 ([d11741e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/d11741ef329ee6fe46b6ed30447d29035bf9ef9c))
+* correct command for updating global npm tools in devcontainer configuration ([beb4971](https://github.com/simplyRoba/pixoo-bridge.rs/commit/beb4971ed2305334b86b986fbf6e16308dc16301))
+* **deps:** bump thiserror from 1.0.69 to 2.0.18 ([35999a3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/35999a30f880b703a3d2c1882c725dbc65ad0bd8))
+* **deps:** bump uuid from 1.20.0 to 1.21.0 ([a2096d5](https://github.com/simplyRoba/pixoo-bridge.rs/commit/a2096d552199a5f1f4c67efbd8b23cc929a158f7))
+* format imports in draw.rs and add settings.local.json for permissions ([af64dfc](https://github.com/simplyRoba/pixoo-bridge.rs/commit/af64dfccc52efbe19005c2900d66a049922d49be))
+* honor PIXOO_BRIDGE_PORT in Dockerfile health check ([ad68a26](https://github.com/simplyRoba/pixoo-bridge.rs/commit/ad68a2643d4ae9b1d1ac74f1e122ff9ab90660ec))
+* implement integration tests for error paths in middleware ([62cd4b9](https://github.com/simplyRoba/pixoo-bridge.rs/commit/62cd4b9eaa55645f2d1fd6c992fbd1f65a982f2a))
+* mark access log level as debug and document resolution ([2f0262b](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2f0262bab8143befd71b081b660274e4160aa5bb))
+* mark several review items as won't fix and clarify resolution details ([51b896c](https://github.com/simplyRoba/pixoo-bridge.rs/commit/51b896c177c9e7d834a4aec4907b541d7607959e))
+* remove settings.local.json as it is no longer needed ([de8a7a8](https://github.com/simplyRoba/pixoo-bridge.rs/commit/de8a7a8d7de93eeb3fd81ae606855b4b9fba216e))
+* replace hardcoded PicWidth with PIXOO_FRAME_DIM constant ([a054852](https://github.com/simplyRoba/pixoo-bridge.rs/commit/a0548520fcfa3674162882150a4bee212f34933e))
+* **request_tracing:** replace constant reference to HEADER_NAME in tests ([9d79184](https://github.com/simplyRoba/pixoo-bridge.rs/commit/9d7918432fcd84f1a1d4ba38fdf1a94d6c4f4b4b))
+* **tests:** simplify request creation in test case ([b22c66e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/b22c66e784ee170d5568ee4f0e33411b0cf77d68))
+* update devcontainer configuration for Rust and npm tools ([48e8ca0](https://github.com/simplyRoba/pixoo-bridge.rs/commit/48e8ca03261003449506f718847b370657f85fcd))
+* update send_command to use reference for PixooCommand in multiple files ([fb05298](https://github.com/simplyRoba/pixoo-bridge.rs/commit/fb052982f9cc7dcad8a7e652e4b631958dbb7fc1))
+
 ## [0.10.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.9.0...v0.10.0) (2026-02-09)
 
 
