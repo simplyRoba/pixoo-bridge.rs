@@ -101,13 +101,13 @@ jobs:
       contents: write
     steps:
       - name: Download linux/amd64 binary
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-binaries-linux-amd64
           path: release-artifacts/linux-amd64
 
       - name: Download linux/arm64 binary
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-binaries-linux-arm64
           path: release-artifacts/linux-arm64
@@ -136,13 +136,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download linux/amd64 binary
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-binaries-linux-amd64
           path: release-artifacts/linux-amd64
 
       - name: Download linux/arm64 binary
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-binaries-linux-arm64
           path: release-artifacts/linux-arm64
