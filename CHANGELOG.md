@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.11.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.11.0...v0.11.1) (2026-03-11)
+
+
+### Bug Fixes
+
+* **ci:** bump docker/build-push-action from 6 to 7 ([ea89ca3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/ea89ca3dc0e08d2afee245ae10e49d2224db0360))
+* **ci:** bump docker/metadata-action from 5 to 6 ([8f2f451](https://github.com/simplyRoba/pixoo-bridge.rs/commit/8f2f45195dff502450b58dcc4ce892f284f2cdcf))
+* **deps:** bump image from 0.25.9 to 0.25.10 ([edeb66a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/edeb66a8831b985c967d4d62649c7ff284a6dcc3))
+* **deps:** bump quinn-proto from 0.11.13 to 0.11.14 ([61a9786](https://github.com/simplyRoba/pixoo-bridge.rs/commit/61a978619833ba984165c0552b3528e002ab7211))
+* **deps:** bump uuid from 1.21.0 to 1.22.0 ([6e26e08](https://github.com/simplyRoba/pixoo-bridge.rs/commit/6e26e0896097e7bc964bd76215de277d5975f052))
+
 ## [0.11.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.10.0...v0.11.0) (2026-03-05)
 
 
