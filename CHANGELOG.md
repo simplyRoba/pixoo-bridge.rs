@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.11.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.11.0...v0.11.1) (2026-03-27)
+
+
+### Bug Fixes
+
+* **ci:** bump docker/build-push-action from 6 to 7 ([ea89ca3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/ea89ca3dc0e08d2afee245ae10e49d2224db0360))
+* **ci:** bump docker/metadata-action from 5 to 6 ([8f2f451](https://github.com/simplyRoba/pixoo-bridge.rs/commit/8f2f45195dff502450b58dcc4ce892f284f2cdcf))
+* **deps:** bump image from 0.25.9 to 0.25.10 ([edeb66a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/edeb66a8831b985c967d4d62649c7ff284a6dcc3))
+* **deps:** bump quinn-proto from 0.11.13 to 0.11.14 ([61a9786](https://github.com/simplyRoba/pixoo-bridge.rs/commit/61a978619833ba984165c0552b3528e002ab7211))
+* **deps:** bump rustls-webpki from 0.103.9 to 0.103.10 ([a9c6a43](https://github.com/simplyRoba/pixoo-bridge.rs/commit/a9c6a432e65ac3f35724f91ba14d6694202002df))
+* **deps:** bump tracing-subscriber from 0.3.22 to 0.3.23 ([f3473c9](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f3473c9c5646be3136db7b41268618a7d834e088))
+* **deps:** bump uuid from 1.21.0 to 1.22.0 ([6e26e08](https://github.com/simplyRoba/pixoo-bridge.rs/commit/6e26e0896097e7bc964bd76215de277d5975f052))
+* **deps:** bump uuid from 1.22.0 to 1.23.0 ([9057586](https://github.com/simplyRoba/pixoo-bridge.rs/commit/9057586c897e65d1cb6f1dc977160e89a11ad53d))
+
 ## [0.11.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.10.0...v0.11.0) (2026-03-05)
 
 
