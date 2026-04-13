@@ -118,7 +118,7 @@ jobs:
           mv release-artifacts/linux-arm64/pixoo-bridge release-artifacts/linux-arm64/pixoo-bridge-linux-arm64
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             release-artifacts/linux-amd64/pixoo-bridge-linux-amd64
