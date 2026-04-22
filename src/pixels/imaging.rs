@@ -68,9 +68,7 @@ fn detect_format(bytes: &[u8], content_type: Option<&str>) -> Result<ImageFormat
 }
 
 fn is_animated_webp(bytes: &[u8]) -> bool {
-    WebPDecoder::new(Cursor::new(bytes))
-        .map(|dec| dec.has_animation())
-        .unwrap_or(false)
+    WebPDecoder::new(Cursor::new(bytes)).is_ok_and(|dec| dec.has_animation())
 }
 
 fn decode_static(bytes: &[u8], format: ImageFormat) -> Result<Vec<DecodedFrame>, ImageError> {
@@ -122,7 +120,7 @@ fn decode_animation_frames<'a>(
         .take(MAX_ANIMATION_FRAMES)
         .map(|frame| {
             let (numer, denom) = frame.delay().numer_denom_ms();
-            let delay_ms = if denom == 0 { 0 } else { numer / denom };
+            let delay_ms = numer.checked_div(denom).unwrap_or(0);
             let img = DynamicImage::ImageRgba8(frame.into_buffer());
             let rgb_buffer = resize_and_extract(&img);
             DecodedFrame {
