@@ -111,24 +111,4 @@ The Pixoo Channel control API will not be implemented. Use the Divoom app for th
 
 ---
 
-# Contributing
-
-If you want to build or contribute, this project targets a minimal Rust service that bridges Pixoo device protocols to a more usable HTTP interface.
-
-## Tech Stack
-
-- Rust (stable toolchain)
-- [axum](https://github.com/tokio-rs/axum) HTTP framework on [tokio](https://tokio.rs/)
-- Multi-arch Docker images (`linux/amd64`, `linux/arm64`)
-
-## Development
-
-Run `cargo fmt && cargo clippy && cargo test` before committing. Follow conventional commit format.
-
-## Releases
-
-Releases are managed by [release-please](https://github.com/googleapis/release-please). Merging to `main` automatically creates or updates a release PR. Once that PR is merged, the pipeline compiles binaries for `linux/amd64` and `linux/arm64`, uploads them as GitHub release assets, and publishes a multi-arch Docker image to `ghcr.io`.
-
----
-
 **This project is developed spec-driven with AI assistance, reviewed by a critical human.**
