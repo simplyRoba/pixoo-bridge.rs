@@ -128,7 +128,7 @@ impl FromStr for OnOffAction {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        match s.to_ascii_lowercase().as_str() {
             "on" => Ok(Self::On),
             "off" => Ok(Self::Off),
             _ => Err(()),
@@ -247,7 +247,7 @@ async fn manage_set_time_mode(
     State(state): State<Arc<AppState>>,
     Path(mode): Path<String>,
 ) -> Response {
-    let mode_value = match mode.as_str() {
+    let mode_value = match mode.to_ascii_lowercase().as_str() {
         "12h" => 0,
         "24h" => 1,
         _ => return validation_error_simple("mode", "mode must be '12h' or '24h'"),
@@ -264,7 +264,7 @@ async fn manage_set_temperature_unit(
     State(state): State<Arc<AppState>>,
     Path(unit): Path<String>,
 ) -> Response {
-    let mode_value = match unit.as_str() {
+    let mode_value = match unit.to_ascii_lowercase().as_str() {
         "celsius" => 0,
         "fahrenheit" => 1,
         _ => return validation_error_simple("unit", "unit must be 'celsius' or 'fahrenheit'"),

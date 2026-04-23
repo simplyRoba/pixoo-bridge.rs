@@ -64,7 +64,7 @@ impl FromStr for StopwatchAction {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        match s.to_ascii_lowercase().as_str() {
             "start" => Ok(Self::Start),
             "stop" => Ok(Self::Stop),
             "reset" => Ok(Self::Reset),
@@ -97,7 +97,7 @@ impl FromStr for SoundmeterAction {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        match s.to_ascii_lowercase().as_str() {
             "start" => Ok(Self::Start),
             "stop" => Ok(Self::Stop),
             _ => Err(()),
