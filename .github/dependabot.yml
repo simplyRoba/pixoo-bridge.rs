@@ -8,6 +8,19 @@ updates:
       timezone: "Europe/Berlin"
     commit-message:
       prefix: "fix(deps): "
+    groups:
+      tokio:
+        patterns:
+          - "tokio"
+          - "tokio-test"
+      serde:
+        patterns:
+          - "serde"
+          - "serde_json"
+      tracing:
+        patterns:
+          - "tracing"
+          - "tracing-subscriber"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
