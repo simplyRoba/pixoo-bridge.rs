@@ -1,6 +1,7 @@
 use crate::pixels::{
     decode_upload, encode_pic_data, uniform_pixel_buffer, DecodedFrame, ImageError, PIXOO_FRAME_DIM,
 };
+use crate::pixoo::fields::{request as req, response as resp};
 use crate::pixoo::PixooCommand;
 use crate::remote::RemoteFetchError;
 use crate::state::AppState;
@@ -235,24 +236,24 @@ async fn draw_text(
     ValidatedJson(payload): ValidatedJson<DrawTextRequest>,
 ) -> Response {
     let mut args = Map::new();
-    args.insert("LcdId".to_string(), Value::from(0));
-    args.insert("TextId".to_string(), Value::from(payload.id));
-    args.insert("x".to_string(), Value::from(payload.position.x));
-    args.insert("y".to_string(), Value::from(payload.position.y));
+    args.insert(req::LCD_ID.to_string(), Value::from(0));
+    args.insert(req::TEXT_ID.to_string(), Value::from(payload.id));
+    args.insert(req::X.to_string(), Value::from(payload.position.x));
+    args.insert(req::Y.to_string(), Value::from(payload.position.y));
     args.insert(
-        "dir".to_string(),
+        req::DIR.to_string(),
         Value::from(payload.scroll_direction.key()),
     );
-    args.insert("font".to_string(), Value::from(payload.font));
-    args.insert("TextWidth".to_string(), Value::from(payload.text_width));
-    args.insert("speed".to_string(), Value::from(payload.scroll_speed));
-    args.insert("TextString".to_string(), Value::String(payload.text));
+    args.insert(req::FONT.to_string(), Value::from(payload.font));
+    args.insert(req::TEXT_WIDTH.to_string(), Value::from(payload.text_width));
+    args.insert(req::SPEED.to_string(), Value::from(payload.scroll_speed));
+    args.insert(req::TEXT_STRING.to_string(), Value::String(payload.text));
     args.insert(
-        "color".to_string(),
+        req::COLOR.to_string(),
         Value::String(rgb_to_hex(&payload.color)),
     );
     args.insert(
-        "align".to_string(),
+        req::ALIGN.to_string(),
         Value::from(payload.text_alignment.key()),
     );
 
@@ -313,7 +314,7 @@ fn decode_frames(
 async fn get_next_pic_id(state: &AppState) -> Result<i64, Response> {
     let response = dispatch_pixoo_query(state, PixooCommand::DrawGetGifId).await?;
 
-    let Some(value) = response.get("PicId") else {
+    let Some(value) = response.get(resp::PIC_ID) else {
         error!(response = ?response, "missing PicId in draw response");
         return Err(service_unavailable());
     };
@@ -347,12 +348,12 @@ async fn send_draw_frame(
     pic_data: String,
 ) -> Response {
     let mut args = Map::new();
-    args.insert("PicId".to_string(), Value::from(pic_id));
-    args.insert("PicNum".to_string(), Value::from(pic_num));
-    args.insert("PicOffset".to_string(), Value::from(pic_offset));
-    args.insert("PicWidth".to_string(), Value::from(PIXOO_FRAME_DIM));
-    args.insert("PicSpeed".to_string(), Value::from(pic_speed));
-    args.insert("PicData".to_string(), Value::String(pic_data));
+    args.insert(req::PIC_ID.to_string(), Value::from(pic_id));
+    args.insert(req::PIC_NUM.to_string(), Value::from(pic_num));
+    args.insert(req::PIC_OFFSET.to_string(), Value::from(pic_offset));
+    args.insert(req::PIC_WIDTH.to_string(), Value::from(PIXOO_FRAME_DIM));
+    args.insert(req::PIC_SPEED.to_string(), Value::from(pic_speed));
+    args.insert(req::PIC_DATA.to_string(), Value::String(pic_data));
 
     dispatch_pixoo_command(state, PixooCommand::DrawSendGif, args).await
 }

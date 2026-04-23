@@ -1,6 +1,7 @@
 pub mod client;
 pub mod command;
 pub mod error;
+pub mod fields;
 
 pub use client::{PixooClient, PixooClientConfig};
 pub use command::PixooCommand;

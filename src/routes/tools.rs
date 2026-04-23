@@ -1,3 +1,4 @@
+use crate::pixoo::fields::request as req;
 use crate::pixoo::PixooCommand;
 use axum::extract::{Path, State};
 use axum::response::Response;
@@ -111,9 +112,9 @@ async fn timer_start(
     ValidatedJson(payload): ValidatedJson<TimerRequest>,
 ) -> Response {
     let mut args = Map::new();
-    args.insert("Minute".to_string(), Value::from(payload.minute));
-    args.insert("Second".to_string(), Value::from(payload.second));
-    args.insert("Status".to_string(), Value::from(1));
+    args.insert(req::MINUTE.to_string(), Value::from(payload.minute));
+    args.insert(req::SECOND.to_string(), Value::from(payload.second));
+    args.insert(req::STATUS.to_string(), Value::from(1));
 
     dispatch_pixoo_command(&state, PixooCommand::ToolsTimer, args).await
 }
@@ -121,7 +122,7 @@ async fn timer_start(
 #[tracing::instrument(skip(state))]
 async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     let mut args = Map::new();
-    args.insert("Status".to_string(), Value::from(0));
+    args.insert(req::STATUS.to_string(), Value::from(0));
 
     dispatch_pixoo_command(&state, PixooCommand::ToolsTimer, args).await
 }
@@ -133,7 +134,7 @@ async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String
     };
 
     let mut args = Map::new();
-    args.insert("Status".to_string(), Value::from(parsed.status()));
+    args.insert(req::STATUS.to_string(), Value::from(parsed.status()));
 
     dispatch_pixoo_command(&state, PixooCommand::ToolsStopwatch, args).await
 }
@@ -144,8 +145,8 @@ async fn scoreboard(
     ValidatedJson(payload): ValidatedJson<ScoreboardRequest>,
 ) -> Response {
     let mut args = Map::new();
-    args.insert("BlueScore".to_string(), Value::from(payload.blue_score));
-    args.insert("RedScore".to_string(), Value::from(payload.red_score));
+    args.insert(req::BLUE_SCORE.to_string(), Value::from(payload.blue_score));
+    args.insert(req::RED_SCORE.to_string(), Value::from(payload.red_score));
 
     dispatch_pixoo_command(&state, PixooCommand::ToolsScoreboard, args).await
 }
@@ -157,7 +158,7 @@ async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<Strin
     };
 
     let mut args = Map::new();
-    args.insert("NoiseStatus".to_string(), Value::from(parsed.status()));
+    args.insert(req::NOISE_STATUS.to_string(), Value::from(parsed.status()));
 
     dispatch_pixoo_command(&state, PixooCommand::ToolsSoundMeter, args).await
 }

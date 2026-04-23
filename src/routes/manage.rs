@@ -1,4 +1,5 @@
 use crate::pixoo::client::PixooResponse;
+use crate::pixoo::fields::{request as req, response as resp};
 use crate::pixoo::PixooCommand;
 use axum::extract::{Json, Path, State};
 use axum::response::{IntoResponse, Response};
@@ -191,11 +192,11 @@ async fn manage_set_location(
 ) -> Response {
     let mut args = Map::new();
     args.insert(
-        "Longitude".to_string(),
+        req::LONGITUDE.to_string(),
         Value::String(payload.longitude.to_string()),
     );
     args.insert(
-        "Latitude".to_string(),
+        req::LATITUDE.to_string(),
         Value::String(payload.latitude.to_string()),
     );
 
@@ -214,7 +215,7 @@ async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
 
     debug!(utc = utc_secs, "setting device UTC clock");
     let mut args = Map::new();
-    args.insert("Utc".to_string(), Value::from(utc_secs));
+    args.insert(req::UTC.to_string(), Value::from(utc_secs));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageSetUtc, args).await
 }
@@ -237,7 +238,10 @@ async fn manage_set_timezone(
     };
 
     let mut args = Map::new();
-    args.insert("TimeZoneValue".to_string(), Value::String(timezone_value));
+    args.insert(
+        req::TIMEZONE_VALUE.to_string(),
+        Value::String(timezone_value),
+    );
 
     dispatch_pixoo_command(&state, PixooCommand::ManageSetTimezone, args).await
 }
@@ -254,7 +258,7 @@ async fn manage_set_time_mode(
     };
 
     let mut args = Map::new();
-    args.insert("Mode".to_string(), Value::from(mode_value));
+    args.insert(req::MODE.to_string(), Value::from(mode_value));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageSetTimeMode, args).await
 }
@@ -271,7 +275,7 @@ async fn manage_set_temperature_unit(
     };
 
     let mut args = Map::new();
-    args.insert("Mode".to_string(), Value::from(mode_value));
+    args.insert(req::MODE.to_string(), Value::from(mode_value));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageSetTemperatureUnit, args).await
 }
@@ -286,7 +290,7 @@ async fn manage_display_on(
     };
 
     let mut args = Map::new();
-    args.insert("OnOff".to_string(), Value::from(parsed.flag_value()));
+    args.insert(req::ON_OFF.to_string(), Value::from(parsed.flag_value()));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayPower, args).await
 }
@@ -302,7 +306,7 @@ async fn manage_display_brightness(
     };
 
     let mut args = Map::new();
-    args.insert("Brightness".to_string(), Value::from(brightness_value));
+    args.insert(req::BRIGHTNESS.to_string(), Value::from(brightness_value));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayBrightness, args).await
 }
@@ -318,7 +322,7 @@ async fn manage_display_rotation(
     };
 
     let mut args = Map::new();
-    args.insert("Mode".to_string(), Value::from(mode_value));
+    args.insert(req::MODE.to_string(), Value::from(mode_value));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayRotation, args).await
 }
@@ -333,7 +337,7 @@ async fn manage_display_mirror(
     };
 
     let mut args = Map::new();
-    args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
+    args.insert(req::MODE.to_string(), Value::from(parsed.flag_value()));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayMirror, args).await
 }
@@ -348,7 +352,7 @@ async fn manage_display_overclock(
     };
 
     let mut args = Map::new();
-    args.insert("Mode".to_string(), Value::from(parsed.flag_value()));
+    args.insert(req::MODE.to_string(), Value::from(parsed.flag_value()));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayOverclock, args).await
 }
@@ -359,9 +363,9 @@ async fn manage_display_white_balance(
     ValidatedJson(payload): ValidatedJson<WhiteBalanceRequest>,
 ) -> Response {
     let mut args = Map::new();
-    args.insert("RValue".to_string(), Value::from(payload.red));
-    args.insert("GValue".to_string(), Value::from(payload.green));
-    args.insert("BValue".to_string(), Value::from(payload.blue));
+    args.insert(req::R_VALUE.to_string(), Value::from(payload.red));
+    args.insert(req::G_VALUE.to_string(), Value::from(payload.green));
+    args.insert(req::B_VALUE.to_string(), Value::from(payload.blue));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayWhiteBalance, args).await
 }
@@ -397,25 +401,25 @@ fn current_utc_seconds() -> Result<i64, String> {
 
 fn map_settings(response: &PixooResponse) -> Result<ManageSettings, String> {
     Ok(ManageSettings {
-        display_on: flag_bool(response, "LightSwitch")?,
-        brightness: parse_i64(response, "Brightness")?,
+        display_on: flag_bool(response, resp::LIGHT_SWITCH)?,
+        brightness: parse_i64(response, resp::BRIGHTNESS)?,
         time_mode: time_mode(response)?,
         rotation_angle: rotation_angle(response)?,
-        mirrored: flag_bool(response, "MirrorFlag")?,
+        mirrored: flag_bool(response, resp::MIRROR_FLAG)?,
         temperature_unit: temperature_unit(response)?,
-        current_clock_id: parse_i64(response, "CurClockId")?,
+        current_clock_id: parse_i64(response, resp::CUR_CLOCK_ID)?,
     })
 }
 
 fn map_time(response: &PixooResponse) -> Result<ManageTime, String> {
-    let utc_secs = parse_i64(response, "UTCTime")?;
+    let utc_secs = parse_i64(response, resp::UTC_TIME)?;
     let utc_time = Utc
         .timestamp_opt(utc_secs, 0)
         .single()
         .ok_or_else(|| format!("UTCTime {utc_secs} out of range"))?;
     let utc_iso = utc_time.format("%Y-%m-%dT%H:%M:%S").to_string();
 
-    let local_value = parse_string(response, "LocalTime")?;
+    let local_value = parse_string(response, resp::LOCAL_TIME)?;
     let local_naive = NaiveDateTime::parse_from_str(&local_value, "%Y-%m-%d %H:%M:%S")
         .map_err(|err| format!("LocalTime parse error: {err}"))?;
     let local_iso = local_naive.format("%Y-%m-%dT%H:%M:%S").to_string();
@@ -428,13 +432,13 @@ fn map_time(response: &PixooResponse) -> Result<ManageTime, String> {
 
 fn map_weather(response: &PixooResponse) -> Result<ManageWeather, String> {
     Ok(ManageWeather {
-        weather_string: parse_string(response, "Weather")?,
-        current_temperature: parse_f64(response, "CurTemp")?,
-        minimal_temperature: parse_f64(response, "MinTemp")?,
-        maximal_temperature: parse_f64(response, "MaxTemp")?,
-        pressure: parse_i64(response, "Pressure")?,
-        humidity: parse_i64(response, "Humidity")?,
-        wind_speed: parse_f64(response, "WindSpeed")?,
+        weather_string: parse_string(response, resp::WEATHER)?,
+        current_temperature: parse_f64(response, resp::CUR_TEMP)?,
+        minimal_temperature: parse_f64(response, resp::MIN_TEMP)?,
+        maximal_temperature: parse_f64(response, resp::MAX_TEMP)?,
+        pressure: parse_i64(response, resp::PRESSURE)?,
+        humidity: parse_i64(response, resp::HUMIDITY)?,
+        wind_speed: parse_f64(response, resp::WIND_SPEED)?,
     })
 }
 
@@ -468,7 +472,7 @@ fn parse_f64(response: &PixooResponse, key: &str) -> Result<f64, String> {
 }
 
 fn time_mode(response: &PixooResponse) -> Result<String, String> {
-    let flag = parse_string(response, "Time24Flag")?;
+    let flag = parse_string(response, resp::TIME_24_FLAG)?;
     Ok(if flag == "1" {
         "TWENTY_FOUR".to_string()
     } else {
@@ -477,7 +481,7 @@ fn time_mode(response: &PixooResponse) -> Result<String, String> {
 }
 
 fn rotation_angle(response: &PixooResponse) -> Result<i64, String> {
-    let flag = parse_string(response, "RotationFlag")?;
+    let flag = parse_string(response, resp::ROTATION_FLAG)?;
     if flag == "0" {
         return Ok(0);
     }
@@ -488,7 +492,7 @@ fn rotation_angle(response: &PixooResponse) -> Result<i64, String> {
 }
 
 fn temperature_unit(response: &PixooResponse) -> Result<String, String> {
-    let flag = parse_string(response, "TemperatureMode")?;
+    let flag = parse_string(response, resp::TEMPERATURE_MODE)?;
     Ok(if flag == "1" {
         "FAHRENHEIT".to_string()
     } else {

@@ -72,7 +72,7 @@ impl PixooClient {
 
     fn build_payload(command: &PixooCommand, mut args: Map<String, Value>) -> Map<String, Value> {
         args.insert(
-            "Command".to_string(),
+            super::fields::request::COMMAND.to_string(),
             Value::String(command.as_str().to_string()),
         );
         args
@@ -267,6 +267,7 @@ fn log_pixoo_error(context: &str, err: &PixooError, retriable: bool) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pixoo::fields::{request as req, response as resp};
     use axum::extract::State;
     use axum::http::StatusCode;
     use axum::routing::post;
@@ -329,19 +330,19 @@ mod tests {
     #[test]
     fn builds_payload_with_command_and_args() {
         let mut args = Map::new();
-        args.insert("Minute".to_string(), Value::Number(1.into()));
-        args.insert("Second".to_string(), Value::Number(0.into()));
-        args.insert("Status".to_string(), Value::Number(1.into()));
+        args.insert(req::MINUTE.to_string(), Value::Number(1.into()));
+        args.insert(req::SECOND.to_string(), Value::Number(0.into()));
+        args.insert(req::STATUS.to_string(), Value::Number(1.into()));
 
         let payload = PixooClient::build_payload(&PixooCommand::SystemReboot, args);
 
         assert_eq!(
-            payload.get("Command"),
+            payload.get(req::COMMAND),
             Some(&Value::String("Device/SysReboot".to_string()))
         );
-        assert_eq!(payload.get("Minute"), Some(&Value::Number(1.into())));
-        assert_eq!(payload.get("Second"), Some(&Value::Number(0.into())));
-        assert_eq!(payload.get("Status"), Some(&Value::Number(1.into())));
+        assert_eq!(payload.get(req::MINUTE), Some(&Value::Number(1.into())));
+        assert_eq!(payload.get(req::SECOND), Some(&Value::Number(0.into())));
+        assert_eq!(payload.get(req::STATUS), Some(&Value::Number(1.into())));
     }
 
     #[test]
@@ -357,8 +358,14 @@ mod tests {
         .expect("response should parse");
 
         assert!(response.get("error_code").is_none());
-        assert_eq!(response.get("Brightness"), Some(&Value::Number(100.into())));
-        assert_eq!(response.get("RotationFlag"), Some(&Value::Number(1.into())));
+        assert_eq!(
+            response.get(resp::BRIGHTNESS),
+            Some(&Value::Number(100.into()))
+        );
+        assert_eq!(
+            response.get(resp::ROTATION_FLAG),
+            Some(&Value::Number(1.into()))
+        );
     }
 
     #[test]
