@@ -1,0 +1,6 @@
+# Only release-artifacts/ is needed by the Dockerfile.
+# Exclude everything else to keep the build context small.
+*
+
+# Allow the pre-built binaries
+!release-artifacts/
