@@ -84,9 +84,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn build_app(state: Arc<AppState>) -> Router {
     let app = mount_all_routes(Router::new());
 
-    app.layer(from_fn(access_log))
+    app.fallback(fallback_not_found)
+        .layer(from_fn(access_log))
         .layer(from_fn(request_tracing::propagate))
         .with_state(state)
+}
+
+async fn fallback_not_found() -> Response {
+    routes::not_found()
 }
 
 async fn access_log(req: Request<Body>, next: Next) -> Response {
@@ -333,5 +338,32 @@ mod tests {
         let (level, invalid) = resolve_log_level(&config);
         assert_eq!(level, LevelFilter::INFO);
         assert_eq!(invalid, Some("not-a-level".to_string()));
+    }
+
+    #[tokio::test]
+    async fn undefined_route_returns_json_404() {
+        let server = MockServer::start_async().await;
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let app = build_app(Arc::new(AppState::with_client(client)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/nonexistent")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["error"], "not found");
     }
 }
