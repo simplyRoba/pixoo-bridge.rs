@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.12.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.11.1...v0.12.0) (2026-04-28)
+
+
+### Features
+
+* add JSON 404 fallback for undefined routes ([a73449b](https://github.com/simplyRoba/pixoo-bridge.rs/commit/a73449b4b38a09d85721de6b1d9ce3ead8910e0f))
+* add ValidatedPath&lt;T&gt; extractor for consistent path parameter validation ([1301bea](https://github.com/simplyRoba/pixoo-bridge.rs/commit/1301bea12f6c265fcf13b17153ecf962cf41d180))
+* add VSCode extensions recommendations ([8be8608](https://github.com/simplyRoba/pixoo-bridge.rs/commit/8be860812755ea6d7000c7b268f736cfb0879fba))
+
+
+### Bug Fixes
+
+* add .dockerignore to minimize build context ([f1b36f5](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f1b36f52fae155ec5dcb7834f8216c768fd73c92))
+* **ci:** bump googleapis/release-please-action from 4 to 5 ([852ba7a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/852ba7af4fdcfa6404f22845c01d6cc2abcc04f8))
+* **ci:** bump softprops/action-gh-release from 2 to 3 ([19cd7b4](https://github.com/simplyRoba/pixoo-bridge.rs/commit/19cd7b469b8b2d531e0c603233cfd64bbab4651a))
+* **ci:** group related cargo dependencies in dependabot config ([88fc611](https://github.com/simplyRoba/pixoo-bridge.rs/commit/88fc611db60789613e88a10bdcf69f73bd5bc57a))
+* **deps:** bump axum from 0.8.8 to 0.8.9 ([7e755ad](https://github.com/simplyRoba/pixoo-bridge.rs/commit/7e755ad75b6a92fbc212a66e4ea3c9549a733ee3))
+* **deps:** bump rand from 0.9.2 to 0.9.4 ([005793b](https://github.com/simplyRoba/pixoo-bridge.rs/commit/005793b6ec452ecbd548f908f5b64a64252238d4))
+* **deps:** bump rustls-webpki from 0.103.10 to 0.103.13 ([2b770ae](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2b770aebfd29f39bec7302a151cf554df044b656))
+* **deps:** bump tokio from 1.50.0 to 1.51.0 ([2e59d95](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2e59d951db98cf8fd62d95df52df3cf897d16807))
+* **deps:** bump tokio from 1.51.0 to 1.51.1 ([8ac19fe](https://github.com/simplyRoba/pixoo-bridge.rs/commit/8ac19fe7a9bda266c4735042051b2ea55c3d8429))
+* **deps:** bump tokio from 1.51.1 to 1.52.0 ([370e61a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/370e61af41d6f258d80c02d489ab3dc128c5c450))
+* **deps:** bump tokio from 1.52.0 to 1.52.1 ([752c2dc](https://github.com/simplyRoba/pixoo-bridge.rs/commit/752c2dc3ab13938fa176204a32be0e56ebef60f9))
+* **deps:** bump uuid from 1.23.0 to 1.23.1 ([5421a75](https://github.com/simplyRoba/pixoo-bridge.rs/commit/5421a750f7362dc64021bc7cd44d0a4f586c4883))
+* make path/body enum parsing case-insensitive ([4c52c95](https://github.com/simplyRoba/pixoo-bridge.rs/commit/4c52c95219a39c9bdc4158bf6c8100e1e33d4a1f))
+* resolve clippy pedantic warnings in imaging module ([1bb9e30](https://github.com/simplyRoba/pixoo-bridge.rs/commit/1bb9e30e6be177dffa5a897300ba76bb2e0f1e75))
+
 ## [0.11.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.11.0...v0.11.1) (2026-03-27)
 
 
