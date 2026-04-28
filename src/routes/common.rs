@@ -3,11 +3,12 @@ use crate::pixoo::{map_pixoo_error, PixooCommand};
 use crate::state::AppState;
 use axum::body::Body;
 use axum::extract::rejection::JsonRejection;
-use axum::extract::{FromRequest, Json, Request};
+use axum::extract::{FromRequest, Json, Path, Request};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use serde::de::DeserializeOwned;
 use serde_json::{json, Map, Value};
+use std::str::FromStr;
 use tracing::error;
 use validator::{Validate, ValidationError, ValidationErrors};
 
@@ -32,6 +33,39 @@ where
         }
 
         Ok(ValidatedJson(value))
+    }
+}
+
+/// Trait for path parameters that can describe their allowed values
+/// when validation fails.
+pub trait PathParam: FromStr + Send + 'static {
+    fn allowed_values() -> &'static [&'static str];
+}
+
+/// A path extractor that parses and validates a single path segment,
+/// returning a consistent validation error response on failure.
+pub struct ValidatedPath<T>(pub T);
+
+impl<S, T> FromRequest<S> for ValidatedPath<T>
+where
+    T: PathParam,
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
+        let Path(raw) = Path::<String>::from_request(req, state)
+            .await
+            .map_err(|err| {
+                json_error(StatusCode::BAD_REQUEST, "invalid path")
+                    .message(&err.body_text())
+                    .finish()
+            })?;
+
+        match raw.parse::<T>() {
+            Ok(parsed) => Ok(ValidatedPath(parsed)),
+            Err(_) => Err(action_validation_error(&raw, T::allowed_values())),
+        }
     }
 }
 

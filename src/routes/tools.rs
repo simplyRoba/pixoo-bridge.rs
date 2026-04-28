@@ -1,6 +1,6 @@
 use crate::pixoo::fields::request as req;
 use crate::pixoo::PixooCommand;
-use axum::extract::{Path, State};
+use axum::extract::State;
 use axum::response::Response;
 use axum::routing::post;
 use axum::Router;
@@ -10,7 +10,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use validator::Validate;
 
-use super::common::{action_validation_error, dispatch_pixoo_command, ValidatedJson};
+use super::common::{dispatch_pixoo_command, PathParam, ValidatedJson, ValidatedPath};
 
 use crate::state::AppState;
 
@@ -55,7 +55,9 @@ impl StopwatchAction {
             Self::Reset => 2,
         }
     }
+}
 
+impl PathParam for StopwatchAction {
     fn allowed_values() -> &'static [&'static str] {
         &["start", "stop", "reset"]
     }
@@ -88,7 +90,9 @@ impl SoundmeterAction {
             Self::Stop => 0,
         }
     }
+}
 
+impl PathParam for SoundmeterAction {
     fn allowed_values() -> &'static [&'static str] {
         &["start", "stop"]
     }
@@ -128,13 +132,12 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
 }
 
 #[tracing::instrument(skip(state))]
-async fn stopwatch(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
-    let Ok(parsed) = action.parse::<StopwatchAction>() else {
-        return action_validation_error(&action, StopwatchAction::allowed_values());
-    };
-
+async fn stopwatch(
+    State(state): State<Arc<AppState>>,
+    ValidatedPath(action): ValidatedPath<StopwatchAction>,
+) -> Response {
     let mut args = Map::new();
-    args.insert(req::STATUS.to_string(), Value::from(parsed.status()));
+    args.insert(req::STATUS.to_string(), Value::from(action.status()));
 
     dispatch_pixoo_command(&state, PixooCommand::ToolsStopwatch, args).await
 }
@@ -152,13 +155,12 @@ async fn scoreboard(
 }
 
 #[tracing::instrument(skip(state))]
-async fn soundmeter(State(state): State<Arc<AppState>>, Path(action): Path<String>) -> Response {
-    let Ok(parsed) = action.parse::<SoundmeterAction>() else {
-        return action_validation_error(&action, SoundmeterAction::allowed_values());
-    };
-
+async fn soundmeter(
+    State(state): State<Arc<AppState>>,
+    ValidatedPath(action): ValidatedPath<SoundmeterAction>,
+) -> Response {
     let mut args = Map::new();
-    args.insert(req::NOISE_STATUS.to_string(), Value::from(parsed.status()));
+    args.insert(req::NOISE_STATUS.to_string(), Value::from(action.status()));
 
     dispatch_pixoo_command(&state, PixooCommand::ToolsSoundMeter, args).await
 }

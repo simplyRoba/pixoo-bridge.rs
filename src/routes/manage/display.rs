@@ -10,7 +10,7 @@ use std::sync::Arc;
 use validator::Validate;
 
 use crate::routes::common::{
-    action_validation_error, dispatch_pixoo_command, validation_error_simple, ValidatedJson,
+    dispatch_pixoo_command, validation_error_simple, PathParam, ValidatedJson, ValidatedPath,
 };
 
 #[derive(Debug, Deserialize, Validate)]
@@ -37,8 +37,10 @@ impl OnOffAction {
             Self::Off => 0,
         }
     }
+}
 
-    pub fn allowed_values() -> &'static [&'static str] {
+impl PathParam for OnOffAction {
+    fn allowed_values() -> &'static [&'static str] {
         &["on", "off"]
     }
 }
@@ -58,14 +60,10 @@ impl FromStr for OnOffAction {
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_on(
     State(state): State<Arc<AppState>>,
-    Path(action): Path<String>,
+    ValidatedPath(action): ValidatedPath<OnOffAction>,
 ) -> Response {
-    let Ok(parsed) = action.parse::<OnOffAction>() else {
-        return action_validation_error(&action, OnOffAction::allowed_values());
-    };
-
     let mut args = Map::new();
-    args.insert(req::ON_OFF.to_string(), Value::from(parsed.flag_value()));
+    args.insert(req::ON_OFF.to_string(), Value::from(action.flag_value()));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayPower, args).await
 }
@@ -105,14 +103,10 @@ pub async fn manage_display_rotation(
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_mirror(
     State(state): State<Arc<AppState>>,
-    Path(action): Path<String>,
+    ValidatedPath(action): ValidatedPath<OnOffAction>,
 ) -> Response {
-    let Ok(parsed) = action.parse::<OnOffAction>() else {
-        return action_validation_error(&action, OnOffAction::allowed_values());
-    };
-
     let mut args = Map::new();
-    args.insert(req::MODE.to_string(), Value::from(parsed.flag_value()));
+    args.insert(req::MODE.to_string(), Value::from(action.flag_value()));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayMirror, args).await
 }
@@ -120,14 +114,10 @@ pub async fn manage_display_mirror(
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_overclock(
     State(state): State<Arc<AppState>>,
-    Path(action): Path<String>,
+    ValidatedPath(action): ValidatedPath<OnOffAction>,
 ) -> Response {
-    let Ok(parsed) = action.parse::<OnOffAction>() else {
-        return action_validation_error(&action, OnOffAction::allowed_values());
-    };
-
     let mut args = Map::new();
-    args.insert(req::MODE.to_string(), Value::from(parsed.flag_value()));
+    args.insert(req::MODE.to_string(), Value::from(action.flag_value()));
 
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayOverclock, args).await
 }
