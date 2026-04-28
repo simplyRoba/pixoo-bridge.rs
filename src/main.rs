@@ -26,6 +26,7 @@ use remote::{RemoteFetchConfig, RemoteFetcher};
 use request_tracing::RequestId;
 use routes::mount_all_routes;
 use state::AppState;
+use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -85,6 +86,7 @@ fn build_app(state: Arc<AppState>) -> Router {
     let app = mount_all_routes(Router::new());
 
     app.fallback(fallback_not_found)
+        .layer(CorsLayer::permissive())
         .layer(from_fn(access_log))
         .layer(from_fn(request_tracing::propagate))
         .with_state(state)
