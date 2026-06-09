@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.12.0...v0.12.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* **deps:** bump chrono from 0.4.44 to 0.4.45 ([bcfeed9](https://github.com/simplyRoba/pixoo-bridge.rs/commit/bcfeed975b86ef5984eb75a488115652570143f7))
+* **deps:** bump serde_json from 1.0.149 to 1.0.150 in the serde group ([91645d2](https://github.com/simplyRoba/pixoo-bridge.rs/commit/91645d2c881dd66a02d385ca2d19a0162f6bde77))
+* **deps:** bump uuid from 1.23.1 to 1.23.2 ([ef2621a](https://github.com/simplyRoba/pixoo-bridge.rs/commit/ef2621a8c0816d7ce4dad2cd6ad0b22ea6bb2f13))
+
 ## [0.12.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.11.1...v0.12.0) (2026-05-19)
 
 
