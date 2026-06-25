@@ -15,6 +15,8 @@ jobs:
       - name: Run release-please
         uses: googleapis/release-please-action@v5
         with:
-          release-type: rust
+          # release-type and changelog sections are configured via
+          # release-please-config.json + .release-please-manifest.json
+          # (auto-detected by release-please-action@v5).
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
         id: release
