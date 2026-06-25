@@ -20,7 +20,7 @@ rules:
   specs:
     - "Describe deltas in ADDED/MODIFIED/REMOVED sections and never rewrite the full spec—refer to existing requirements when modifying."
     - "Use RFC 2119 keywords (SHALL/MUST/SHOULD) and GIVEN/WHEN/THEN/AND scenarios to keep requirements testable."
-    - "Capabilities in specs need to pe put under a domain folder (like `core`, `ui`, `api` ..). The schema is specs/{domain}/{capability}/specs.md. A change can have more than one capability in more than  one domain."
+    - "Capabilities live in a single flat folder per capability, with the domain encoded as a prefix in the name (like `core`, `api` ..). The schema is specs/{domain}-{capability}/spec.md (e.g. specs/core-server/spec.md, specs/api-draw/spec.md). A change can touch more than one capability across more than one domain. Do NOT nest capabilities inside a domain subfolder and use spec.md (singular) — the OpenSpec CLI only discovers specs one level deep and reads spec.md."
     - "Be aware that at this phase the specs are only created in the change proposal. NOT in the final specs yet."
   tasks:
     - "Create branches off main for the change; never merge or push to main."

@@ -24,5 +24,5 @@
 ## Vocabulary
 - **Change**: the scoped OpenSpec artifact you are working on (proposal → implementation → verification). A change captures one logical goal, outlines the affected capabilities/apis, and stores only delta requirements.
 - **Requirement**: a concrete, testable statement in a change’s ADDED/MODIFIED/REMOVED sections. Requirements should use RFC 2119 keywords and Given/When/Then structure so they can be verified during testing.
-- **Capability**: the functional area covered by one or more requirements. Capabilities are represented by folders under `openspec/specs/{domain}/{capability}` and help teams scope work before implementation begins.
-- **Domain**: the broader grouping for related capabilities (for example `core`, `ui`, `api`). Every new capability must be placed in the correct domain folder.
+- **Capability**: the functional area covered by one or more requirements. Capabilities are represented by a single flat folder `openspec/specs/{domain}-{capability}/spec.md` (e.g. `api-draw`, `core-server`) and help teams scope work before implementation begins. Do not nest capabilities in domain subfolders — the OpenSpec CLI only discovers specs one level deep.
+- **Domain**: the broader grouping for related capabilities (for example `core`, `api`). The domain is encoded as a prefix in the capability folder name; every new capability must use the correct domain prefix.

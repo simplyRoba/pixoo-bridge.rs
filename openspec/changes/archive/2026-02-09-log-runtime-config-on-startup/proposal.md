@@ -19,5 +19,5 @@ The startup log already surfaces the Pixoo base URL, listener address, and versi
 ## Impact
 
 - `src/main.rs` (startup logging) and any helpers that format the log entry.
-- `openspec/specs/core/logging/specs.md` to keep the documented requirements in sync with the emitted log.
+- `openspec/specs/core-logging/spec.md` to keep the documented requirements in sync with the emitted log.
 - Operator observability; no API surface changes.

@@ -20,4 +20,4 @@ Correlating production logs with user requests is currently impossible because o
 
 - `src/main.rs`, `src/routes/*`, and `src/state.rs` gain request-id-aware middleware and state extension plumbing.
 - `src/pixoo/client.rs` and logging helpers will add the identifier to Pixoo command logs and errors.
-- New tracing spans and middleware will touch configuration/observability docs and logging expectations in `openspec/specs/core/logging/specs.md`.
+- New tracing spans and middleware will touch configuration/observability docs and logging expectations in `openspec/specs/core-logging/spec.md`.

@@ -5,7 +5,7 @@
 
 ## 2. Specs and documentation
 
-- [x] 2.1 Update `openspec/specs/core/logging/specs.md` so the startup logging requirement and scenario describe the new fields.
+- [x] 2.1 Update `openspec/specs/core-logging/spec.md` so the startup logging requirement and scenario describe the new fields.
 - [x] 2.2 Refresh the change-specific spec delta (`openspec/changes/log-runtime-config-on-startup/`) so the artifacts describe the updated behavior.
 
 ## 3. Validation
