@@ -23,8 +23,6 @@ tests/               # integration tests using httpmock
 - Rust stable toolchain (latest)
 - A Pixoo device on the network, or willingness to mock it
 
-A devcontainer config is included (`.devcontainer/`) with Rust, Node, Docker-in-Docker, and Starship pre-installed. Open the project in VS Code or GitHub Codespaces and the environment is ready.
-
 ### Running locally
 
 ```bash
