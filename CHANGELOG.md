@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.12.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.12.1...v0.12.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* **ci:** bump actions/cache from 5 to 6 ([422da87](https://github.com/simplyRoba/pixoo-bridge.rs/commit/422da87b3e7349c337244e6e9867894e569e6f0c))
+* **ci:** bump actions/checkout from 6 to 7 ([892ecff](https://github.com/simplyRoba/pixoo-bridge.rs/commit/892ecffde6a55b7a657f3570f801b728b7f76d91))
+* **deps:** bump tower-http from 0.6.11 to 0.7.0 ([9e59f42](https://github.com/simplyRoba/pixoo-bridge.rs/commit/9e59f42a68d8d362a1a67e786d9a516bee120efb))
+* **deps:** bump uuid from 1.23.2 to 1.23.4 ([2090a23](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2090a231a1f1855ce470b48313f4cd8f6313038c))
+
+
+### Code Refactoring
+
+* **openspec:** flatten specs to domain-prefixed layout + fix validation ([4a37776](https://github.com/simplyRoba/pixoo-bridge.rs/commit/4a3777671135ab803265eb6081d04f8b143ab821))
+
+
+### Documentation
+
+* drop devcontainer mention from CONTRIBUTING ([4c7fc39](https://github.com/simplyRoba/pixoo-bridge.rs/commit/4c7fc39e51b28d86c6404be1c821619c9468c498))
+
 ## [0.12.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.12.0...v0.12.1) (2026-06-09)
 
 
