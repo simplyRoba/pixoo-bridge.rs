@@ -8,7 +8,7 @@ updates:
       time: "09:00"
       timezone: "Europe/Berlin"
     commit-message:
-      prefix: "fix(deps): "
+      prefix: "deps: "
     groups:
       tokio:
         patterns:
@@ -30,4 +30,4 @@ updates:
       time: "09:00"
       timezone: "Europe/Berlin"
     commit-message:
-      prefix: "fix(ci): "
+      prefix: "deps: "
