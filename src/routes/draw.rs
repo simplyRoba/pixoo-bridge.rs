@@ -175,6 +175,7 @@ fn rgb_to_hex(color: &RgbColor) -> String {
     responses(
         (status = 200, description = "Display filled with the requested color"),
         (status = 400, description = "Invalid color values", body = ValidationErrorBody),
+        (status = 500, description = "Internal encoding error", body = GenericErrorBody),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)

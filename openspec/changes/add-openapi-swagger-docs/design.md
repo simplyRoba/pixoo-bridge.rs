@@ -8,7 +8,7 @@ This change completes that work as a tracked, additive documentation layer. Ther
 
 **Goals:**
 - Generate an OpenAPI 3.x document directly from the live router so it cannot drift from implemented routes.
-- Serve interactive Swagger UI at the root path (`/`) and the raw spec at `/api-docs/openapi.json`.
+- Serve interactive Swagger UI at `/docs` (with `/` redirecting to it) and the raw spec at `/api-docs/openapi.json`.
 - Document every endpoint (draw, tools, manage, system), including path-parameter and multipart routes, plus shared error responses.
 
 **Non-Goals:**
@@ -25,11 +25,12 @@ Each `mount_*` helper is converted to build an `OpenApiRouter<Arc<AppState>>` an
 - **Alternative considered**: Classic `#[derive(OpenApi)]` with explicit `paths(...)`/`components(schemas(...))`. Rejected: avoids one dependency but reintroduces drift and duplicates the route list.
 - **Cost**: Adds the `utoipa-axum` crate (small, pure-Rust, no heavy transitive deps).
 
-### Decision: Mount Swagger UI at the root path `/`
-Use `utoipa_swagger_ui::SwaggerUi::new("/").url("/api-docs/openapi.json", ApiDoc::openapi())`, merged into the app in `build_app`.
+### Decision: Mount Swagger UI at `/docs` with a `/` → `/docs` redirect
+Use `utoipa_swagger_ui::SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi())`, merged into the app in `build_app`, plus a `GET /` route that issues a permanent redirect to `/docs`.
 
-- **Why**: Requested behavior — operators get docs immediately at the host root with no path to remember.
-- **Trade-off**: The root path is consumed by the UI, so the app has no separate landing page. Acceptable: the bridge is an API, and `/health` and all functional routes are unaffected (Swagger UI only claims `/` and its asset sub-paths, which do not collide with existing routes).
+- **Why**: Operators still reach docs from the host root (via the redirect) without a path to remember, while functional routes stay reachable.
+- **Why not root `/` directly**: Mounting Swagger UI at `/` makes `utoipa-swagger-ui` register a catch-all `/{*rest}` route that intercepts every unknown path and returns its own empty 404, clobbering the bridge's existing JSON `{"error":"not found"}` fallback (an established, tested contract). Mounting at `/docs` confines the catch-all to the docs subtree and preserves the JSON 404.
+- **Trade-off**: The root path is a redirect rather than a landing page. Acceptable: the bridge is an API, and `/health` and all functional routes are unaffected.
 
 ### Decision: Centralize only the top-level document in a new `src/openapi.rs`
 `src/openapi.rs` holds the `#[derive(OpenApi)] struct ApiDoc` with `info` (title, version sourced from `CARGO_PKG_VERSION`, description) and any shared `components`/error schemas. Per-path docs stay next to their handlers via `#[utoipa::path]`.
@@ -43,7 +44,7 @@ Add `ToSchema`-deriving structs (or documented inline schemas) for the common er
 
 ## Risks / Trade-offs
 
-- [Swagger UI asset paths could shadow a future root-level route] → Only `/` and its known asset sub-paths are claimed; new functional routes use existing namespaced prefixes (`/draw`, `/tools`, `/manage`, `/system`-style), so collisions are avoided by convention.
+- [Swagger UI asset paths could shadow other routes] → Mounting at `/docs` confines Swagger UI's catch-all to the `/docs` subtree; the bare `/` only serves a redirect, and the JSON 404 fallback handles all other unknown paths. New functional routes use existing namespaced prefixes (`/draw`, `/tools`, `/manage`, `/system`-style).
 - [Annotation drift for response codes — a handler could return a status not listed] → Mitigated structurally for paths by `utoipa-axum`; response-code accuracy is covered by review and the verification step. Behavior is untouched, so risk is documentation-only.
 - [Binary size / compile time from `utoipa-swagger-ui` embedded assets] → Accepted; the crate was already chosen in the WIP. If size becomes a concern, a follow-up can switch to JSON-spec-only. Out of scope here.
 - [`preserve_order` feature already enabled] → Keeps schema field ordering stable/deterministic in the generated spec; no action needed.
@@ -54,7 +55,7 @@ Add `ToSchema`-deriving structs (or documented inline schemas) for the common er
 2. Add missing `ToSchema` derives to response structs; remove the dead `OpenApi` import in `manage/display.rs`.
 3. Add `#[utoipa::path]` to each handler.
 4. Convert `mount_*` helpers to `OpenApiRouter` and aggregate them; build `ApiDoc` in `src/openapi.rs`.
-5. Mount Swagger UI at `/` and the spec at `/api-docs/openapi.json` in `build_app`.
+5. Mount Swagger UI at `/docs`, redirect `/` → `/docs`, and serve the spec at `/api-docs/openapi.json` in `build_app`.
 6. Run `cargo fmt`, `cargo clippy`, `cargo test`; add a test asserting `/api-docs/openapi.json` returns 200 with a valid document and that a sample route is present.
 
 **Rollback**: The feature is additive; reverting the change removes the docs routes and dependency with no impact on existing endpoints.

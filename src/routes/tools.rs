@@ -79,7 +79,7 @@ impl FromStr for StopwatchAction {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 enum SoundmeterAction {
     Start,
