@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.12.2...v1.0.0) (2026-06-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **api:** unify all error responses into one envelope ([#118](https://github.com/simplyRoba/pixoo-bridge.rs/issues/118))
+
+### Features
+
+* **api:** add OpenAPI spec and Swagger UI ([#116](https://github.com/simplyRoba/pixoo-bridge.rs/issues/116)) ([10dc8ba](https://github.com/simplyRoba/pixoo-bridge.rs/commit/10dc8ba3d71593e676c5695f0f62c9840d4770e0))
+* **api:** unify all error responses into one envelope ([#118](https://github.com/simplyRoba/pixoo-bridge.rs/issues/118)) ([87cddd3](https://github.com/simplyRoba/pixoo-bridge.rs/commit/87cddd3261d37ba646c28e53c3dede2d09011012))
+
 ## [0.12.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.12.1...v0.12.2) (2026-06-25)
 
 
