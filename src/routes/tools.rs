@@ -12,7 +12,6 @@ use utoipa_axum::routes;
 use validator::Validate;
 
 use super::common::{dispatch_pixoo_command, PathParam, ValidatedJson, ValidatedPath};
-use crate::openapi::ValidationErrorBody;
 use crate::pixoo::error::PixooHttpErrorResponse;
 
 use crate::state::AppState;
@@ -120,7 +119,7 @@ impl FromStr for SoundmeterAction {
     request_body = TimerRequest,
     responses(
         (status = 200, description = "Timer started"),
-        (status = 400, description = "Invalid timer values", body = ValidationErrorBody),
+        (status = 400, description = "Invalid timer values", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -165,7 +164,7 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     params(("action" = String, Path, description = "One of: start, stop, reset")),
     responses(
         (status = 200, description = "Stopwatch action applied"),
-        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -189,7 +188,7 @@ async fn stopwatch(
     request_body = ScoreboardRequest,
     responses(
         (status = 200, description = "Scoreboard updated"),
-        (status = 400, description = "Invalid scores", body = ValidationErrorBody),
+        (status = 400, description = "Invalid scores", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -214,7 +213,7 @@ async fn scoreboard(
     params(("action" = String, Path, description = "One of: start, stop")),
     responses(
         (status = 200, description = "Sound meter action applied"),
-        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -250,7 +249,7 @@ mod tests {
 
     fn assert_validation_failed(body: &str) -> Value {
         let parsed: Value = serde_json::from_str(body).unwrap();
-        assert_eq!(parsed["error"], "validation failed");
+        assert_eq!(parsed["error_kind"], "validation");
         parsed
     }
 
@@ -381,7 +380,7 @@ mod tests {
         let json_body: serde_json::Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error_kind"], "device-error");
         assert_eq!(json_body["error_status"], 503);
-        assert_eq!(json_body["error_code"], 1);
+        assert_eq!(json_body["details"]["error_code"], 1);
     }
 
     #[tokio::test]

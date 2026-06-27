@@ -74,7 +74,31 @@ Interactive API documentation (Swagger UI) is served at `/docs`; the raw OpenAPI
 | `POST` | `/manage/display/brightness/overclock/{action}` | Enable or disable overclock mode (`on`/`off`). | `200` | `400` invalid action |
 | `POST` | `/manage/display/white-balance` | Adjust RGB white balance; body `{ "red": 0-100, "green": 0-100, "blue": 0-100 }`. | `200` | `400` invalid payload |
 
-All endpoints may return `502` (unreachable), `503` (device error), or `504` (timeout) with a JSON body: `{ "error_status", "message", "error_kind", "error_code?" }`.
+### Error responses
+
+Every error response (`4xx` and `5xx`) shares one canonical envelope. The root object always has exactly these three fields:
+
+- `error_status` (int) — the HTTP status, mirrored into the body
+- `error_kind` (string) — discriminator: one of `validation`, `not-found`, `payload-too-large`, `unreachable`, `timeout`, `device-error`, `remote-fetch`, `internal`
+- `message` (string) — human-readable description
+
+All case-specific data lives in a single optional `details` object, which is **omitted entirely when empty**:
+
+- validation (`400`): `details` holds the per-field/per-action errors, e.g. `{ "red": ["range"] }`
+- payload-too-large (`413`): `details` is `{ "limit": <int>, "actual": <int> }`
+- device error (`503`): `details` is `{ "error_code": <int> }` when the device provided one
+- not-found (`404`), timeouts, and unreachable: no `details` key
+
+Example (device error):
+
+```json
+{
+  "error_status": 503,
+  "error_kind": "device-error",
+  "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
+  "details": { "error_code": 1 }
+}
+```
 
 ## Observability
 
@@ -99,6 +123,8 @@ This project is a drop-in replacement for the Kotlin-based [pixoo-bridge](https:
 | Kotlin (old) | Rust (new) |
 | --- | --- |
 | `/tool/...` | `/tools/...` |
+
+**Breaking change — unified error envelope:** all error responses now use the single envelope described under [Error responses](#error-responses). The legacy root `error` string field has been **removed** (its text now lives in `message`, and `error_kind` is the discriminator), and the previously root-level `limit`, `actual`, and `error_code` fields are now nested under `details`. Clients that parsed the old `{ "error": ... }` / root `limit`/`actual`/`error_code` shapes must switch to `message`/`error_kind` and read extras from `details`.
 
 All other endpoints and request/response shapes remain the same.
 

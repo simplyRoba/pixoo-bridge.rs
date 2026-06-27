@@ -326,7 +326,7 @@ mod tests {
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json["error_kind"], "device-error");
         assert_eq!(json["error_status"], 503);
-        assert_eq!(json["error_code"], 1);
+        assert_eq!(json["details"]["error_code"], 1);
     }
 
     #[test]
@@ -388,13 +388,24 @@ mod tests {
         assert!(doc["paths"]["/health"].get("get").is_some());
         assert!(doc["paths"]["/draw/fill"].get("post").is_some());
 
-        // Device-failure responses reference the canonical error schema.
-        assert!(doc["components"]["schemas"]
-            .get("PixooHttpErrorResponse")
-            .is_some());
-        assert!(doc["paths"]["/draw/fill"]["post"]["responses"]
-            .get("504")
-            .is_some());
+        // Every error response references the one canonical envelope schema; the
+        // old divergent bodies are gone.
+        let schemas = doc["components"]["schemas"].as_object().expect("schemas");
+        assert!(schemas.contains_key("PixooHttpErrorResponse"));
+        assert!(!schemas.contains_key("ValidationErrorBody"));
+        assert!(!schemas.contains_key("PayloadTooLargeBody"));
+
+        let fill_responses = &doc["paths"]["/draw/fill"]["post"]["responses"];
+        for status in ["400", "500", "502", "503", "504"] {
+            let schema_ref = fill_responses[status]["content"]["application/json"]["schema"]
+                ["$ref"]
+                .as_str()
+                .unwrap_or_default();
+            assert_eq!(
+                schema_ref, "#/components/schemas/PixooHttpErrorResponse",
+                "status {status} must reference the canonical envelope"
+            );
+        }
     }
 
     #[tokio::test]
@@ -472,6 +483,12 @@ mod tests {
             .await
             .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(json["error"], "not found");
+        assert_eq!(json["error_status"], 404);
+        assert_eq!(json["error_kind"], "not-found");
+        assert!(json["message"].is_string());
+        assert!(
+            json.get("details").is_none(),
+            "not-found body must omit details"
+        );
     }
 }

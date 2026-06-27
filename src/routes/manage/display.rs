@@ -12,7 +12,6 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-use crate::openapi::ValidationErrorBody;
 use crate::pixoo::error::PixooHttpErrorResponse;
 use crate::routes::common::{
     dispatch_pixoo_command, validation_error_simple, PathParam, ValidatedJson, ValidatedPath,
@@ -79,7 +78,7 @@ impl FromStr for OnOffAction {
     params(("action" = String, Path, description = "One of: on, off")),
     responses(
         (status = 200, description = "Display power toggled"),
-        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -103,7 +102,7 @@ pub async fn manage_display_on(
     params(("value" = i32, Path, description = "Brightness 0-100")),
     responses(
         (status = 200, description = "Brightness updated"),
-        (status = 400, description = "Value out of range", body = ValidationErrorBody),
+        (status = 400, description = "Value out of range", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -132,7 +131,7 @@ pub async fn manage_display_brightness(
     params(("angle" = i32, Path, description = "One of: 0, 90, 180, 270")),
     responses(
         (status = 200, description = "Rotation updated"),
-        (status = 400, description = "Invalid angle", body = ValidationErrorBody),
+        (status = 400, description = "Invalid angle", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -161,7 +160,7 @@ pub async fn manage_display_rotation(
     params(("action" = String, Path, description = "One of: on, off")),
     responses(
         (status = 200, description = "Mirror mode toggled"),
-        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -185,7 +184,7 @@ pub async fn manage_display_mirror(
     params(("action" = String, Path, description = "One of: on, off")),
     responses(
         (status = 200, description = "Overclock mode toggled"),
-        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -209,7 +208,7 @@ pub async fn manage_display_overclock(
     request_body = WhiteBalanceRequest,
     responses(
         (status = 200, description = "White balance updated"),
-        (status = 400, description = "Invalid values", body = ValidationErrorBody),
+        (status = 400, description = "Invalid values", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -285,7 +284,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert_eq!(json_body["details"]["action"]["provided"], "invalid");
         assert_eq!(
             json_body["details"]["action"]["allowed"],
@@ -321,7 +320,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert_eq!(
             json_body["details"]["value"],
             "value must be an integer between 0 and 100"
@@ -356,7 +355,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert_eq!(
             json_body["details"]["angle"],
             "angle must be 0, 90, 180, or 270"
@@ -391,7 +390,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert_eq!(json_body["details"]["action"]["provided"], "invalid");
         assert_eq!(
             json_body["details"]["action"]["allowed"],
@@ -437,7 +436,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert_eq!(json_body["details"]["action"]["provided"], "invalid");
         assert_eq!(
             json_body["details"]["action"]["allowed"],
@@ -483,7 +482,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert!(json_body["details"]["red"]
             .as_array()
             .unwrap()
@@ -517,7 +516,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert_eq!(
             json_body["details"]["value"],
             "value must be an integer between 0 and 100",

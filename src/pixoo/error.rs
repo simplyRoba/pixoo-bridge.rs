@@ -79,14 +79,19 @@ pub enum PixooErrorCategory {
     Unknown,
 }
 
-/// Discriminator for every server-side error envelope.
+/// Discriminator for every error envelope.
 ///
-/// `unreachable`, `timeout`, and `device-error` originate from the Pixoo
-/// device; `remote-fetch` covers failed remote image downloads; `internal`
-/// covers unexpected bridge-side failures (e.g. encoding or response parsing).
+/// `validation`, `not-found`, and `payload-too-large` describe request-side
+/// failures; `unreachable`, `timeout`, and `device-error` originate from the
+/// Pixoo device; `remote-fetch` covers failed remote image downloads; and
+/// `internal` covers unexpected bridge-side failures (e.g. encoding or response
+/// parsing).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum PixooHttpErrorKind {
+    Validation,
+    NotFound,
+    PayloadTooLarge,
     Unreachable,
     Timeout,
     DeviceError,
@@ -94,37 +99,58 @@ pub enum PixooHttpErrorKind {
     Internal,
 }
 
-/// Canonical error body for every non-validation failure (`500`/`502`/`503`/`504`).
+/// Canonical error body for every error response (`4xx` and `5xx`).
 ///
-/// All server-side error responses share this shape so clients can rely on a
-/// single envelope and use `error_kind` to discriminate the cause.
+/// All error responses share this shape so clients can rely on a single
+/// envelope: the root is always `error_status`, `error_kind`, and `message`,
+/// and any kind-specific data lives in the optional `details` object. `details`
+/// is omitted entirely when there is no extra data; its per-kind contents are:
+/// validation → a field/action error map; payload-too-large → `{ limit, actual }`;
+/// device errors → `{ error_code }` when the device provided one.
 #[derive(Debug, Serialize, ToSchema)]
 #[schema(example = json!({
     "error_status": 503,
-    "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
     "error_kind": "device-error",
-    "error_code": 1
+    "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
+    "details": { "error_code": 1 }
 }))]
 pub struct PixooHttpErrorResponse {
     /// HTTP status mirrored into the body.
     pub error_status: u16,
+    /// Failure category discriminator.
+    pub error_kind: PixooHttpErrorKind,
     /// Human-readable failure description.
     pub message: String,
-    /// Failure category.
-    pub error_kind: PixooHttpErrorKind,
-    /// Pixoo device error code, present only for device errors.
+    /// Kind-specific data; omitted entirely when there is none.
+    #[schema(value_type = Object)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub error_code: Option<i64>,
+    pub details: Option<Value>,
 }
 
 impl PixooHttpErrorResponse {
-    /// Builds a canonical error response with the given status, kind, and message.
+    /// Builds a canonical error response with the given status, kind, and
+    /// message and no `details`.
     pub fn new(status: StatusCode, kind: PixooHttpErrorKind, message: impl Into<String>) -> Self {
         Self {
             error_status: status.as_u16(),
-            message: message.into(),
             error_kind: kind,
-            error_code: None,
+            message: message.into(),
+            details: None,
+        }
+    }
+
+    /// Builds a canonical error response carrying a kind-specific `details` object.
+    pub fn with_details(
+        status: StatusCode,
+        kind: PixooHttpErrorKind,
+        message: impl Into<String>,
+        details: Value,
+    ) -> Self {
+        Self {
+            error_status: status.as_u16(),
+            error_kind: kind,
+            message: message.into(),
+            details: Some(details),
         }
     }
 
@@ -151,19 +177,26 @@ pub fn map_pixoo_error(
     let status = match kind {
         PixooHttpErrorKind::Unreachable => StatusCode::BAD_GATEWAY,
         PixooHttpErrorKind::Timeout => StatusCode::GATEWAY_TIMEOUT,
-        // `kind` is always a device variant here; remaining kinds map to 503.
-        PixooHttpErrorKind::DeviceError
+        // `kind` is always a device variant here; all remaining kinds map to 503.
+        PixooHttpErrorKind::Validation
+        | PixooHttpErrorKind::NotFound
+        | PixooHttpErrorKind::PayloadTooLarge
+        | PixooHttpErrorKind::DeviceError
         | PixooHttpErrorKind::RemoteFetch
         | PixooHttpErrorKind::Internal => StatusCode::SERVICE_UNAVAILABLE,
     };
 
     let message = format!("{context}: {error}");
 
+    let details = error
+        .error_code()
+        .map(|code| serde_json::json!({ "error_code": code }));
+
     let payload = PixooHttpErrorResponse {
         error_status: status.as_u16(),
-        message,
         error_kind: kind,
-        error_code: error.error_code(),
+        message,
+        details,
     };
 
     (status, Json(payload))
@@ -200,7 +233,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_GATEWAY);
         assert_eq!(response.error_kind, PixooHttpErrorKind::Unreachable);
-        assert!(response.error_code.is_none());
+        assert!(response.details.is_none());
     }
 
     #[tokio::test]
@@ -223,7 +256,10 @@ mod tests {
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(response.error_kind, PixooHttpErrorKind::DeviceError);
-        assert_eq!(response.error_code, Some(1));
+        assert_eq!(
+            response.details,
+            Some(serde_json::json!({ "error_code": 1 }))
+        );
     }
 
     #[tokio::test]
