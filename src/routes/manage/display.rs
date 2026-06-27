@@ -12,7 +12,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-use crate::pixoo::error::PixooHttpErrorResponse;
+use crate::pixoo::error::{
+    DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse, ValidationErrorResponse,
+};
 use crate::routes::common::{
     dispatch_pixoo_command, validation_error_simple, PathParam, ValidatedJson, ValidatedPath,
 };
@@ -78,10 +80,10 @@ impl FromStr for OnOffAction {
     params(("action" = String, Path, description = "One of: on, off")),
     responses(
         (status = 200, description = "Display power toggled"),
-        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -102,10 +104,10 @@ pub async fn manage_display_on(
     params(("value" = i32, Path, description = "Brightness 0-100")),
     responses(
         (status = 200, description = "Brightness updated"),
-        (status = 400, description = "Value out of range", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -131,10 +133,10 @@ pub async fn manage_display_brightness(
     params(("angle" = i32, Path, description = "One of: 0, 90, 180, 270")),
     responses(
         (status = 200, description = "Rotation updated"),
-        (status = 400, description = "Invalid angle", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -160,10 +162,10 @@ pub async fn manage_display_rotation(
     params(("action" = String, Path, description = "One of: on, off")),
     responses(
         (status = 200, description = "Mirror mode toggled"),
-        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -184,10 +186,10 @@ pub async fn manage_display_mirror(
     params(("action" = String, Path, description = "One of: on, off")),
     responses(
         (status = 200, description = "Overclock mode toggled"),
-        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -208,10 +210,10 @@ pub async fn manage_display_overclock(
     request_body = WhiteBalanceRequest,
     responses(
         (status = 200, description = "White balance updated"),
-        (status = 400, description = "Invalid values", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, payload))]

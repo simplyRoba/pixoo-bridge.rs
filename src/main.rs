@@ -388,22 +388,45 @@ mod tests {
         assert!(doc["paths"]["/health"].get("get").is_some());
         assert!(doc["paths"]["/draw/fill"].get("post").is_some());
 
-        // Every error response references the one canonical envelope schema; the
-        // old divergent bodies are gone.
+        // Schema component still present; no divergent one-off schemas.
         let schemas = doc["components"]["schemas"].as_object().expect("schemas");
         assert!(schemas.contains_key("PixooHttpErrorResponse"));
         assert!(!schemas.contains_key("ValidationErrorBody"));
         assert!(!schemas.contains_key("PayloadTooLargeBody"));
 
-        let fill_responses = &doc["paths"]["/draw/fill"]["post"]["responses"];
-        for status in ["400", "500", "502", "503", "504"] {
-            let schema_ref = fill_responses[status]["content"]["application/json"]["schema"]
-                ["$ref"]
+        // All reusable response components are registered and each one points
+        // back to the canonical envelope schema.
+        let resp_components = doc["components"]["responses"]
+            .as_object()
+            .expect("response components");
+        for name in [
+            "ValidationErrorResponse",
+            "PayloadTooLargeResponse",
+            "InternalErrorResponse",
+            "DeviceUnreachableResponse",
+            "DeviceErrorResponse",
+            "DeviceTimeoutResponse",
+        ] {
+            assert!(
+                resp_components.contains_key(name),
+                "missing response component: {name}"
+            );
+            let schema_ref = resp_components[name]["content"]["application/json"]["schema"]["$ref"]
                 .as_str()
                 .unwrap_or_default();
             assert_eq!(
                 schema_ref, "#/components/schemas/PixooHttpErrorResponse",
-                "status {status} must reference the canonical envelope"
+                "{name} must reference the canonical envelope schema"
+            );
+        }
+
+        // Path-level responses now $ref the response components (not inline schema).
+        let fill_responses = &doc["paths"]["/draw/fill"]["post"]["responses"];
+        for status in ["400", "500", "502", "503", "504"] {
+            let ref_val = fill_responses[status]["$ref"].as_str().unwrap_or_default();
+            assert!(
+                ref_val.starts_with("#/components/responses/"),
+                "status {status} must $ref a response component, got: {ref_val:?}"
             );
         }
     }

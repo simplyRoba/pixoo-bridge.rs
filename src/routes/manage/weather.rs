@@ -13,7 +13,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-use crate::pixoo::error::PixooHttpErrorResponse;
+use crate::pixoo::error::{
+    DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse, ValidationErrorResponse,
+};
 use crate::routes::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, service_unavailable, validation_error_simple,
     ValidatedJson,
@@ -54,9 +56,9 @@ pub struct LocationRequest {
     tag = "manage",
     responses(
         (status = 200, description = "Current weather data", body = ManageWeather),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device error or unparseable weather response", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -82,10 +84,10 @@ pub async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     request_body = LocationRequest,
     responses(
         (status = 200, description = "Location updated"),
-        (status = 400, description = "Invalid coordinates", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, payload))]
@@ -113,10 +115,10 @@ pub async fn manage_set_location(
     params(("unit" = String, Path, description = "One of: celsius, fahrenheit")),
     responses(
         (status = 200, description = "Temperature unit updated"),
-        (status = 400, description = "Invalid unit", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
