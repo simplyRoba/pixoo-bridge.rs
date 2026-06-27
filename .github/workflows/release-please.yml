@@ -12,11 +12,17 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate app token
+        uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ secrets.RELEASE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
       - name: Run release-please
         uses: googleapis/release-please-action@v5
         with:
           # release-type and changelog sections are configured via
           # release-please-config.json + .release-please-manifest.json
           # (auto-detected by release-please-action@v5).
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
         id: release
