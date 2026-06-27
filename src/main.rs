@@ -1,4 +1,5 @@
 mod config;
+mod openapi;
 mod pixels;
 mod pixoo;
 mod remote;
@@ -10,7 +11,8 @@ use axum::{
     body::Body,
     http::Request,
     middleware::{from_fn, Next},
-    response::Response,
+    response::{Redirect, Response},
+    routing::get,
     Router,
 };
 use std::{env, net::SocketAddr, sync::Arc, time::Instant};
@@ -21,12 +23,16 @@ use tracing_subscriber::filter::LevelFilter;
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 use config::{AppConfig, ConfigSource, EnvConfigSource};
+use openapi::ApiDoc;
 use pixoo::PixooClient;
 use remote::{RemoteFetchConfig, RemoteFetcher};
 use request_tracing::RequestId;
-use routes::mount_all_routes;
+use routes::build_router;
 use state::AppState;
 use tower_http::cors::CorsLayer;
+use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_swagger_ui::SwaggerUi;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -83,9 +89,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn build_app(state: Arc<AppState>) -> Router {
-    let app = mount_all_routes(Router::new());
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .merge(build_router())
+        .split_for_parts();
 
-    app.fallback(fallback_not_found)
+    router
+        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", api))
+        .route("/", get(|| async { Redirect::permanent("/docs") }))
+        .fallback(fallback_not_found)
         .layer(CorsLayer::permissive())
         .layer(from_fn(access_log))
         .layer(from_fn(request_tracing::propagate))
@@ -275,7 +286,7 @@ mod tests {
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json["error_kind"], "unreachable");
         assert_eq!(json["error_status"], 502);
-        assert!(json["message"].as_str().unwrap().len() > 0);
+        assert!(!json["message"].as_str().unwrap().is_empty());
     }
 
     #[tokio::test]
@@ -340,6 +351,101 @@ mod tests {
         let (level, invalid) = resolve_log_level(&config);
         assert_eq!(level, LevelFilter::INFO);
         assert_eq!(invalid, Some("not-a-level".to_string()));
+    }
+
+    #[tokio::test]
+    async fn openapi_spec_endpoint_returns_document_with_routes() {
+        let server = MockServer::start_async().await;
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let app = build_app(Arc::new(AppState::with_client(client)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/api-docs/openapi.json")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let doc: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(doc["openapi"].as_str().unwrap().chars().next(), Some('3'));
+        assert_eq!(doc["info"]["title"], "Pixoo Bridge");
+        let paths = doc["paths"].as_object().expect("paths object");
+        assert!(paths.contains_key("/draw/fill"));
+        assert!(paths.contains_key("/manage/settings"));
+        assert!(paths.contains_key("/health"));
+        assert!(paths.contains_key("/tools/stopwatch/{action}"));
+        assert!(doc["paths"]["/health"].get("get").is_some());
+        assert!(doc["paths"]["/draw/fill"].get("post").is_some());
+
+        // Device-failure responses reference the canonical error schema.
+        assert!(doc["components"]["schemas"]
+            .get("PixooHttpErrorResponse")
+            .is_some());
+        assert!(doc["paths"]["/draw/fill"]["post"]["responses"]
+            .get("504")
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn root_path_redirects_to_docs() {
+        let server = MockServer::start_async().await;
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let app = build_app(Arc::new(AppState::with_client(client)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::PERMANENT_REDIRECT);
+        assert_eq!(
+            response
+                .headers()
+                .get("location")
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            "/docs"
+        );
+    }
+
+    #[tokio::test]
+    async fn swagger_ui_is_served_at_docs() {
+        let server = MockServer::start_async().await;
+        let client =
+            PixooClient::new(server.base_url(), PixooClientConfig::default()).expect("client");
+        let app = build_app(Arc::new(AppState::with_client(client)));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri("/docs/")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[tokio::test]

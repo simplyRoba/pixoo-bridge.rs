@@ -2,6 +2,7 @@ use axum::{http::StatusCode, Json};
 use serde::Serialize;
 use serde_json::Value;
 use thiserror::Error;
+use utoipa::ToSchema;
 
 #[derive(Debug, Error)]
 pub enum PixooError {
@@ -78,7 +79,7 @@ pub enum PixooErrorCategory {
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum PixooHttpErrorKind {
     Unreachable,
@@ -86,11 +87,18 @@ pub enum PixooHttpErrorKind {
     DeviceError,
 }
 
-#[derive(Debug, Serialize)]
+/// Error body returned when a Pixoo command fails: `502` (unreachable),
+/// `503` (device reported an error), or `504` (device timeout).
+#[derive(Debug, Serialize, ToSchema)]
 pub struct PixooHttpErrorResponse {
+    /// HTTP status mirrored into the body.
+    #[schema(example = 503)]
     pub error_status: u16,
+    /// Human-readable failure description.
     pub message: String,
+    /// Failure category.
     pub error_kind: PixooHttpErrorKind,
+    /// Pixoo device error code, present only for device errors.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_code: Option<i64>,
 }

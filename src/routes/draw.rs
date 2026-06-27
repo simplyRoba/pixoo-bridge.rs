@@ -8,13 +8,17 @@ use crate::state::AppState;
 use axum::extract::{Multipart, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
-use axum::Router;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::sync::Arc;
 use tracing::error;
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use validator::{Validate, ValidationError};
+
+use crate::openapi::{GenericErrorBody, PayloadTooLargeBody, ValidationErrorBody};
+use crate::pixoo::error::PixooHttpErrorResponse;
 
 use super::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, json_error,
@@ -23,16 +27,26 @@ use super::common::{
 
 const SINGLE_FRAME_PIC_SPEED_MS: u32 = 9999;
 
-pub fn mount_draw_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
-    router
-        .route("/draw/fill", post(draw_fill))
-        .route("/draw/upload", post(draw_upload))
-        .route("/draw/remote", post(draw_remote))
-        .route("/draw/text", post(draw_text))
-        .route("/draw/text/clear", post(draw_text_clear))
+pub fn draw_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(draw_fill))
+        .routes(routes!(draw_upload))
+        .routes(routes!(draw_remote))
+        .routes(routes!(draw_text))
+        .routes(routes!(draw_text_clear))
 }
 
-#[derive(Debug, Deserialize, Validate)]
+/// Multipart form for `/draw/upload`. Used for documentation only; the handler
+/// reads the `file` field directly from the multipart stream.
+#[derive(ToSchema)]
+#[allow(dead_code)]
+struct UploadForm {
+    /// Image file to render (PNG, GIF, WebP, or JPEG).
+    #[schema(format = Binary, value_type = String)]
+    file: Vec<u8>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 struct DrawFillRequest {
     #[validate(range(min = 0, max = 255))]
     red: u16,
@@ -42,13 +56,13 @@ struct DrawFillRequest {
     blue: u16,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 struct DrawRemoteRequest {
     #[validate(custom(function = "validate_remote_link"))]
     link: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct DrawTextRequest {
     #[validate(range(min = 0, max = 20))]
@@ -68,20 +82,20 @@ struct DrawTextRequest {
     text_alignment: TextAlignment,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 struct TextPosition {
     x: u16,
     y: u16,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 struct RgbColor {
     red: u16,
     green: u16,
     blue: u16,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 enum ScrollDirection {
     Left,
@@ -97,7 +111,7 @@ impl ScrollDirection {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 enum TextAlignment {
     Left,
@@ -153,6 +167,19 @@ fn rgb_to_hex(color: &RgbColor) -> String {
     format!("#{:02X}{:02X}{:02X}", color.red, color.green, color.blue)
 }
 
+#[utoipa::path(
+    post,
+    path = "/draw/fill",
+    tag = "draw",
+    request_body = DrawFillRequest,
+    responses(
+        (status = 200, description = "Display filled with the requested color"),
+        (status = 400, description = "Invalid color values", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, payload))]
 async fn draw_fill(
     State(state): State<Arc<AppState>>,
@@ -185,6 +212,21 @@ async fn draw_fill(
     send_draw_frame(&state, pic_id, 1, 0, SINGLE_FRAME_PIC_SPEED_MS, pic_data).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/draw/upload",
+    tag = "draw",
+    request_body(content = inline(UploadForm), content_type = "multipart/form-data"),
+    responses(
+        (status = 200, description = "Image uploaded and rendered"),
+        (status = 400, description = "Missing, empty, or undecodable image", body = ValidationErrorBody),
+        (status = 413, description = "Image exceeds the configured size limit", body = PayloadTooLargeBody),
+        (status = 500, description = "Internal encoding error", body = GenericErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, multipart))]
 async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipart) -> Response {
     // Extract the file field from the multipart request
@@ -206,6 +248,21 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
     send_frames(&state, frames, state.animation_speed_factor).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/draw/remote",
+    tag = "draw",
+    request_body = DrawRemoteRequest,
+    responses(
+        (status = 200, description = "Remote image fetched and rendered"),
+        (status = 400, description = "Invalid link", body = ValidationErrorBody),
+        (status = 413, description = "Remote payload exceeds the configured size limit", body = PayloadTooLargeBody),
+        (status = 500, description = "Internal encoding error", body = GenericErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Remote fetch failed (GenericErrorBody) or Pixoo device error (PixooHttpErrorResponse)", body = GenericErrorBody),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, payload))]
 async fn draw_remote(
     State(state): State<Arc<AppState>>,
@@ -230,6 +287,19 @@ async fn draw_remote(
     send_frames(&state, frames, state.animation_speed_factor).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/draw/text",
+    tag = "draw",
+    request_body = DrawTextRequest,
+    responses(
+        (status = 200, description = "Text sent to the display"),
+        (status = 400, description = "Invalid text payload", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, payload))]
 async fn draw_text(
     State(state): State<Arc<AppState>>,
@@ -260,6 +330,17 @@ async fn draw_text(
     dispatch_pixoo_command(&state, PixooCommand::DrawSendText, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/draw/text/clear",
+    tag = "draw",
+    responses(
+        (status = 200, description = "Text cleared from the display"),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 async fn draw_text_clear(State(state): State<Arc<AppState>>) -> Response {
     dispatch_pixoo_command(&state, PixooCommand::DrawClearText, Map::new()).await
@@ -414,7 +495,7 @@ fn remote_fetch_failed(message: &str) -> Response {
 mod tests {
     use super::SINGLE_FRAME_PIC_SPEED_MS;
     use super::{
-        mount_draw_routes, DrawTextRequest, RgbColor, ScrollDirection, TextAlignment, TextPosition,
+        draw_router, DrawTextRequest, RgbColor, ScrollDirection, TextAlignment, TextPosition,
     };
     use crate::pixels::{encode_pic_data, uniform_pixel_buffer};
     use crate::pixoo::{PixooClient, PixooClientConfig};
@@ -474,7 +555,8 @@ mod tests {
     }
 
     fn build_draw_app(state: Arc<AppState>) -> Router {
-        mount_draw_routes(Router::new()).with_state(state)
+        let (router, _api) = draw_router().with_state(state).split_for_parts();
+        router
     }
 
     fn base_text_payload() -> DrawTextRequest {
@@ -736,7 +818,7 @@ mod tests {
                 .set_repeat(image::codecs::gif::Repeat::Infinite)
                 .unwrap();
             for i in 0..frame_count {
-                let v = ((i * 10) % 256) as u8;
+                let v = u8::try_from((i * 10) % 256).unwrap();
                 let img: RgbaImage = ImageBuffer::from_fn(8, 8, |_, _| Rgba([v, v, v, 255]));
                 let frame = Frame::from_parts(
                     img,
@@ -804,7 +886,7 @@ mod tests {
     fn remote_test_state(base_url: String, max_image_size: usize) -> Arc<AppState> {
         let client = PixooClient::new(base_url, PixooClientConfig::default()).expect("client");
         let remote_fetcher = RemoteFetcher::new(RemoteFetchConfig::new(
-            Duration::from_millis(5_000),
+            Duration::from_secs(5),
             max_image_size,
         ))
         .expect("remote fetcher");
@@ -865,7 +947,7 @@ mod tests {
         for i in 0..3 {
             assert_eq!(captured[i + 1]["Command"], "Draw/SendHttpGif");
             assert_eq!(captured[i + 1]["PicNum"], 3);
-            assert_eq!(captured[i + 1]["PicOffset"], i as i64);
+            assert_eq!(captured[i + 1]["PicOffset"], i64::try_from(i).unwrap());
             assert_eq!(captured[i + 1]["PicWidth"], 64);
         }
     }

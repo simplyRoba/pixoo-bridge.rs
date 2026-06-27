@@ -8,8 +8,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::sync::Arc;
 use tracing::error;
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use validator::Validate;
 
+use crate::openapi::{GenericErrorBody, ValidationErrorBody};
+use crate::pixoo::error::PixooHttpErrorResponse;
 use crate::routes::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, service_unavailable, validation_error_simple,
     ValidatedJson,
@@ -17,7 +22,14 @@ use crate::routes::common::{
 
 use super::parsing::{parse_f64, parse_i64, parse_string};
 
-#[derive(Serialize)]
+pub fn weather_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(manage_weather))
+        .routes(routes!(manage_set_location))
+        .routes(routes!(manage_set_temperature_unit))
+}
+
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ManageWeather {
     weather_string: String,
@@ -29,7 +41,7 @@ pub struct ManageWeather {
     wind_speed: f64,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct LocationRequest {
     #[validate(range(min = -180.0, max = 180.0))]
     pub longitude: f64,
@@ -37,6 +49,17 @@ pub struct LocationRequest {
     pub latitude: f64,
 }
 
+#[utoipa::path(
+    get,
+    path = "/manage/weather",
+    tag = "manage",
+    responses(
+        (status = 200, description = "Current weather data", body = ManageWeather),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device error (PixooHttpErrorResponse) or unparseable weather (GenericErrorBody)", body = GenericErrorBody),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 pub async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_pixoo_query(&state, PixooCommand::ManageGetWeather).await {
@@ -53,6 +76,19 @@ pub async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/weather/location",
+    tag = "manage",
+    request_body = LocationRequest,
+    responses(
+        (status = 200, description = "Location updated"),
+        (status = 400, description = "Invalid coordinates", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, payload))]
 pub async fn manage_set_location(
     State(state): State<Arc<AppState>>,
@@ -71,6 +107,19 @@ pub async fn manage_set_location(
     dispatch_pixoo_command(&state, PixooCommand::ManageSetLocation, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/weather/temperature-unit/{unit}",
+    tag = "manage",
+    params(("unit" = String, Path, description = "One of: celsius, fahrenheit")),
+    responses(
+        (status = 200, description = "Temperature unit updated"),
+        (status = 400, description = "Invalid unit", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 pub async fn manage_set_temperature_unit(
     State(state): State<Arc<AppState>>,
@@ -113,7 +162,7 @@ fn map_weather(response: &PixooResponse) -> Result<ManageWeather, String> {
 mod tests {
     use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::common::testing::send_json_request;
-    use crate::routes::manage::mount_manage_routes;
+    use crate::routes::manage::manage_router;
     use crate::state::AppState;
     use axum::http::{Method, StatusCode};
     use axum::Router;
@@ -122,7 +171,8 @@ mod tests {
     use std::sync::Arc;
 
     fn build_manage_app(state: Arc<AppState>) -> Router {
-        mount_manage_routes(Router::new()).with_state(state)
+        let (router, _api) = manage_router().with_state(state).split_for_parts();
+        router
     }
 
     async fn send_get(app: &Router, uri: &str) -> (StatusCode, String) {

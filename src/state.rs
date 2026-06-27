@@ -18,7 +18,7 @@ pub struct AppState {
 impl AppState {
     pub fn with_client(client: PixooClient) -> Self {
         let remote_fetcher = RemoteFetcher::new(RemoteFetchConfig::new(
-            Duration::from_millis(10_000),
+            Duration::from_secs(10),
             5 * 1024 * 1024,
         ))
         .expect("remote fetcher");

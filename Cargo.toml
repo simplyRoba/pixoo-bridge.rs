@@ -30,6 +30,9 @@ base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
 uuid = { version = "1", features = ["v4", "std"] }
 thiserror = "2.0"
+utoipa = { version = "5.3", features = ["axum_extras", "preserve_order"] }
+utoipa-axum = "0.2"
+utoipa-swagger-ui = { version = "9.0", features = ["axum"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
