@@ -28,7 +28,6 @@ use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
         PixooHttpErrorResponse,
         PixooHttpErrorKind,
         ValidationErrorBody,
-        GenericErrorBody,
         PayloadTooLargeBody
     ))
 )]
@@ -42,20 +41,8 @@ pub struct ValidationErrorBody {
     #[schema(example = "validation failed")]
     pub error: String,
     /// Field- or action-specific details. Shape depends on the failing input.
-    #[schema(value_type = Object)]
+    #[schema(value_type = Object, example = json!({ "red": ["range"] }))]
     pub details: serde_json::Value,
-}
-
-/// Generic `{ error, message? }` body returned by some failure paths
-/// (e.g. remote fetch failures, internal errors, settings-parse failures).
-#[derive(Serialize, ToSchema)]
-#[allow(dead_code)]
-pub struct GenericErrorBody {
-    /// Short error label, e.g. `"remote fetch failed"`.
-    pub error: String,
-    /// Optional human-readable detail.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
 }
 
 /// `413 Payload Too Large` body returned when an image exceeds the size limit.
@@ -66,7 +53,9 @@ pub struct PayloadTooLargeBody {
     #[schema(example = "file too large")]
     pub error: String,
     /// Configured maximum size in bytes.
+    #[schema(example = 5_242_880)]
     pub limit: usize,
     /// Actual payload size in bytes.
+    #[schema(example = 6_000_000)]
     pub actual: usize,
 }

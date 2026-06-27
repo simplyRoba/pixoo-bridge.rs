@@ -17,8 +17,8 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::{Validate, ValidationError};
 
-use crate::openapi::{GenericErrorBody, PayloadTooLargeBody, ValidationErrorBody};
-use crate::pixoo::error::PixooHttpErrorResponse;
+use crate::openapi::{PayloadTooLargeBody, ValidationErrorBody};
+use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
 
 use super::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, json_error,
@@ -175,7 +175,7 @@ fn rgb_to_hex(color: &RgbColor) -> String {
     responses(
         (status = 200, description = "Display filled with the requested color"),
         (status = 400, description = "Invalid color values", body = ValidationErrorBody),
-        (status = 500, description = "Internal encoding error", body = GenericErrorBody),
+        (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -222,7 +222,7 @@ async fn draw_fill(
         (status = 200, description = "Image uploaded and rendered"),
         (status = 400, description = "Missing, empty, or undecodable image", body = ValidationErrorBody),
         (status = 413, description = "Image exceeds the configured size limit", body = PayloadTooLargeBody),
-        (status = 500, description = "Internal encoding error", body = GenericErrorBody),
+        (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -258,9 +258,9 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
         (status = 200, description = "Remote image fetched and rendered"),
         (status = 400, description = "Invalid link", body = ValidationErrorBody),
         (status = 413, description = "Remote payload exceeds the configured size limit", body = PayloadTooLargeBody),
-        (status = 500, description = "Internal encoding error", body = GenericErrorBody),
+        (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Remote fetch failed (GenericErrorBody) or Pixoo device error (PixooHttpErrorResponse)", body = GenericErrorBody),
+        (status = 503, description = "Remote fetch failed or Pixoo device error (see error_kind)", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
     )
 )]
@@ -487,9 +487,12 @@ fn payload_too_large(limit: usize, actual: usize) -> Response {
 }
 
 fn remote_fetch_failed(message: &str) -> Response {
-    json_error(StatusCode::SERVICE_UNAVAILABLE, "remote fetch failed")
-        .message(message)
-        .finish()
+    PixooHttpErrorResponse::new(
+        StatusCode::SERVICE_UNAVAILABLE,
+        PixooHttpErrorKind::RemoteFetch,
+        format!("remote fetch failed: {message}"),
+    )
+    .into_response()
 }
 
 #[cfg(test)]
@@ -1091,6 +1094,11 @@ mod tests {
 
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "remote fetch failed");
+        assert_eq!(json_body["error_kind"], "remote-fetch");
+        assert_eq!(json_body["error_status"], 503);
+        assert!(json_body["message"]
+            .as_str()
+            .unwrap()
+            .contains("remote fetch failed"));
     }
 }

@@ -13,7 +13,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-use crate::openapi::{GenericErrorBody, ValidationErrorBody};
+use crate::openapi::ValidationErrorBody;
 use crate::pixoo::error::PixooHttpErrorResponse;
 use crate::routes::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, service_unavailable, validation_error_simple,
@@ -56,7 +56,7 @@ pub struct LocationRequest {
     responses(
         (status = 200, description = "Current weather data", body = ManageWeather),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device error (PixooHttpErrorResponse) or unparseable weather (GenericErrorBody)", body = GenericErrorBody),
+        (status = 503, description = "Pixoo device error or unparseable weather response", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
     )
 )]

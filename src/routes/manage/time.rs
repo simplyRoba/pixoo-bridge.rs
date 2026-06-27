@@ -14,7 +14,7 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::openapi::{GenericErrorBody, ValidationErrorBody};
+use crate::openapi::ValidationErrorBody;
 use crate::pixoo::error::PixooHttpErrorResponse;
 use crate::routes::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, service_unavailable,
@@ -44,7 +44,7 @@ pub struct ManageTime {
     responses(
         (status = 200, description = "Current device time", body = ManageTime),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device error (PixooHttpErrorResponse) or unparseable time (GenericErrorBody)", body = GenericErrorBody),
+        (status = 503, description = "Pixoo device error or unparseable time response", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
     )
 )]
@@ -70,7 +70,7 @@ pub async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
     tag = "manage",
     responses(
         (status = 200, description = "Device clock set to current UTC"),
-        (status = 500, description = "Failed to compute UTC timestamp"),
+        (status = 500, description = "Failed to compute UTC timestamp", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
