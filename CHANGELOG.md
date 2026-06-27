@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.0.0...v1.1.0) (2026-06-27)
+
+
+### Features
+
+* **openapi:** add per-status-code response examples  ([#119](https://github.com/simplyRoba/pixoo-bridge.rs/issues/119)) ([6921a7e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/6921a7e47944fd1d442a1d301996acd191a92d48))
+
 ## [1.0.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v0.12.2...v1.0.0) (2026-06-27)
 
 
