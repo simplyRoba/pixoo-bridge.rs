@@ -3,23 +3,47 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
-    Json, Router,
+    Json,
 };
+use serde::Serialize;
 use serde_json::{json, Map};
 use std::sync::Arc;
 use tracing::{debug, error};
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 use super::common::dispatch_pixoo_command;
+use crate::pixoo::error::PixooHttpErrorResponse;
 
 use crate::state::AppState;
 
-pub fn mount_system_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
-    router
-        .route("/health", get(health))
-        .route("/reboot", post(reboot))
+pub fn system_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(health))
+        .routes(routes!(reboot))
 }
 
+/// `200 OK` body for `/health`.
+#[derive(Serialize, ToSchema)]
+#[allow(dead_code)]
+struct HealthStatus {
+    /// Always `"ok"`.
+    #[schema(example = "ok")]
+    status: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "system",
+    responses(
+        (status = 200, description = "Bridge is healthy (and Pixoo reachable when forwarding is enabled)", body = HealthStatus),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 async fn health(State(state): State<Arc<AppState>>) -> Response {
     if !state.health_forward {
@@ -40,6 +64,17 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/reboot",
+    tag = "system",
+    responses(
+        (status = 200, description = "Reboot command accepted"),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 async fn reboot(State(state): State<Arc<AppState>>) -> Response {
     dispatch_pixoo_command(&state, PixooCommand::SystemReboot, Map::new()).await
@@ -47,7 +82,7 @@ async fn reboot(State(state): State<Arc<AppState>>) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use super::mount_system_routes;
+    use super::system_router;
     use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::state::AppState;
     use axum::body::{to_bytes, Body};
@@ -58,7 +93,8 @@ mod tests {
     use tower::ServiceExt;
 
     fn build_system_app(state: Arc<AppState>) -> Router {
-        mount_system_routes(Router::new()).with_state(state)
+        let (router, _api) = system_router().with_state(state).split_for_parts();
+        router
     }
 
     fn system_state(client: PixooClient, health_forward: bool) -> Arc<AppState> {

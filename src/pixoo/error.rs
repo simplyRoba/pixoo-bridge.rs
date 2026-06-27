@@ -2,6 +2,7 @@ use axum::{http::StatusCode, Json};
 use serde::Serialize;
 use serde_json::Value;
 use thiserror::Error;
+use utoipa::ToSchema;
 
 #[derive(Debug, Error)]
 pub enum PixooError {
@@ -78,21 +79,63 @@ pub enum PixooErrorCategory {
     Unknown,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+/// Discriminator for every server-side error envelope.
+///
+/// `unreachable`, `timeout`, and `device-error` originate from the Pixoo
+/// device; `remote-fetch` covers failed remote image downloads; `internal`
+/// covers unexpected bridge-side failures (e.g. encoding or response parsing).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum PixooHttpErrorKind {
     Unreachable,
     Timeout,
     DeviceError,
+    RemoteFetch,
+    Internal,
 }
 
-#[derive(Debug, Serialize)]
+/// Canonical error body for every non-validation failure (`500`/`502`/`503`/`504`).
+///
+/// All server-side error responses share this shape so clients can rely on a
+/// single envelope and use `error_kind` to discriminate the cause.
+#[derive(Debug, Serialize, ToSchema)]
+#[schema(example = json!({
+    "error_status": 503,
+    "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
+    "error_kind": "device-error",
+    "error_code": 1
+}))]
 pub struct PixooHttpErrorResponse {
+    /// HTTP status mirrored into the body.
     pub error_status: u16,
+    /// Human-readable failure description.
     pub message: String,
+    /// Failure category.
     pub error_kind: PixooHttpErrorKind,
+    /// Pixoo device error code, present only for device errors.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_code: Option<i64>,
+}
+
+impl PixooHttpErrorResponse {
+    /// Builds a canonical error response with the given status, kind, and message.
+    pub fn new(status: StatusCode, kind: PixooHttpErrorKind, message: impl Into<String>) -> Self {
+        Self {
+            error_status: status.as_u16(),
+            message: message.into(),
+            error_kind: kind,
+            error_code: None,
+        }
+    }
+
+    /// Consumes the body into an axum response with the matching status code.
+    pub fn into_response(self) -> axum::response::Response {
+        use axum::response::IntoResponse;
+
+        let status =
+            StatusCode::from_u16(self.error_status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        (status, Json(self)).into_response()
+    }
 }
 
 pub fn map_pixoo_error(
@@ -108,7 +151,10 @@ pub fn map_pixoo_error(
     let status = match kind {
         PixooHttpErrorKind::Unreachable => StatusCode::BAD_GATEWAY,
         PixooHttpErrorKind::Timeout => StatusCode::GATEWAY_TIMEOUT,
-        PixooHttpErrorKind::DeviceError => StatusCode::SERVICE_UNAVAILABLE,
+        // `kind` is always a device variant here; remaining kinds map to 503.
+        PixooHttpErrorKind::DeviceError
+        | PixooHttpErrorKind::RemoteFetch
+        | PixooHttpErrorKind::Internal => StatusCode::SERVICE_UNAVAILABLE,
     };
 
     let message = format!("{context}: {error}");

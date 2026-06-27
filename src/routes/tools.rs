@@ -2,28 +2,31 @@ use crate::pixoo::fields::request as req;
 use crate::pixoo::PixooCommand;
 use axum::extract::State;
 use axum::response::Response;
-use axum::routing::post;
-use axum::Router;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::str::FromStr;
 use std::sync::Arc;
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use validator::Validate;
 
 use super::common::{dispatch_pixoo_command, PathParam, ValidatedJson, ValidatedPath};
+use crate::openapi::ValidationErrorBody;
+use crate::pixoo::error::PixooHttpErrorResponse;
 
 use crate::state::AppState;
 
-pub fn mount_tool_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
-    router
-        .route("/tools/timer/start", post(timer_start))
-        .route("/tools/timer/stop", post(timer_stop))
-        .route("/tools/stopwatch/{action}", post(stopwatch))
-        .route("/tools/scoreboard", post(scoreboard))
-        .route("/tools/soundmeter/{action}", post(soundmeter))
+pub fn tool_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(timer_start))
+        .routes(routes!(timer_stop))
+        .routes(routes!(stopwatch))
+        .routes(routes!(scoreboard))
+        .routes(routes!(soundmeter))
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 struct TimerRequest {
     #[validate(range(min = 0, max = 59))]
     minute: u32,
@@ -31,7 +34,7 @@ struct TimerRequest {
     second: u32,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 struct ScoreboardRequest {
     #[validate(range(min = 0, max = 999))]
     blue_score: u16,
@@ -39,7 +42,7 @@ struct ScoreboardRequest {
     red_score: u16,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 enum StopwatchAction {
     Start,
@@ -76,7 +79,7 @@ impl FromStr for StopwatchAction {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 enum SoundmeterAction {
     Start,
@@ -110,6 +113,19 @@ impl FromStr for SoundmeterAction {
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/tools/timer/start",
+    tag = "tools",
+    request_body = TimerRequest,
+    responses(
+        (status = 200, description = "Timer started"),
+        (status = 400, description = "Invalid timer values", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, payload))]
 async fn timer_start(
     State(state): State<Arc<AppState>>,
@@ -123,6 +139,17 @@ async fn timer_start(
     dispatch_pixoo_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/tools/timer/stop",
+    tag = "tools",
+    responses(
+        (status = 200, description = "Timer stopped"),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     let mut args = Map::new();
@@ -131,6 +158,19 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     dispatch_pixoo_command(&state, PixooCommand::ToolsTimer, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/tools/stopwatch/{action}",
+    tag = "tools",
+    params(("action" = String, Path, description = "One of: start, stop, reset")),
+    responses(
+        (status = 200, description = "Stopwatch action applied"),
+        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 async fn stopwatch(
     State(state): State<Arc<AppState>>,
@@ -142,6 +182,19 @@ async fn stopwatch(
     dispatch_pixoo_command(&state, PixooCommand::ToolsStopwatch, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/tools/scoreboard",
+    tag = "tools",
+    request_body = ScoreboardRequest,
+    responses(
+        (status = 200, description = "Scoreboard updated"),
+        (status = 400, description = "Invalid scores", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, payload))]
 async fn scoreboard(
     State(state): State<Arc<AppState>>,
@@ -154,6 +207,19 @@ async fn scoreboard(
     dispatch_pixoo_command(&state, PixooCommand::ToolsScoreboard, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/tools/soundmeter/{action}",
+    tag = "tools",
+    params(("action" = String, Path, description = "One of: start, stop")),
+    responses(
+        (status = 200, description = "Sound meter action applied"),
+        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 async fn soundmeter(
     State(state): State<Arc<AppState>>,
@@ -167,7 +233,7 @@ async fn soundmeter(
 
 #[cfg(test)]
 mod tests {
-    use super::mount_tool_routes;
+    use super::tool_router;
     use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::common::testing::send_json_request;
     use crate::state::AppState;
@@ -178,7 +244,8 @@ mod tests {
     use std::sync::Arc;
 
     fn build_tool_app(state: Arc<AppState>) -> Router {
-        mount_tool_routes(Router::new()).with_state(state)
+        let (router, _api) = tool_router().with_state(state).split_for_parts();
+        router
     }
 
     fn assert_validation_failed(body: &str) -> Value {

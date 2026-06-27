@@ -7,13 +7,28 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::str::FromStr;
 use std::sync::Arc;
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use validator::Validate;
 
+use crate::openapi::ValidationErrorBody;
+use crate::pixoo::error::PixooHttpErrorResponse;
 use crate::routes::common::{
     dispatch_pixoo_command, validation_error_simple, PathParam, ValidatedJson, ValidatedPath,
 };
 
-#[derive(Debug, Deserialize, Validate)]
+pub fn display_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(manage_display_on))
+        .routes(routes!(manage_display_brightness))
+        .routes(routes!(manage_display_rotation))
+        .routes(routes!(manage_display_mirror))
+        .routes(routes!(manage_display_overclock))
+        .routes(routes!(manage_display_white_balance))
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct WhiteBalanceRequest {
     #[validate(range(min = 0, max = 100))]
     pub red: i64,
@@ -23,7 +38,7 @@ pub struct WhiteBalanceRequest {
     pub blue: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum OnOffAction {
     On,
@@ -57,6 +72,19 @@ impl FromStr for OnOffAction {
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/display/{action}",
+    tag = "manage",
+    params(("action" = String, Path, description = "One of: on, off")),
+    responses(
+        (status = 200, description = "Display power toggled"),
+        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_on(
     State(state): State<Arc<AppState>>,
@@ -68,6 +96,19 @@ pub async fn manage_display_on(
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayPower, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/display/brightness/{value}",
+    tag = "manage",
+    params(("value" = i32, Path, description = "Brightness 0-100")),
+    responses(
+        (status = 200, description = "Brightness updated"),
+        (status = 400, description = "Value out of range", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_brightness(
     State(state): State<Arc<AppState>>,
@@ -84,6 +125,19 @@ pub async fn manage_display_brightness(
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayBrightness, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/display/rotation/{angle}",
+    tag = "manage",
+    params(("angle" = i32, Path, description = "One of: 0, 90, 180, 270")),
+    responses(
+        (status = 200, description = "Rotation updated"),
+        (status = 400, description = "Invalid angle", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_rotation(
     State(state): State<Arc<AppState>>,
@@ -100,6 +154,19 @@ pub async fn manage_display_rotation(
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayRotation, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/display/mirror/{action}",
+    tag = "manage",
+    params(("action" = String, Path, description = "One of: on, off")),
+    responses(
+        (status = 200, description = "Mirror mode toggled"),
+        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_mirror(
     State(state): State<Arc<AppState>>,
@@ -111,6 +178,19 @@ pub async fn manage_display_mirror(
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayMirror, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/display/brightness/overclock/{action}",
+    tag = "manage",
+    params(("action" = String, Path, description = "One of: on, off")),
+    responses(
+        (status = 200, description = "Overclock mode toggled"),
+        (status = 400, description = "Unsupported action", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 pub async fn manage_display_overclock(
     State(state): State<Arc<AppState>>,
@@ -122,6 +202,19 @@ pub async fn manage_display_overclock(
     dispatch_pixoo_command(&state, PixooCommand::ManageDisplayOverclock, args).await
 }
 
+#[utoipa::path(
+    post,
+    path = "/manage/display/white-balance",
+    tag = "manage",
+    request_body = WhiteBalanceRequest,
+    responses(
+        (status = 200, description = "White balance updated"),
+        (status = 400, description = "Invalid values", body = ValidationErrorBody),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state, payload))]
 pub async fn manage_display_white_balance(
     State(state): State<Arc<AppState>>,
@@ -139,7 +232,7 @@ pub async fn manage_display_white_balance(
 mod tests {
     use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::common::testing::send_json_request;
-    use crate::routes::manage::mount_manage_routes;
+    use crate::routes::manage::manage_router;
     use crate::state::AppState;
     use axum::http::{Method, StatusCode};
     use axum::Router;
@@ -148,7 +241,8 @@ mod tests {
     use std::sync::Arc;
 
     fn build_manage_app(state: Arc<AppState>) -> Router {
-        mount_manage_routes(Router::new()).with_state(state)
+        let (router, _api) = manage_router().with_state(state).split_for_parts();
+        router
     }
 
     async fn send_post(

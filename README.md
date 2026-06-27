@@ -43,6 +43,8 @@ Unexpected Pixoo errors are logged with context; set `PIXOO_BRIDGE_LOG_LEVEL=DEB
 
 ## API
 
+Interactive API documentation (Swagger UI) is served at `/docs`; the raw OpenAPI specification is available at `/api-docs/openapi.json`. Opening the bridge root (`/`) redirects to `/docs`.
+
 | Method | Endpoint | Description | Success | Client Errors |
 | --- | --- | --- | --- | --- |
 | `GET` | `/health` | Bridge health probe (cascades to device if enabled). | `200` | — |
@@ -89,7 +91,7 @@ This project is a drop-in replacement for the Kotlin-based [pixoo-bridge](https:
 | Kotlin (old) | Rust (new) | Notes |
 | --- | --- | --- |
 | `PIXOO_SIZE` | removed | No longer needed. |
-| `PIXOO_BRIDGE_DOCS_ENABLED` | removed | No built-in API docs UI. |
+| `PIXOO_BRIDGE_DOCS_ENABLED` | removed | Swagger UI is always served at `/docs`. |
 | — | `PIXOO_BRIDGE_REMOTE_TIMEOUT_MS` | New. Controls remote call timeout. |
 
 **Endpoint changes:**

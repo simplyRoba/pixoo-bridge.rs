@@ -8,57 +8,25 @@ use crate::pixoo::PixooCommand;
 use crate::state::AppState;
 use axum::extract::State;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
-use axum::Router;
 use serde::Serialize;
 use std::sync::Arc;
 use tracing::error;
+use utoipa::ToSchema;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 use super::common::{dispatch_pixoo_query, service_unavailable};
+use crate::pixoo::error::PixooHttpErrorResponse;
 
-use display::{
-    manage_display_brightness, manage_display_mirror, manage_display_on, manage_display_overclock,
-    manage_display_rotation, manage_display_white_balance,
-};
-use time::{manage_set_time, manage_set_time_mode, manage_set_timezone, manage_time};
-use weather::{manage_set_location, manage_set_temperature_unit, manage_weather};
-
-pub fn mount_manage_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
-    router
-        .route("/manage/settings", get(manage_settings))
-        .route("/manage/time", get(manage_time).post(manage_set_time))
-        .route("/manage/weather", get(manage_weather))
-        .route("/manage/weather/location", post(manage_set_location))
-        .route("/manage/time/offset/{offset}", post(manage_set_timezone))
-        .route("/manage/time/mode/{mode}", post(manage_set_time_mode))
-        .route(
-            "/manage/weather/temperature-unit/{unit}",
-            post(manage_set_temperature_unit),
-        )
-        .route("/manage/display/{action}", post(manage_display_on))
-        .route(
-            "/manage/display/brightness/{value}",
-            post(manage_display_brightness),
-        )
-        .route(
-            "/manage/display/rotation/{angle}",
-            post(manage_display_rotation),
-        )
-        .route(
-            "/manage/display/mirror/{action}",
-            post(manage_display_mirror),
-        )
-        .route(
-            "/manage/display/brightness/overclock/{action}",
-            post(manage_display_overclock),
-        )
-        .route(
-            "/manage/display/white-balance",
-            post(manage_display_white_balance),
-        )
+pub fn manage_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .routes(routes!(manage_settings))
+        .merge(time::time_router())
+        .merge(weather::weather_router())
+        .merge(display::display_router())
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct ManageSettings {
     display_on: bool,
@@ -70,6 +38,17 @@ struct ManageSettings {
     current_clock_id: i64,
 }
 
+#[utoipa::path(
+    get,
+    path = "/manage/settings",
+    tag = "manage",
+    responses(
+        (status = 200, description = "Current device settings", body = ManageSettings),
+        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
+        (status = 503, description = "Pixoo device error or unparseable settings response", body = PixooHttpErrorResponse),
+        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+    )
+)]
 #[tracing::instrument(skip(state))]
 async fn manage_settings(State(state): State<Arc<AppState>>) -> Response {
     let response = match dispatch_pixoo_query(&state, PixooCommand::ManageGetSettings).await {
@@ -146,7 +125,7 @@ pub(crate) mod parsing {
 
 #[cfg(test)]
 mod tests {
-    use super::mount_manage_routes;
+    use super::manage_router;
     use crate::pixoo::{PixooClient, PixooClientConfig};
     use crate::routes::common::testing::send_json_request;
     use crate::state::AppState;
@@ -157,7 +136,8 @@ mod tests {
     use std::sync::Arc;
 
     fn build_manage_app(state: Arc<AppState>) -> Router {
-        mount_manage_routes(Router::new()).with_state(state)
+        let (router, _api) = manage_router().with_state(state).split_for_parts();
+        router
     }
 
     async fn send_get(app: &Router, uri: &str) -> (StatusCode, String) {

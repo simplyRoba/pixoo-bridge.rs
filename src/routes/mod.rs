@@ -7,19 +7,21 @@ mod tools;
 use axum::http::StatusCode;
 use axum::response::Response;
 use std::sync::Arc;
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::state::AppState;
 
-use axum::Router;
-
-/// Mounts all route modules onto the given router.
+/// Builds the documented application router by merging every route module.
 ///
-/// When adding a new route module, add it here rather than in main.rs.
-pub fn mount_all_routes(router: Router<Arc<AppState>>) -> Router<Arc<AppState>> {
-    let router = draw::mount_draw_routes(router);
-    let router = tools::mount_tool_routes(router);
-    let router = manage::mount_manage_routes(router);
-    system::mount_system_routes(router)
+/// Each module returns an [`OpenApiRouter`] so that route registration and
+/// `OpenAPI` documentation stay in a single place and cannot drift. When adding
+/// a new route module, merge it here rather than in main.rs.
+pub fn build_router() -> OpenApiRouter<Arc<AppState>> {
+    OpenApiRouter::new()
+        .merge(draw::draw_router())
+        .merge(tools::tool_router())
+        .merge(manage::manage_router())
+        .merge(system::system_router())
 }
 
 /// Returns a JSON 404 response for undefined routes.

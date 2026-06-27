@@ -1,4 +1,5 @@
 use crate::pixoo::client::PixooResponse;
+use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
 use crate::pixoo::{map_pixoo_error, PixooCommand};
 use crate::state::AppState;
 use axum::body::Body;
@@ -174,11 +175,21 @@ pub async fn dispatch_pixoo_command(
 }
 
 pub fn service_unavailable() -> Response {
-    json_error(StatusCode::SERVICE_UNAVAILABLE, "Pixoo command failed").finish()
+    PixooHttpErrorResponse::new(
+        StatusCode::SERVICE_UNAVAILABLE,
+        PixooHttpErrorKind::DeviceError,
+        "Pixoo command failed",
+    )
+    .into_response()
 }
 
 pub fn internal_server_error(message: &str) -> Response {
-    json_error(StatusCode::INTERNAL_SERVER_ERROR, message).finish()
+    PixooHttpErrorResponse::new(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        PixooHttpErrorKind::Internal,
+        message,
+    )
+    .into_response()
 }
 
 fn validation_error_message(error: &ValidationError) -> String {
