@@ -17,12 +17,11 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::{Validate, ValidationError};
 
-use crate::openapi::{PayloadTooLargeBody, ValidationErrorBody};
 use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
 
 use super::common::{
-    dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, json_error,
-    service_unavailable, validation_error_simple, ValidatedJson,
+    dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, service_unavailable,
+    validation_error_simple, ValidatedJson,
 };
 
 const SINGLE_FRAME_PIC_SPEED_MS: u32 = 9999;
@@ -174,7 +173,7 @@ fn rgb_to_hex(color: &RgbColor) -> String {
     request_body = DrawFillRequest,
     responses(
         (status = 200, description = "Display filled with the requested color"),
-        (status = 400, description = "Invalid color values", body = ValidationErrorBody),
+        (status = 400, description = "Invalid color values", body = PixooHttpErrorResponse),
         (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
@@ -220,8 +219,8 @@ async fn draw_fill(
     request_body(content = inline(UploadForm), content_type = "multipart/form-data"),
     responses(
         (status = 200, description = "Image uploaded and rendered"),
-        (status = 400, description = "Missing, empty, or undecodable image", body = ValidationErrorBody),
-        (status = 413, description = "Image exceeds the configured size limit", body = PayloadTooLargeBody),
+        (status = 400, description = "Missing, empty, or undecodable image", body = PixooHttpErrorResponse),
+        (status = 413, description = "Image exceeds the configured size limit", body = PixooHttpErrorResponse),
         (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
@@ -256,8 +255,8 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
     request_body = DrawRemoteRequest,
     responses(
         (status = 200, description = "Remote image fetched and rendered"),
-        (status = 400, description = "Invalid link", body = ValidationErrorBody),
-        (status = 413, description = "Remote payload exceeds the configured size limit", body = PayloadTooLargeBody),
+        (status = 400, description = "Invalid link", body = PixooHttpErrorResponse),
+        (status = 413, description = "Remote payload exceeds the configured size limit", body = PixooHttpErrorResponse),
         (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Remote fetch failed or Pixoo device error (see error_kind)", body = PixooHttpErrorResponse),
@@ -295,7 +294,7 @@ async fn draw_remote(
     request_body = DrawTextRequest,
     responses(
         (status = 200, description = "Text sent to the display"),
-        (status = 400, description = "Invalid text payload", body = ValidationErrorBody),
+        (status = 400, description = "Invalid text payload", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -481,9 +480,13 @@ async fn send_frames(state: &AppState, frames: Vec<DecodedFrame>, speed_factor: 
 }
 
 fn payload_too_large(limit: usize, actual: usize) -> Response {
-    json_error(StatusCode::PAYLOAD_TOO_LARGE, "file too large")
-        .limit_actual(limit, actual)
-        .finish()
+    PixooHttpErrorResponse::with_details(
+        StatusCode::PAYLOAD_TOO_LARGE,
+        PixooHttpErrorKind::PayloadTooLarge,
+        "file too large",
+        serde_json::json!({ "limit": limit, "actual": actual }),
+    )
+    .into_response()
 }
 
 fn remote_fetch_failed(message: &str) -> Response {
@@ -627,7 +630,9 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_status"], 400);
+        assert_eq!(json_body["error_kind"], "validation");
+        assert!(json_body["message"].is_string());
         assert!(json_body["details"]["red"].is_array());
     }
 
@@ -720,7 +725,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert!(json_body["details"]["id"].is_array());
         assert!(json_body["details"]["text_width"].is_array());
         assert!(json_body["details"]["color"].is_array());
@@ -760,7 +765,7 @@ mod tests {
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error_kind"], "device-error");
-        assert_eq!(json_body["error_code"], 1);
+        assert_eq!(json_body["details"]["error_code"], 1);
     }
 
     #[tokio::test]
@@ -795,7 +800,7 @@ mod tests {
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error_kind"], "device-error");
-        assert_eq!(json_body["error_code"], 1);
+        assert_eq!(json_body["details"]["error_code"], 1);
     }
 
     // --- draw_upload tests ---
@@ -966,7 +971,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&resp_body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
     }
 
     #[tokio::test]
@@ -979,7 +984,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&resp_body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
     }
 
     #[tokio::test]
@@ -996,8 +1001,8 @@ mod tests {
 
         assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
         let json_body: Value = serde_json::from_str(&resp_body).unwrap();
-        assert_eq!(json_body["error"], "file too large");
-        assert_eq!(json_body["limit"], 100);
+        assert_eq!(json_body["error_kind"], "payload-too-large");
+        assert_eq!(json_body["details"]["limit"], 100);
     }
 
     #[tokio::test]
@@ -1010,7 +1015,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&resp_body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert!(json_body["details"]["file"]
             .as_str()
             .unwrap()
@@ -1052,7 +1057,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
     }
 
     #[tokio::test]
@@ -1074,9 +1079,14 @@ mod tests {
 
         assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "file too large");
-        assert_eq!(json_body["limit"], 100);
-        assert_eq!(json_body["actual"], 200);
+        assert_eq!(json_body["error_status"], 413);
+        assert_eq!(json_body["error_kind"], "payload-too-large");
+        assert_eq!(json_body["details"]["limit"], 100);
+        assert_eq!(json_body["details"]["actual"], 200);
+        assert!(
+            json_body["limit"].is_null() && json_body["actual"].is_null(),
+            "limit/actual must be nested under details, not at root"
+        );
     }
 
     #[tokio::test]

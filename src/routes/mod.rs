@@ -9,6 +9,7 @@ use axum::response::Response;
 use std::sync::Arc;
 use utoipa_axum::router::OpenApiRouter;
 
+use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
 use crate::state::AppState;
 
 /// Builds the documented application router by merging every route module.
@@ -26,5 +27,10 @@ pub fn build_router() -> OpenApiRouter<Arc<AppState>> {
 
 /// Returns a JSON 404 response for undefined routes.
 pub fn not_found() -> Response {
-    common::json_error(StatusCode::NOT_FOUND, "not found").finish()
+    PixooHttpErrorResponse::new(
+        StatusCode::NOT_FOUND,
+        PixooHttpErrorKind::NotFound,
+        "not found",
+    )
+    .into_response()
 }

@@ -4,8 +4,7 @@
 //! (see `crate::routes::build_router`), so this module only defines the
 //! document metadata and the error response schemas that handlers reference.
 
-use serde::Serialize;
-use utoipa::{OpenApi, ToSchema};
+use utoipa::OpenApi;
 
 use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
 
@@ -24,38 +23,6 @@ use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
         (name = "manage", description = "Device settings: display, time, and weather"),
         (name = "system", description = "Health and system control")
     ),
-    components(schemas(
-        PixooHttpErrorResponse,
-        PixooHttpErrorKind,
-        ValidationErrorBody,
-        PayloadTooLargeBody
-    ))
+    components(schemas(PixooHttpErrorResponse, PixooHttpErrorKind))
 )]
 pub struct ApiDoc;
-
-/// `400 Bad Request` body returned when payload or path validation fails.
-#[derive(Serialize, ToSchema)]
-#[allow(dead_code)]
-pub struct ValidationErrorBody {
-    /// Always `"validation failed"`.
-    #[schema(example = "validation failed")]
-    pub error: String,
-    /// Field- or action-specific details. Shape depends on the failing input.
-    #[schema(value_type = Object, example = json!({ "red": ["range"] }))]
-    pub details: serde_json::Value,
-}
-
-/// `413 Payload Too Large` body returned when an image exceeds the size limit.
-#[derive(Serialize, ToSchema)]
-#[allow(dead_code)]
-pub struct PayloadTooLargeBody {
-    /// Always `"file too large"`.
-    #[schema(example = "file too large")]
-    pub error: String,
-    /// Configured maximum size in bytes.
-    #[schema(example = 5_242_880)]
-    pub limit: usize,
-    /// Actual payload size in bytes.
-    #[schema(example = 6_000_000)]
-    pub actual: usize,
-}

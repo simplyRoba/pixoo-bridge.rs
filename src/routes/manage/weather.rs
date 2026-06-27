@@ -13,7 +13,6 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-use crate::openapi::ValidationErrorBody;
 use crate::pixoo::error::PixooHttpErrorResponse;
 use crate::routes::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, service_unavailable, validation_error_simple,
@@ -83,7 +82,7 @@ pub async fn manage_weather(State(state): State<Arc<AppState>>) -> Response {
     request_body = LocationRequest,
     responses(
         (status = 200, description = "Location updated"),
-        (status = 400, description = "Invalid coordinates", body = ValidationErrorBody),
+        (status = 400, description = "Invalid coordinates", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -114,7 +113,7 @@ pub async fn manage_set_location(
     params(("unit" = String, Path, description = "One of: celsius, fahrenheit")),
     responses(
         (status = 200, description = "Temperature unit updated"),
-        (status = 400, description = "Invalid unit", body = ValidationErrorBody),
+        (status = 400, description = "Invalid unit", body = PixooHttpErrorResponse),
         (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
         (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
         (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
@@ -243,7 +242,7 @@ mod tests {
         let json_body: Value = serde_json::from_str(&body).unwrap();
         assert_eq!(json_body["error_kind"], "device-error");
         assert_eq!(json_body["error_status"], 503);
-        assert_eq!(json_body["error_code"], 1);
+        assert_eq!(json_body["details"]["error_code"], 1);
     }
 
     #[tokio::test]
@@ -285,7 +284,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert!(json_body["details"]["longitude"]
             .as_array()
             .unwrap()
@@ -354,7 +353,7 @@ mod tests {
 
         assert_eq!(status, StatusCode::BAD_REQUEST);
         let json_body: Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(json_body["error"], "validation failed");
+        assert_eq!(json_body["error_kind"], "validation");
         assert_eq!(
             json_body["details"]["unit"],
             "unit must be 'celsius' or 'fahrenheit'"

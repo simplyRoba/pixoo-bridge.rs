@@ -57,11 +57,7 @@ where
     async fn from_request(req: Request<Body>, state: &S) -> Result<Self, Self::Rejection> {
         let Path(raw) = Path::<String>::from_request(req, state)
             .await
-            .map_err(|err| {
-                json_error(StatusCode::BAD_REQUEST, "invalid path")
-                    .message(&err.body_text())
-                    .finish()
-            })?;
+            .map_err(|err| validation_error_simple("path", &err.body_text()))?;
 
         match raw.parse::<T>() {
             Ok(parsed) => Ok(ValidatedPath(parsed)),
@@ -70,69 +66,28 @@ where
     }
 }
 
-pub struct ErrorBuilder {
-    status: StatusCode,
-    body: Map<String, Value>,
-}
-
-pub fn json_error(status: StatusCode, error: &str) -> ErrorBuilder {
-    let mut body = Map::new();
-    body.insert("error".to_string(), Value::String(error.to_string()));
-    ErrorBuilder { status, body }
-}
-
-impl ErrorBuilder {
-    pub fn message(mut self, message: &str) -> Self {
-        self.body
-            .insert("message".to_string(), Value::String(message.to_string()));
-        self
-    }
-
-    pub fn details(mut self, details: Map<String, Value>) -> Self {
-        self.body
-            .insert("details".to_string(), Value::Object(details));
-        self
-    }
-
-    pub fn field_error(self, field: &str, message: &str) -> Self {
-        let mut details = Map::new();
-        details.insert(field.to_string(), Value::String(message.to_string()));
-        self.details(details)
-    }
-
-    pub fn action_error(self, action: &str, allowed: &[&str]) -> Self {
-        let mut details = Map::new();
-        details.insert(
-            "action".to_string(),
-            json!({
-                "provided": action,
-                "allowed": allowed,
-            }),
-        );
-        self.details(details)
-    }
-
-    pub fn limit_actual(mut self, limit: usize, actual: usize) -> Self {
-        self.body.insert("limit".to_string(), Value::from(limit));
-        self.body.insert("actual".to_string(), Value::from(actual));
-        self
-    }
-
-    pub fn finish(self) -> Response {
-        (self.status, Json(Value::Object(self.body))).into_response()
-    }
+/// Builds a `400` validation envelope carrying the given `details` object.
+fn validation_response(details: Value) -> Response {
+    PixooHttpErrorResponse::with_details(
+        StatusCode::BAD_REQUEST,
+        PixooHttpErrorKind::Validation,
+        "validation failed",
+        details,
+    )
+    .into_response()
 }
 
 pub fn validation_error_simple(field: &str, message: &str) -> Response {
-    json_error(StatusCode::BAD_REQUEST, "validation failed")
-        .field_error(field, message)
-        .finish()
+    validation_response(json!({ field: message }))
 }
 
 pub fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
-    json_error(StatusCode::BAD_REQUEST, "validation failed")
-        .action_error(action, allowed)
-        .finish()
+    validation_response(json!({
+        "action": {
+            "provided": action,
+            "allowed": allowed,
+        }
+    }))
 }
 
 /// Sends a Pixoo command and returns the device response.
@@ -200,12 +155,6 @@ fn validation_error_message(error: &ValidationError) -> String {
     }
 }
 
-fn validation_error_response(details: Map<String, Value>) -> Response {
-    json_error(StatusCode::BAD_REQUEST, "validation failed")
-        .details(details)
-        .finish()
-}
-
 fn validation_errors_response(errors: &ValidationErrors) -> Response {
     let mut details = Map::new();
 
@@ -217,7 +166,7 @@ fn validation_errors_response(errors: &ValidationErrors) -> Response {
         details.insert(field.to_string(), Value::Array(messages));
     }
 
-    validation_error_response(details)
+    validation_response(Value::Object(details))
 }
 
 #[cfg(test)]
