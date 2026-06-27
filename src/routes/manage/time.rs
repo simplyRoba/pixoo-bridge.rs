@@ -14,7 +14,10 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::pixoo::error::PixooHttpErrorResponse;
+use crate::pixoo::error::{
+    DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse, InternalErrorResponse,
+    ValidationErrorResponse,
+};
 use crate::routes::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, service_unavailable,
     validation_error_simple,
@@ -42,9 +45,9 @@ pub struct ManageTime {
     tag = "manage",
     responses(
         (status = 200, description = "Current device time", body = ManageTime),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device error or unparseable time response", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -69,10 +72,10 @@ pub async fn manage_time(State(state): State<Arc<AppState>>) -> Response {
     tag = "manage",
     responses(
         (status = 200, description = "Device clock set to current UTC"),
-        (status = 500, description = "Failed to compute UTC timestamp", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 500, response = InternalErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -99,10 +102,10 @@ pub async fn manage_set_time(State(state): State<Arc<AppState>>) -> Response {
     params(("offset" = i32, Path, description = "UTC offset between -12 and 14")),
     responses(
         (status = 200, description = "Timezone offset applied"),
-        (status = 400, description = "Invalid offset", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -138,10 +141,10 @@ pub async fn manage_set_timezone(
     params(("mode" = String, Path, description = "One of: 12h, 24h")),
     responses(
         (status = 200, description = "Time mode applied"),
-        (status = 400, description = "Invalid mode", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]

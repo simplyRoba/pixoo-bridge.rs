@@ -12,7 +12,9 @@ use utoipa_axum::routes;
 use validator::Validate;
 
 use super::common::{dispatch_pixoo_command, PathParam, ValidatedJson, ValidatedPath};
-use crate::pixoo::error::PixooHttpErrorResponse;
+use crate::pixoo::error::{
+    DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse, ValidationErrorResponse,
+};
 
 use crate::state::AppState;
 
@@ -119,10 +121,10 @@ impl FromStr for SoundmeterAction {
     request_body = TimerRequest,
     responses(
         (status = 200, description = "Timer started"),
-        (status = 400, description = "Invalid timer values", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, payload))]
@@ -144,9 +146,9 @@ async fn timer_start(
     tag = "tools",
     responses(
         (status = 200, description = "Timer stopped"),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -164,10 +166,10 @@ async fn timer_stop(State(state): State<Arc<AppState>>) -> Response {
     params(("action" = String, Path, description = "One of: start, stop, reset")),
     responses(
         (status = 200, description = "Stopwatch action applied"),
-        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -188,10 +190,10 @@ async fn stopwatch(
     request_body = ScoreboardRequest,
     responses(
         (status = 200, description = "Scoreboard updated"),
-        (status = 400, description = "Invalid scores", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, payload))]
@@ -213,10 +215,10 @@ async fn scoreboard(
     params(("action" = String, Path, description = "One of: start, stop")),
     responses(
         (status = 200, description = "Sound meter action applied"),
-        (status = 400, description = "Unsupported action", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]

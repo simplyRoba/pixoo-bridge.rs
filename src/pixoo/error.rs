@@ -2,7 +2,7 @@ use axum::{http::StatusCode, Json};
 use serde::Serialize;
 use serde_json::Value;
 use thiserror::Error;
-use utoipa::ToSchema;
+use utoipa::{ToResponse, ToSchema};
 
 #[derive(Debug, Error)]
 pub enum PixooError {
@@ -108,12 +108,41 @@ pub enum PixooHttpErrorKind {
 /// validation → a field/action error map; payload-too-large → `{ limit, actual }`;
 /// device errors → `{ error_code }` when the device provided one.
 #[derive(Debug, Serialize, ToSchema)]
-#[schema(example = json!({
-    "error_status": 503,
-    "error_kind": "device-error",
-    "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
-    "details": { "error_code": 1 }
-}))]
+#[schema(examples(
+    json!({
+        "error_status": 400,
+        "error_kind": "validation",
+        "message": "Request validation failed",
+        "details": { "color": "must be a valid hex color (e.g. #FF0000)" }
+    }),
+    json!({
+        "error_status": 413,
+        "error_kind": "payload-too-large",
+        "message": "Request payload too large",
+        "details": { "limit": 1_048_576, "actual": 2_097_152 }
+    }),
+    json!({
+        "error_status": 500,
+        "error_kind": "internal",
+        "message": "Internal error: failed to encode image frame"
+    }),
+    json!({
+        "error_status": 502,
+        "error_kind": "unreachable",
+        "message": "Cannot connect to Pixoo device at http://192.168.1.100"
+    }),
+    json!({
+        "error_status": 503,
+        "error_kind": "device-error",
+        "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
+        "details": { "error_code": 1 }
+    }),
+    json!({
+        "error_status": 504,
+        "error_kind": "timeout",
+        "message": "Request to Pixoo device timed out after 5s"
+    })
+))]
 pub struct PixooHttpErrorResponse {
     /// HTTP status mirrored into the body.
     pub error_status: u16,
@@ -163,6 +192,87 @@ impl PixooHttpErrorResponse {
         (status, Json(self)).into_response()
     }
 }
+
+/// Reusable `400 Validation Error` response component.
+#[allow(dead_code)]
+#[derive(ToResponse)]
+#[response(
+    description = "Request validation failed; `details` contains per-field errors",
+    example = json!({
+        "error_status": 400,
+        "error_kind": "validation",
+        "message": "Request validation failed",
+        "details": { "field": "reason" }
+    })
+)]
+pub struct ValidationErrorResponse(PixooHttpErrorResponse);
+
+/// Reusable `413 Payload Too Large` response component.
+#[allow(dead_code)]
+#[derive(ToResponse)]
+#[response(
+    description = "Request payload exceeds the configured size limit",
+    example = json!({
+        "error_status": 413,
+        "error_kind": "payload-too-large",
+        "message": "Request payload too large",
+        "details": { "limit": 1_048_576, "actual": 2_097_152 }
+    })
+)]
+pub struct PayloadTooLargeResponse(PixooHttpErrorResponse);
+
+/// Reusable `500 Internal Error` response component.
+#[allow(dead_code)]
+#[derive(ToResponse)]
+#[response(
+    description = "Unexpected bridge-side error",
+    example = json!({
+        "error_status": 500,
+        "error_kind": "internal",
+        "message": "Internal error: failed to encode image frame"
+    })
+)]
+pub struct InternalErrorResponse(PixooHttpErrorResponse);
+
+/// Reusable `502 Bad Gateway` response component.
+#[allow(dead_code)]
+#[derive(ToResponse)]
+#[response(
+    description = "Pixoo device is unreachable",
+    example = json!({
+        "error_status": 502,
+        "error_kind": "unreachable",
+        "message": "Cannot connect to Pixoo device at http://192.168.1.100"
+    })
+)]
+pub struct DeviceUnreachableResponse(PixooHttpErrorResponse);
+
+/// Reusable `503 Service Unavailable` response component.
+#[allow(dead_code)]
+#[derive(ToResponse)]
+#[response(
+    description = "Pixoo device reported an error or the response could not be parsed",
+    example = json!({
+        "error_status": 503,
+        "error_kind": "device-error",
+        "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
+        "details": { "error_code": 1 }
+    })
+)]
+pub struct DeviceErrorResponse(PixooHttpErrorResponse);
+
+/// Reusable `504 Gateway Timeout` response component.
+#[allow(dead_code)]
+#[derive(ToResponse)]
+#[response(
+    description = "Pixoo device did not respond in time",
+    example = json!({
+        "error_status": 504,
+        "error_kind": "timeout",
+        "message": "Request to Pixoo device timed out after 5s"
+    })
+)]
+pub struct DeviceTimeoutResponse(PixooHttpErrorResponse);
 
 pub fn map_pixoo_error(
     error: &PixooError,

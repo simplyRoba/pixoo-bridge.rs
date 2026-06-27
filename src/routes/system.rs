@@ -14,7 +14,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use super::common::dispatch_pixoo_command;
-use crate::pixoo::error::PixooHttpErrorResponse;
+use crate::pixoo::error::{DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse};
 
 use crate::state::AppState;
 
@@ -39,9 +39,9 @@ struct HealthStatus {
     tag = "system",
     responses(
         (status = 200, description = "Bridge is healthy (and Pixoo reachable when forwarding is enabled)", body = HealthStatus),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
@@ -70,9 +70,9 @@ async fn health(State(state): State<Arc<AppState>>) -> Response {
     tag = "system",
     responses(
         (status = 200, description = "Reboot command accepted"),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]

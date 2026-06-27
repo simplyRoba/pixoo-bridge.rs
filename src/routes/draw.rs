@@ -17,7 +17,10 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::{Validate, ValidationError};
 
-use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
+use crate::pixoo::error::{
+    DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse, InternalErrorResponse,
+    PayloadTooLargeResponse, PixooHttpErrorKind, PixooHttpErrorResponse, ValidationErrorResponse,
+};
 
 use super::common::{
     dispatch_pixoo_command, dispatch_pixoo_query, internal_server_error, service_unavailable,
@@ -173,11 +176,11 @@ fn rgb_to_hex(color: &RgbColor) -> String {
     request_body = DrawFillRequest,
     responses(
         (status = 200, description = "Display filled with the requested color"),
-        (status = 400, description = "Invalid color values", body = PixooHttpErrorResponse),
-        (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 500, response = InternalErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, payload))]
@@ -219,12 +222,12 @@ async fn draw_fill(
     request_body(content = inline(UploadForm), content_type = "multipart/form-data"),
     responses(
         (status = 200, description = "Image uploaded and rendered"),
-        (status = 400, description = "Missing, empty, or undecodable image", body = PixooHttpErrorResponse),
-        (status = 413, description = "Image exceeds the configured size limit", body = PixooHttpErrorResponse),
-        (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 413, response = PayloadTooLargeResponse),
+        (status = 500, response = InternalErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, multipart))]
@@ -255,12 +258,12 @@ async fn draw_upload(State(state): State<Arc<AppState>>, mut multipart: Multipar
     request_body = DrawRemoteRequest,
     responses(
         (status = 200, description = "Remote image fetched and rendered"),
-        (status = 400, description = "Invalid link", body = PixooHttpErrorResponse),
-        (status = 413, description = "Remote payload exceeds the configured size limit", body = PixooHttpErrorResponse),
-        (status = 500, description = "Internal encoding error", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Remote fetch failed or Pixoo device error (see error_kind)", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 413, response = PayloadTooLargeResponse),
+        (status = 500, response = InternalErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, payload))]
@@ -294,10 +297,10 @@ async fn draw_remote(
     request_body = DrawTextRequest,
     responses(
         (status = 200, description = "Text sent to the display"),
-        (status = 400, description = "Invalid text payload", body = PixooHttpErrorResponse),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 400, response = ValidationErrorResponse),
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state, payload))]
@@ -336,9 +339,9 @@ async fn draw_text(
     tag = "draw",
     responses(
         (status = 200, description = "Text cleared from the display"),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device reported an error", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]

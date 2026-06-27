@@ -6,7 +6,10 @@
 
 use utoipa::OpenApi;
 
-use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
+use crate::pixoo::error::{
+    DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse, InternalErrorResponse,
+    PayloadTooLargeResponse, PixooHttpErrorKind, PixooHttpErrorResponse, ValidationErrorResponse,
+};
 
 /// Base `OpenAPI` document. Paths and request/response schemas are merged in at
 /// runtime from the `OpenApiRouter`; only metadata lives here.
@@ -23,6 +26,16 @@ use crate::pixoo::error::{PixooHttpErrorKind, PixooHttpErrorResponse};
         (name = "manage", description = "Device settings: display, time, and weather"),
         (name = "system", description = "Health and system control")
     ),
-    components(schemas(PixooHttpErrorResponse, PixooHttpErrorKind))
+    components(
+        schemas(PixooHttpErrorResponse, PixooHttpErrorKind),
+        responses(
+            ValidationErrorResponse,
+            PayloadTooLargeResponse,
+            InternalErrorResponse,
+            DeviceUnreachableResponse,
+            DeviceErrorResponse,
+            DeviceTimeoutResponse,
+        )
+    )
 )]
 pub struct ApiDoc;

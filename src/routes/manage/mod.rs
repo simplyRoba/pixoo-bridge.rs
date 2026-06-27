@@ -16,7 +16,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use super::common::{dispatch_pixoo_query, service_unavailable};
-use crate::pixoo::error::PixooHttpErrorResponse;
+use crate::pixoo::error::{DeviceErrorResponse, DeviceTimeoutResponse, DeviceUnreachableResponse};
 
 pub fn manage_router() -> OpenApiRouter<Arc<AppState>> {
     OpenApiRouter::new()
@@ -44,9 +44,9 @@ struct ManageSettings {
     tag = "manage",
     responses(
         (status = 200, description = "Current device settings", body = ManageSettings),
-        (status = 502, description = "Pixoo device unreachable", body = PixooHttpErrorResponse),
-        (status = 503, description = "Pixoo device error or unparseable settings response", body = PixooHttpErrorResponse),
-        (status = 504, description = "Pixoo device timed out", body = PixooHttpErrorResponse)
+        (status = 502, response = DeviceUnreachableResponse),
+        (status = 503, response = DeviceErrorResponse),
+        (status = 504, response = DeviceTimeoutResponse)
     )
 )]
 #[tracing::instrument(skip(state))]
