@@ -99,19 +99,21 @@ pub enum PixooHttpErrorKind {
 /// All server-side error responses share this shape so clients can rely on a
 /// single envelope and use `error_kind` to discriminate the cause.
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(example = json!({
+    "error_status": 503,
+    "message": "Pixoo Channel/SetBrightness command: device returned error_code 1",
+    "error_kind": "device-error",
+    "error_code": 1
+}))]
 pub struct PixooHttpErrorResponse {
     /// HTTP status mirrored into the body.
-    #[schema(example = 503)]
     pub error_status: u16,
     /// Human-readable failure description.
-    #[schema(example = "Pixoo Channel/SetBrightness command: device returned error_code 1")]
     pub message: String,
     /// Failure category.
-    #[schema(example = "device-error")]
     pub error_kind: PixooHttpErrorKind,
     /// Pixoo device error code, present only for device errors.
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[schema(example = 1)]
     pub error_code: Option<i64>,
 }
 
