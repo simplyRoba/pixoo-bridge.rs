@@ -32,7 +32,7 @@ use state::AppState;
 use tower_http::cors::CorsLayer;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_swagger_ui::{Config, SwaggerUi};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -94,7 +94,11 @@ fn build_app(state: Arc<AppState>) -> Router {
         .split_for_parts();
 
     router
-        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", api))
+        .merge(
+            SwaggerUi::new("/docs")
+                .url("/api-docs/openapi.json", api)
+                .config(Config::from("/api-docs/openapi.json").validator_url("none")),
+        )
         .route("/", get(|| async { Redirect::permanent("/docs") }))
         .fallback(fallback_not_found)
         .layer(CorsLayer::permissive())
