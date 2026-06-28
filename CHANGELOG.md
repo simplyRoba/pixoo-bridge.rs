@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.0...v1.1.1) (2026-06-28)
+
+
+### Bug Fixes
+
+* **openapi:** disable Swagger UI online validator badge ([963086f](https://github.com/simplyRoba/pixoo-bridge.rs/commit/963086f7db216d1801f8d462abb40fada6e7338c))
+
 ## [1.1.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.0.0...v1.1.0) (2026-06-27)
 
 
