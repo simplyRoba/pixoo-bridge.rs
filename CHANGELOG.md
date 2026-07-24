@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.0...v1.1.1) (2026-07-24)
+
+
+### Bug Fixes
+
+* **openapi:** disable Swagger UI online validator badge ([963086f](https://github.com/simplyRoba/pixoo-bridge.rs/commit/963086f7db216d1801f8d462abb40fada6e7338c))
+
+
+### Dependencies
+
+* bump quinn-proto from 0.11.14 to 0.11.16 ([f3e790e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f3e790e7ba2173cce64c11b0de2f697f03daab98))
+* bump the serde group across 1 directory with 2 updates ([45a3ece](https://github.com/simplyRoba/pixoo-bridge.rs/commit/45a3ece15545839ee5a25d3c625559afbaf678fb))
+* bump thiserror from 2.0.18 to 2.0.19 ([2e2f7d8](https://github.com/simplyRoba/pixoo-bridge.rs/commit/2e2f7d876fd5e6658d4e6deb8c4c4bbbb5cf77e6))
+* bump tokio from 1.52.3 to 1.53.1 in the tokio group ([88cf55b](https://github.com/simplyRoba/pixoo-bridge.rs/commit/88cf55b388dda4e61dfb59ce0c72a8e29564fe87))
+* bump uuid from 1.23.4 to 1.24.0 ([b904dcc](https://github.com/simplyRoba/pixoo-bridge.rs/commit/b904dcc3ac48bfcd48f61486e7c83183fbd99ceb))
+
 ## [1.1.0](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.0.0...v1.1.0) (2026-06-27)
 
 
