@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.1...v1.1.2) (2026-08-08)
+
+
+### Documentation
+
+* recommend replacement firmware ([29989bf](https://github.com/simplyRoba/pixoo-bridge.rs/commit/29989bfa53b1bd43337f2ad19872c04c0c1e13c7))
+
 ## [1.1.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.0...v1.1.1) (2026-07-24)
 
 
