@@ -1,5 +1,12 @@
 # pixoo-bridge.rs
 
+> [!TIP]
+> **For a fully local Pixoo64 setup, consider
+> [pixoo-firmware](https://github.com/simplyRoba/pixoo-firmware).** It replaces
+> the mainboard firmware, removes the Divoom app/cloud dependency, and exposes
+> ESPHome and Home Assistant controls directly. Use this bridge when the original
+> firmware must remain installed.
+
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg)](https://conventionalcommits.org)
 ![GitHub License](https://img.shields.io/github/license/simplyRoba/pixoo-bridge.rs?link=https%3A%2F%2Fgithub.com%2FsimplyRoba%2Fpixoo-bridge.rs%2Fblob%2Fmain%2FLICENSE)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/simplyRoba/pixoo-bridge.rs/ci.yml?link=https%3A%2F%2Fgithub.com%2FsimplyRoba%2Fpixoo-bridge.rs%2Factions%2Fworkflows%2Fci.yml%3Fquery%3Dbranch%253Amain)
