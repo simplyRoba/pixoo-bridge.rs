@@ -144,6 +144,6 @@ The Pixoo Channel control API will not be implemented. Use the Divoom app for th
 - [Pixoo-64 product page](https://divoom.com/products/pixoo-64)
 - [Official Divoom API documentation](http://doc.divoom-gz.com/web/#/12?page_id=191)
 
----
+Copyright (C) 2026 simplyRoba.
 
-**This project is developed spec-driven with AI assistance, reviewed by a critical human.**
+**This project is developed with AI assistance, reviewed by a critical human.**
