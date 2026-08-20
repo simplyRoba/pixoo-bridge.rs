@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.1...v1.1.2) (2026-08-20)
+
+
+### Documentation
+
+* clarify copyright and AI disclosure ([9be43d1](https://github.com/simplyRoba/pixoo-bridge.rs/commit/9be43d1e150748170dc3481339b90928186096ef))
+* recommend replacement firmware ([29989bf](https://github.com/simplyRoba/pixoo-bridge.rs/commit/29989bfa53b1bd43337f2ad19872c04c0c1e13c7))
+
+
+### Dependencies
+
+* bump base64 from 0.22.1 to 0.23.1 ([6d0e53e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/6d0e53e446ead92f60794c97782209cf052c8b3b))
+* bump thiserror from 2.0.19 to 2.0.20 ([577a7ff](https://github.com/simplyRoba/pixoo-bridge.rs/commit/577a7ff32f31d04ac2e43061d807b947091cfae6))
+* bump uuid from 1.24.0 to 1.24.1 ([35a9846](https://github.com/simplyRoba/pixoo-bridge.rs/commit/35a9846567ea21e701d8e4ddd96376baf2e60a7c))
+* bump validator from 0.20.0 to 0.21.0 ([cd2ad02](https://github.com/simplyRoba/pixoo-bridge.rs/commit/cd2ad02b2c8137198472b4d5afe875a8fd354a95))
+
 ## [1.1.1](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.0...v1.1.1) (2026-07-24)
 
 
