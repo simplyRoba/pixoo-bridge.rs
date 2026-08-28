@@ -94,6 +94,10 @@ pub fn action_validation_error(action: &str, allowed: &[&str]) -> Response {
 ///
 /// Used by GET-style handlers that need to read the response body.
 /// On failure, returns an error `Response` ready to send to the client.
+// `Response` is axum's canonical error carrier here and is returned directly to
+// the client; boxing it would only move the 128 bytes behind an extra
+// allocation while forcing every `?` call site to unbox.
+#[allow(clippy::result_large_err)]
 pub async fn dispatch_pixoo_query(
     state: &AppState,
     command: PixooCommand,
