@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.3](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.2...v1.1.3) (2026-08-28)
+
+
+### Bug Fixes
+
+* satisfy clippy lints promoted in Rust 1.98 ([f37e797](https://github.com/simplyRoba/pixoo-bridge.rs/commit/f37e7974bc539d4abad3c2b85930e040854b0676))
+
+
+### Dependencies
+
+* bump uuid from 1.24.1 to 1.25.0 ([e06e4fc](https://github.com/simplyRoba/pixoo-bridge.rs/commit/e06e4fcdce9a2050fcee5f98d3fab7fdfd4922f6))
+
 ## [1.1.2](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.1...v1.1.2) (2026-08-20)
 
 
