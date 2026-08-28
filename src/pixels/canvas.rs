@@ -3,7 +3,7 @@ use super::{PIXOO_FRAME_LEN, PIXOO_PIXEL_BYTES};
 /// Creates a uniform pixel buffer where every pixel has the same RGB color.
 pub fn uniform_pixel_buffer(red: u8, green: u8, blue: u8) -> Vec<u8> {
     let mut buffer = vec![0u8; PIXOO_FRAME_LEN];
-    for chunk in buffer.chunks_exact_mut(PIXOO_PIXEL_BYTES) {
+    for chunk in buffer.as_chunks_mut::<PIXOO_PIXEL_BYTES>().0 {
         chunk[0] = red;
         chunk[1] = green;
         chunk[2] = blue;

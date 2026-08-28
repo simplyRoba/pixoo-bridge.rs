@@ -349,6 +349,9 @@ async fn draw_text_clear(State(state): State<Arc<AppState>>) -> Response {
     dispatch_pixoo_command(&state, PixooCommand::DrawClearText, Map::new()).await
 }
 
+// See `dispatch_pixoo_query`: the `Err` variant is an axum `Response` that is
+// handed straight back to the client, so boxing it buys nothing.
+#[allow(clippy::result_large_err)]
 async fn extract_file_field(
     multipart: &mut Multipart,
 ) -> Result<(Vec<u8>, Option<String>), Response> {
@@ -395,6 +398,7 @@ fn decode_frames(
     Ok(frames)
 }
 
+#[allow(clippy::result_large_err)]
 async fn get_next_pic_id(state: &AppState) -> Result<i64, Response> {
     let response = dispatch_pixoo_query(state, PixooCommand::DrawGetGifId).await?;
 
