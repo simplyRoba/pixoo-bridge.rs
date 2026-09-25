@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.4](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.3...v1.1.4) (2026-09-25)
+
+
+### Dependencies
+
+* bump tower-http from 0.7.0 to 0.7.1 ([22cb488](https://github.com/simplyRoba/pixoo-bridge.rs/commit/22cb4884da7ce7c2b007fd25c53377d35ba7ba45))
+* bump uuid from 1.25.0 to 1.26.1 ([dc0a193](https://github.com/simplyRoba/pixoo-bridge.rs/commit/dc0a19339ccda1bb63981fa66e7a851fe1b071e5))
+
 ## [1.1.3](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.2...v1.1.3) (2026-08-28)
 
 
