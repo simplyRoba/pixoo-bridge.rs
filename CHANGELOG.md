@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.1.5](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.4...v1.1.5) (2026-10-13)
+
+
+### Dependencies
+
+* bump rustls from 0.23.36 to 0.23.45 ([0440e56](https://github.com/simplyRoba/pixoo-bridge.rs/commit/0440e56c78482d55e1b3a57cd7c1d5ecffa5199f))
+* bump the tokio group across 1 directory with 2 updates ([240aedd](https://github.com/simplyRoba/pixoo-bridge.rs/commit/240aeddc5c686c4d2bc3879c94dd4c569b415d06))
+* bump the utoipa group with 3 updates ([81927e2](https://github.com/simplyRoba/pixoo-bridge.rs/commit/81927e28045cb2d72d2e29589c83f8ff1ae617fc))
+* bump thiserror from 2.0.20 to 2.0.21 ([b2a577e](https://github.com/simplyRoba/pixoo-bridge.rs/commit/b2a577e7f2618b4ca2528dbbb1f7a06b9b7b6b88))
+* bump uuid from 1.26.1 to 1.28.0 ([43bd4d8](https://github.com/simplyRoba/pixoo-bridge.rs/commit/43bd4d8ed8177e9a463ad5a783842757227a3c7b))
+
 ## [1.1.4](https://github.com/simplyRoba/pixoo-bridge.rs/compare/v1.1.3...v1.1.4) (2026-09-25)
 
 
