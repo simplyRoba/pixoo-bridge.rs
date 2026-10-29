@@ -36,7 +36,7 @@ utoipa-swagger-ui = { version = "10.0", features = ["axum"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
-httpmock = "0.8"
+httpmock = "0.9"
 
 [[bin]]
 name = "pixoo-bridge"
